@@ -292,7 +292,7 @@ private:
             auto next_p=p->next;
             new_buckets.insert_node(
               new_buckets.at(new_buckets.position(h(p->value))),p);
-            p=next_p;
+            b.node=p=next_p;
           }
         }
       }
