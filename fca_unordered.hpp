@@ -94,7 +94,8 @@ public:
   using size_type=std::size_t;
   using pointer=value_type*;
   using allocator_type=
-    typename std::allocator_traits<Allocator>::rebind_alloc<value_type>;
+    typename std::allocator_traits<Allocator>::
+      template rebind_alloc<value_type>;
   
   bucket_array(size_type n,const Allocator& al):
     size_index_(super::size_index(n)),
@@ -160,7 +161,8 @@ class fca_unordered_set
 {
   using node_type=node<T>;
   using node_allocator_type=    
-    typename std::allocator_traits<Allocator>::rebind_alloc<node_type>;
+    typename std::allocator_traits<Allocator>::
+      template rebind_alloc<node_type>;
   using node_alloc_traits=std::allocator_traits<node_allocator_type>;
   using bucket_array_type=bucket_array<node_type,node_allocator_type>;
   using bucket=typename bucket_array_type::value_type; 
