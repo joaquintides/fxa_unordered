@@ -203,8 +203,7 @@ public:
   
   const_iterator begin()const noexcept
   {
-    auto pb=buckets.end();
-    if(pb->next)pb=pb->next;
+    auto pb=buckets.end()->next;
     return {pb->node,pb};
   }
     
