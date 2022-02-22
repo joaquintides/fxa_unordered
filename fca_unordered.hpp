@@ -311,7 +311,9 @@ private:
             p=next_p;
           }
         }
-        for(auto& b:buckets)if(!b.node)buckets.unlink_bucket(&b);
+        for(auto& b:buckets){
+          if(!b.node&&b.next)buckets.unlink_bucket(&b);
+        }
         throw;
       }
       buckets=std::move(new_buckets);
