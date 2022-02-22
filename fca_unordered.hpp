@@ -72,8 +72,6 @@ struct bucket_array_base
   }
 };
 
-template<typename Node,typename Allocator> class bucket_array;
-
 template<typename Node,typename Allocator>
 struct bucket_array_element
 {
@@ -115,30 +113,39 @@ public:
     return super::position(hash,size_index_);
   }
 
-  void insert_node(pointer pb,node_type* p)
+  void insert_node(pointer pb,node_type* p)noexcept
   {
-    if(!pb->prev){ // empty bucket
+    if(!pb->node){ // empty bucket
       pb->next=end()->next;
       pb->next->prev=pb;
       pb->prev=end();
-      end()->next=pb;
+      pb->prev->next=pb;
     }
     p->next=pb->node;
     pb->node=p;
   }
   
-  void extract_node(pointer pb,node_type* p)
+  void extract_node(pointer pb,node_type* p)noexcept
   {
-    node_type** pprev_p=&pb->node;
-    while((*pprev_p)!=p)pprev_p=&(*pprev_p)->next;
-    *pprev_p=p->next;
-    if(!pb->node){ // empty bucket
-      pb->prev->next=pb->next;
-      pb->next->prev=pb->prev;
-      pb->prev=pb->next=0;
-    }
+    node_type** pp=&pb->node;
+    while((*pp)!=p)pp=&(*pp)->next;
+    *pp=p->next;
+    if(!pb->node)unlink_bucket(pb);
+  }
+
+  void extract_node_after(pointer pb,node_type** pp)noexcept
+  {
+    *pp=(*pp)->next;
+    if(!pb->node)unlink_bucket(pb);
   }
   
+  void unlink_bucket(pointer pb)noexcept
+  {
+    pb->next->prev=pb->prev;
+    pb->prev->next=pb->next;
+    pb->prev=pb->next=nullptr;
+  }
+
 private:
   std::size_t                            size_index_;
   std::vector<value_type,allocator_type> v;
@@ -220,8 +227,7 @@ public:
   
   iterator erase(const_iterator pos)
   {
-    auto p=pos.p;
-    auto pb=pos.pb;
+    auto [p,pb]=pos;
     ++pos;
     buckets.extract_node(pb,p);
     delete_node(p);
@@ -232,12 +238,15 @@ public:
   template<typename Key>
   size_type erase(const Key& x)
   {
-    auto it=find(x);
-    if(it==end()){
+    auto [pp,pb]=find_prev(x);
+    if(!pp){
       return 0;
     }
     else{
-      erase(it);
+      auto p=*pp;
+      buckets.extract_node_after(pb,pp);
+      delete_node(p);
+      --size_;
       return 1;
     }
   }
@@ -284,7 +293,7 @@ private:
 
       bucket_array_type new_buckets(bc,al);
       try{
-       for(auto b:buckets){
+        for(auto& b:buckets){
           for(auto p=b.node;p;){
             auto next_p=p->next;
             new_buckets.insert_node(
@@ -294,7 +303,7 @@ private:
         }
       }
       catch(...){
-        for(auto b:new_buckets){
+        for(auto& b:new_buckets){
           for(auto p=b.node;p;){
             auto next_p=p->next;
             delete_node(p);
@@ -302,6 +311,7 @@ private:
             p=next_p;
           }
         }
+        for(auto& b:buckets)if(!b.node)buckets.unlink_bucket(&b);
         throw;
       }
       buckets=std::move(new_buckets);
@@ -325,7 +335,17 @@ private:
     }
     return end();
   }
-   
+  
+  template<typename Key>
+  std::pair<node_type**,bucket*> find_prev(const Key& x)const
+  {
+    auto pb=buckets.at(buckets.position(h(x)));
+    for(auto pp=&pb->node;*pp;pp=&(*pp)->next){
+      if(pred(x,(*pp)->value))return {pp,pb};
+    }
+    return {nullptr,nullptr};
+  }
+     
   size_type max_load()
   {
     float fml=mlf*static_cast<float>(buckets.size());
@@ -346,8 +366,8 @@ private:
 template<class Key,class Value>
 struct map_value_adaptor
 {
-    Key           first;
-    mutable Value second;
+  Key           first;
+  mutable Value second;
 };
 
 template<typename Hash>
