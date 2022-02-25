@@ -9,8 +9,9 @@
  
 #ifndef FCA_UNORDERED_HPP
 #define FCA_UNORDERED_HPP
- 
+
 #include <algorithm>
+#include <boost/core/bit.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <functional>
 #include <limits>
@@ -72,83 +73,154 @@ struct bucket_array_base
   }
 };
 
-template<typename Node,typename Allocator>
-struct bucket_array_element
+template<typename Node>
+struct bucket
 {
-  Node                 *node=nullptr;
-  bucket_array_element *next=nullptr,*prev=nullptr;
+  Node *node=nullptr;
 };
 
+template<typename Node>
+struct bucket_group
+{
+  static constexpr std::size_t N=sizeof(std::size_t)*8;
+
+  bucket<Node> buckets[N];
+  std::size_t  bitmask=0;
+  bucket_group *next=nullptr,*prev=nullptr;
+};
+
+template<typename Node>
+struct bucket_iterator:public boost::iterator_facade<
+  bucket_iterator<Node>,bucket<Node>&,boost::forward_traversal_tag>
+{
+public:
+  bucket_iterator()=default;
+  
+  void advance_to_next_nonempty()
+  {
+    if(n==N-1||(n=boost::core::countr_zero(pbg->bitmask&~((1ul<<(n+1))-1)))>=N){
+      pbg=pbg->next;
+      n=boost::core::countr_zero(pbg->bitmask);
+    }
+  }
+    
+private:
+  friend class boost::iterator_core_access;
+  template <typename,typename> friend class bucket_array;
+  
+  static constexpr auto N=bucket_group<Node>::N;
+
+  bucket_iterator(bucket_group<Node>* pbg,std::size_t n):pbg{pbg},n{n}{}
+
+  auto& dereference()const noexcept{return pbg->buckets[n];}
+  bool equal(const bucket_iterator& x)const noexcept{return pbg==x.pbg&&n==x.n;}
+
+  void increment()noexcept
+  {
+   if(n<N-1){
+      ++n;
+    }
+    else{
+      ++pbg;
+      n=0;
+    }
+  }
+
+  bucket_group<Node> *pbg=nullptr; 
+  std::size_t        n=0; 
+};
+  
 template<typename Node,typename Allocator>
 class bucket_array:bucket_array_base
 {
   using super=bucket_array_base;
+  using node_type=Node;
 
 public:
-  using node_type=Node;
-  using value_type=bucket_array_element<Node,Allocator>;
+  using value_type=bucket<Node>;
   using size_type=std::size_t;
-  using pointer=value_type*;
-  using allocator_type=
-    typename std::allocator_traits<Allocator>::
-      template rebind_alloc<value_type>;
+  using iterator=bucket_iterator<Node>;
   
   bucket_array(size_type n,const Allocator& al):
     size_index_(super::size_index(n)),
-    v(super::sizes[size_index_]+1,al)
+    v(super::sizes[size_index_]/N+1,al)
   {
-    end()->next=end()->prev=end();
+    auto [pbg,m]=end();
+    pbg->bitmask|=1ul<<m;
+    pbg->next=pbg->prev=pbg;
   }
   
   bucket_array(bucket_array&&)=default;
   bucket_array& operator=(bucket_array&&)=default;
   
-  pointer begin()const{return const_cast<pointer>(&v.front());}
-  pointer end()const{return const_cast<pointer>(&v.back());}
-  size_type size()const{return v.size()-1;}
-  pointer at(size_type n)const{return const_cast<pointer>(&v[n]);}
+  iterator begin()const{return at(0);}
+  iterator end()const{return at(size());}
+  size_type size()const{return super::sizes[size_index_];}
+  iterator at(size_type n)const{return {const_cast<group*>(&v[n/N]),n%N};}
   
   size_type position(std::size_t hash)const
   {
     return super::position(hash,size_index_);
   }
 
-  void insert_node(pointer pb,node_type* p)noexcept
+  void insert_node(iterator itb,node_type* p)noexcept
   {
-    if(!pb->node){ // empty bucket
-      pb->next=end()->next;
-      pb->next->prev=pb;
-      pb->prev=end();
-      pb->prev->next=pb;
+    if(!itb->node){ // empty bucket
+      auto [pbg,n]=itb;
+      if(!pbg->bitmask){ // empty group
+          pbg->next=v.back().next;
+          pbg->next->prev=pbg;
+          pbg->prev=&v.back();
+          pbg->prev->next=pbg;
+      }
+      pbg->bitmask|=1ul<<n;
     }
-    p->next=pb->node;
-    pb->node=p;
+    p->next=itb->node;
+    itb->node=p;
   }
   
-  void extract_node(pointer pb,node_type* p)noexcept
+  void extract_node(iterator itb,node_type* p)noexcept
   {
-    node_type** pp=&pb->node;
+    node_type** pp=&itb->node;
     while((*pp)!=p)pp=&(*pp)->next;
     *pp=p->next;
-    if(!pb->node)unlink_bucket(pb);
+    if(!itb->node)unlink_bucket(itb);
   }
 
-  void extract_node_after(pointer pb,node_type** pp)noexcept
+  void extract_node_after(iterator itb,node_type** pp)noexcept
   {
     *pp=(*pp)->next;
-    if(!pb->node)unlink_bucket(pb);
+    if(!itb->node)unlink_bucket(itb);
   }
   
-  void unlink_bucket(pointer pb)noexcept
+  void unlink_bucket(iterator itb)noexcept
   {
-    pb->next->prev=pb->prev;
-    pb->prev->next=pb->next;
-    pb->prev=pb->next=nullptr;
+    auto [pbg,n]=itb;
+    if(!(pbg->bitmask&=~(1ul<<n)))unlink_group(pbg);
+  }
+  
+  void unlink_empty_buckets()noexcept
+  {
+    for(auto& bg:v){
+      if(!bg.bitmask&&bg.next)unlink_group(&bg);
+    }
   }
 
 private:
-  std::size_t                            size_index_;
-  std::vector<value_type,allocator_type> v;
+  using group=bucket_group<Node>;
+  using group_allocator_type=
+    typename std::allocator_traits<Allocator>::
+      template rebind_alloc<group>;
+  static constexpr auto N=group::N;
+  
+  void unlink_group(group* pbg){
+    pbg->next->prev=pbg->prev;
+    pbg->prev->next=pbg->next;
+    pbg->prev=pbg->next=nullptr;
+  }
+
+  std::size_t                             size_index_;
+  std::vector<group,group_allocator_type> v;
 };
 
 template<typename T>
@@ -170,7 +242,7 @@ class fca_unordered_set
       template rebind_alloc<node_type>;
   using node_alloc_traits=std::allocator_traits<node_allocator_type>;
   using bucket_array_type=bucket_array<node_type,node_allocator_type>;
-  using bucket=typename bucket_array_type::value_type; 
+  using bucket=typename bucket_array_type::value_type;
     
 public:
   using key_type=T;
@@ -181,25 +253,26 @@ public:
   {
   public:
     const_iterator()=default;
-    const_iterator(node_type* p,bucket* pb):p{p},pb{pb}{}
         
   private:
     friend class fca_unordered_set;
     friend class boost::iterator_core_access;
     
+    const_iterator(node_type* p,bucket_iterator<node_type> itb):p{p},itb{itb}{}
+
     const value_type& dereference()const noexcept{return p->value;}
     bool equal(const const_iterator& x)const noexcept{return p==x.p;}
     
     void increment()noexcept
     {
       if(!(p=p->next)){
-        pb=pb->next;
-        p=pb->node;
+        itb.advance_to_next_nonempty();
+        p=itb->node;
       }
     }
   
-    node_type *p=nullptr; 
-    bucket    *pb=nullptr; 
+    node_type                  *p=nullptr; 
+    bucket_iterator<node_type> itb={}; 
   };
   using iterator=const_iterator;
   
@@ -210,14 +283,15 @@ public:
   
   const_iterator begin()const noexcept
   {
-    auto pb=buckets.end()->next;
-    return {pb->node,pb};
+    auto itb=buckets.end();
+    itb.advance_to_next_nonempty();
+    return {itb->node,itb};
   }
     
   const_iterator end()const noexcept
   {
-    auto pb=buckets.end();
-    return {pb->node,pb};
+    auto itb=buckets.end();
+    return {itb->node,itb};
   }
   
   size_type size()const noexcept{return size_;}
@@ -227,9 +301,9 @@ public:
   
   iterator erase(const_iterator pos)
   {
-    auto [p,pb]=pos;
+    auto [p,itb]=pos;
     ++pos;
-    buckets.extract_node(pb,p);
+    buckets.extract_node(itb,p);
     delete_node(p);
     --size_;
     return pos;
@@ -238,13 +312,13 @@ public:
   template<typename Key>
   size_type erase(const Key& x)
   {
-    auto [pp,pb]=find_prev(x);
+    auto [pp,itb]=find_prev(x);
     if(!pp){
       return 0;
     }
     else{
       auto p=*pp;
-      buckets.extract_node_after(pb,pp);
+      buckets.extract_node_after(itb,pp);
       delete_node(p);
       --size_;
       return 1;
@@ -293,7 +367,7 @@ private:
 
       bucket_array_type new_buckets(bc,al);
       try{
-        for(auto& b:buckets){
+        for(auto& b:buckets){            
           for(auto p=b.node;p;){
             auto next_p=p->next;
             new_buckets.insert_node(
@@ -311,9 +385,7 @@ private:
             p=next_p;
           }
         }
-        for(auto& b:buckets){
-          if(!b.node&&b.next)buckets.unlink_bucket(&b);
-        }
+        buckets.unlink_empty_buckets();
         throw;
       }
       buckets=std::move(new_buckets);
@@ -321,31 +393,32 @@ private:
       pos=buckets.position(hash);
     }
     
-    auto pb=buckets.at(pos);
+    auto itb=buckets.at(pos);
     auto p=new_node(std::forward<Value>(x));
-    buckets.insert_node(pb,p);
+    buckets.insert_node(itb,p);
     ++size_;
-    return {{p,pb},true};
+    return {{p,itb},true};
   }
   
   template<typename Key>
   iterator find(const Key& x,size_type pos)const
   {
-    auto pb=buckets.at(pos);
-    for(auto p=pb->node;p;p=p->next){
-      if(pred(x,p->value))return {p,pb};
+    auto itb=buckets.at(pos);
+    for(auto p=itb->node;p;p=p->next){
+      if(pred(x,p->value))return {p,itb};
     }
     return end();
   }
   
   template<typename Key>
-  std::pair<node_type**,bucket*> find_prev(const Key& x)const
+  std::pair<node_type**,bucket_iterator<node_type>>
+  find_prev(const Key& x)const
   {
-    auto pb=buckets.at(buckets.position(h(x)));
-    for(auto pp=&pb->node;*pp;pp=&(*pp)->next){
-      if(pred(x,(*pp)->value))return {pp,pb};
+    auto itb=buckets.at(buckets.position(h(x)));
+    for(auto pp=&itb->node;*pp;pp=&(*pp)->next){
+      if(pred(x,(*pp)->value))return {pp,itb};
     }
-    return {nullptr,nullptr};
+    return {nullptr,{}};
   }
      
   size_type max_load()
