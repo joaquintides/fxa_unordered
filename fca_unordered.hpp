@@ -202,6 +202,9 @@ public:
   void unlink_empty_buckets()noexcept
   {
     for(auto& bg:v){
+      for(std::size_t n=0;n<N;++n){
+        if(!bg.buckets[n].node)bg.bitmask&=~(1ul<<n);
+      }
       if(!bg.bitmask&&bg.next)unlink_group(&bg);
     }
   }
