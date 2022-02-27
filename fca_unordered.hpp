@@ -89,6 +89,13 @@ struct bucket_group
   bucket_group *next=nullptr,*prev=nullptr;
 };
 
+inline std::size_t set_bit(std::size_t n){return std::size_t(1)<<n;}
+inline std::size_t reset_bit(std::size_t n){return ~(std::size_t(1)<<n);}
+inline std::size_t reset_first_bits(std::size_t n) // n >0
+{
+  return ~(~(std::size_t(0))>>(sizeof(std::size_t)*8-n));
+}
+
 template<typename Node>
 struct bucket_iterator:public boost::iterator_facade<
   bucket_iterator<Node>,bucket<Node>,boost::forward_traversal_tag>
@@ -98,7 +105,7 @@ public:
   
   void advance_to_next_nonempty()
   {
-    if(n==N-1||(n=boost::core::countr_zero(pbg->bitmask&~((1ul<<(n+1))-1)))>=N){
+    if((n=boost::core::countr_zero(pbg->bitmask&reset_first_bits(n+1)))>=N){
       pbg=pbg->next;
       n=boost::core::countr_zero(pbg->bitmask);
     }
@@ -146,7 +153,7 @@ public:
     v(super::sizes[size_index_]/N+1,al)
   {
     auto [pbg,m]=end();
-    pbg->bitmask|=1ul<<m;
+    pbg->bitmask|=set_bit(m);
     pbg->next=pbg->prev=pbg;
   }
   
@@ -173,7 +180,7 @@ public:
           pbg->prev=&v.back();
           pbg->prev->next=pbg;
       }
-      pbg->bitmask|=1ul<<n;
+      pbg->bitmask|=set_bit(n);
     }
     p->next=itb->node;
     itb->node=p;
@@ -196,14 +203,14 @@ public:
   void unlink_bucket(iterator itb)noexcept
   {
     auto [pbg,n]=itb;
-    if(!(pbg->bitmask&=~(1ul<<n)))unlink_group(pbg);
+    if(!(pbg->bitmask&=reset_bit(n)))unlink_group(pbg);
   }
   
   void unlink_empty_buckets()noexcept
   {
     for(auto& bg:v){
       for(std::size_t n=0;n<N;++n){
-        if(!bg.buckets[n].node)bg.bitmask&=~(1ul<<n);
+        if(!bg.buckets[n].node)bg.bitmask&=reset_bit(n);
       }
       if(!bg.bitmask&&bg.next)unlink_group(&bg);
     }
