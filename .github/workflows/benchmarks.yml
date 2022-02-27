@@ -95,7 +95,7 @@ jobs:
         run: |
           cd %GITHUB_WORKSPACE%
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          set INCLUDE=%INCLUDE%;C:\opt\github\boost-root\boost
+          set INCLUDE=%INCLUDE%;C:\opt\github\boost-root
           echo %INCLUDE%
           ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.compileroptions}}
 
