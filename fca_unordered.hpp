@@ -205,11 +205,15 @@ public:
   
   void unlink_empty_buckets()noexcept
   {
-    for(auto& bg:v){
+    auto pbg=&v.front(),last=&v.back();
+    for(;pbg!=last;++pbg){
       for(std::size_t n=0;n<N;++n){
-        if(!bg.buckets[n].node)bg.bitmask&=reset_bit(n);
+        if(!pbg->buckets[n].node)pbg->bitmask&=reset_bit(n);
       }
-      if(!bg.bitmask&&bg.next)unlink_group(&bg);
+      if(!pbg->bitmask&&pbg->next)unlink_group(pbg);
+    }
+    for(std::size_t n=0;n<size_%N;++n){ // do not check end bucket
+      if(!pbg->buckets[n].node)pbg->bitmask&=reset_bit(n);
     }
   }
 
