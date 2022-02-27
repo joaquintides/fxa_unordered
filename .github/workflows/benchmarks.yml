@@ -86,7 +86,7 @@ jobs:
           cd boost-root
           git checkout boost-1.78.0
           git submodule update --init
-          bootstrap
+          cmd /c bootstrap.bat
           b2 -d0 headers
 
       - name: Compile
