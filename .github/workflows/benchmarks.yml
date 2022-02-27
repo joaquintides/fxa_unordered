@@ -75,7 +75,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install Boost
-        shell: cmd
+        shell: powershell
         run: |
           if ( -Not (Test-Path -Path "C:\opt\github") )
           {
