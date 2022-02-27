@@ -40,35 +40,35 @@ struct bucket_array_base
   template<std::size_t SizeIndex,std::size_t Size=sizes[SizeIndex]>
   static std::size_t position(std::size_t hash){return hash%Size;}
     
-  static std::size_t position(std::size_t hash,std::size_t size_index)
+  static std::size_t position(std::size_t hash,std::size_t size)
   {
-    switch(size_index){
+    switch(size){
       default:
-      case  0: return position<0>(hash);
-      case  1: return position<1>(hash);
-      case  2: return position<2>(hash);
-      case  3: return position<3>(hash);
-      case  4: return position<4>(hash);
-      case  5: return position<5>(hash);
-      case  6: return position<6>(hash);
-      case  7: return position<7>(hash);
-      case  8: return position<8>(hash);
-      case  9: return position<9>(hash);
-      case 10: return position<10>(hash);
-      case 11: return position<11>(hash);
-      case 12: return position<12>(hash);
-      case 13: return position<13>(hash);
-      case 14: return position<14>(hash);
-      case 15: return position<15>(hash);
-      case 16: return position<16>(hash);
-      case 17: return position<17>(hash);
-      case 18: return position<18>(hash);
-      case 19: return position<19>(hash);
-      case 20: return position<20>(hash);
-      case 21: return position<21>(hash);
-      case 22: return position<22>(hash);
-      case 23: return position<23>(hash);
-      case 24: return position<24>(hash);
+      case  sizes[0]: return position<0>(hash);
+      case  sizes[1]: return position<1>(hash);
+      case  sizes[2]: return position<2>(hash);
+      case  sizes[3]: return position<3>(hash);
+      case  sizes[4]: return position<4>(hash);
+      case  sizes[5]: return position<5>(hash);
+      case  sizes[6]: return position<6>(hash);
+      case  sizes[7]: return position<7>(hash);
+      case  sizes[8]: return position<8>(hash);
+      case  sizes[9]: return position<9>(hash);
+      case sizes[10]: return position<10>(hash);
+      case sizes[11]: return position<11>(hash);
+      case sizes[12]: return position<12>(hash);
+      case sizes[13]: return position<13>(hash);
+      case sizes[14]: return position<14>(hash);
+      case sizes[15]: return position<15>(hash);
+      case sizes[16]: return position<16>(hash);
+      case sizes[17]: return position<17>(hash);
+      case sizes[18]: return position<18>(hash);
+      case sizes[19]: return position<19>(hash);
+      case sizes[20]: return position<20>(hash);
+      case sizes[21]: return position<21>(hash);
+      case sizes[22]: return position<22>(hash);
+      case sizes[23]: return position<23>(hash);
+      case sizes[24]: return position<24>(hash);
     }
   }
 };
@@ -146,8 +146,8 @@ public:
   using iterator=bucket_iterator<Node>;
   
   bucket_array(size_type n,const Allocator& al):
-    size_index_(super::size_index(n)),
-    v(super::sizes[size_index_]/N+1,al)
+    size_(super::sizes[super::size_index(n)]),
+    v(size_/N+1,al)
   {
     auto [pbg,m]=end();
     pbg->bitmask|=set_bit(m);
@@ -159,12 +159,12 @@ public:
   
   iterator begin()const{return at(0);}
   iterator end()const{return at(size());}
-  size_type size()const{return super::sizes[size_index_];}
+  size_type size()const{return size_;}
   iterator at(size_type n)const{return {const_cast<group*>(&v[n/N]),n%N};}
   
   size_type position(std::size_t hash)const
   {
-    return super::position(hash,size_index_);
+    return super::position(hash,size_);
   }
 
   void insert_node(iterator itb,node_type* p)noexcept
@@ -226,7 +226,7 @@ private:
     pbg->prev=pbg->next=nullptr;
   }
 
-  std::size_t                             size_index_;
+  std::size_t                             size_;
   std::vector<group,group_allocator_type> v;
 };
 
