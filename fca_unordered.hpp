@@ -250,6 +250,7 @@ class fca_unordered_set
   using node_alloc_traits=std::allocator_traits<node_allocator_type>;
   using bucket_array_type=bucket_array<node_type,node_allocator_type>;
   using bucket=typename bucket_array_type::value_type;
+  using bucket_iterator=typename bucket_array_type::iterator;
     
 public:
   using key_type=T;
@@ -265,7 +266,7 @@ public:
     friend class fca_unordered_set;
     friend class boost::iterator_core_access;
     
-    const_iterator(node_type* p,bucket_iterator<node_type> itb):p{p},itb{itb}{}
+    const_iterator(node_type* p,bucket_iterator itb):p{p},itb{itb}{}
 
     const value_type& dereference()const noexcept{return p->value;}
     bool equal(const const_iterator& x)const noexcept{return p==x.p;}
@@ -278,8 +279,8 @@ public:
       }
     }
   
-    node_type                  *p=nullptr; 
-    bucket_iterator<node_type> itb={}; 
+    node_type       *p=nullptr; 
+    bucket_iterator itb={}; 
   };
   using iterator=const_iterator;
   
@@ -407,7 +408,7 @@ private:
   }
   
   template<typename Key>
-  iterator find(const Key& x,bucket_iterator<node_type> itb)const
+  iterator find(const Key& x,bucket_iterator itb)const
   {
     for(auto p=itb->node;p;p=p->next){
       if(pred(x,p->value))return {p,itb};
@@ -416,8 +417,7 @@ private:
   }
   
   template<typename Key>
-  std::pair<node_type**,bucket_iterator<node_type>>
-  find_prev(const Key& x)const
+  std::pair<node_type**,bucket_iterator> find_prev(const Key& x)const
   {
     auto itb=buckets.at(buckets.position(h(x)));
     for(auto pp=&itb->node;*pp;pp=&(*pp)->next){
