@@ -124,13 +124,10 @@ private:
 
   void increment()noexcept
   {
-   if(n<N-1){
-      ++n;
-    }
-    else{
-      ++pbg;
-      n=0;
-    }
+   if(++n>=N){
+     ++pbg;
+     n=0;
+   }
   }
 
   bucket_group<Node> *pbg=nullptr; 
