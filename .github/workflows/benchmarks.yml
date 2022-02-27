@@ -17,12 +17,13 @@ jobs:
           - compiler: g++-11
             compileroptions: -std=c++2a -O3 -DNDEBUG
             sourcefile: string.cpp
-            outputfile: Perf
+            outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11
           - compiler: clang++
             compileroptions: -std=c++2a -O3 -DNDEBUG
             sourcefile: string.cpp
+            outputfile: benchmark
             os: ubuntu-20.04
 
     runs-on: ${{matrix.os}}
@@ -53,9 +54,9 @@ jobs:
       matrix:
         include:
           - compiler: cl
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /EHsc /MD
-            sourcefile: perf.cpp
-            outputfile: perf.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /EHsc /MD /Fe:benchmark.exe
+            sourcefile: string.cpp
+            outputfile: benchmark.exe            
             os: windows-2019
 
     runs-on: ${{matrix.os}}
@@ -68,10 +69,6 @@ jobs:
         run: |
           cd %GITHUB_WORKSPACE%
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          set INCLUDE=%INCLUDE%;C:\opt\github\range-v3\include
-          set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\include
-          set INCLUDE=%INCLUDE%;C:\opt\github\nanobench\src\include
-          echo %INCLUDE%
           ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.compileroptions}}
 
       - name: Run tests
