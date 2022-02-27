@@ -91,7 +91,7 @@ struct bucket_group
 
 template<typename Node>
 struct bucket_iterator:public boost::iterator_facade<
-  bucket_iterator<Node>,bucket<Node>&,boost::forward_traversal_tag>
+  bucket_iterator<Node>,bucket<Node>,boost::forward_traversal_tag>
 {
 public:
   bucket_iterator()=default;
@@ -252,7 +252,7 @@ public:
   using value_type=T;
   using size_type=std::size_t;
   class const_iterator:public boost::iterator_facade<
-    const_iterator,const value_type&,boost::forward_traversal_tag>
+    const_iterator,const value_type,boost::forward_traversal_tag>
   {
   public:
     const_iterator()=default;
