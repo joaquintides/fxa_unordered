@@ -120,7 +120,8 @@ private:
   bucket_iterator(bucket_group<Node>* pbg,std::size_t n):pbg{pbg},n{n}{}
 
   auto& dereference()const noexcept{return pbg->buckets[n];}
-  bool equal(const bucket_iterator& x)const noexcept{return pbg==x.pbg&&n==x.n;}
+  bool equal(const bucket_iterator& x)const noexcept
+    {return pbg==x.pbg&&n==x.n;}
 
   void increment()noexcept
   {
