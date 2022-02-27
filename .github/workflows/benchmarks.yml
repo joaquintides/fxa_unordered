@@ -54,7 +54,7 @@ jobs:
           ${{matrix.compiler}} --version
           ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.compileroptions}} -o ${{matrix.outputfile}}
 
-      - name: Run tests
+      - name: Run benchmarks
         run: |
           ./${{matrix.outputfile}}
 
@@ -81,7 +81,7 @@ jobs:
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.compileroptions}}
 
-      - name: Run tests
+      - name: Run benchmark
         shell: cmd
         run: |
           ${{matrix.outputfile}}
