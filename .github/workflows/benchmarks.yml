@@ -46,7 +46,7 @@ jobs:
           git submodule update --init
           ./bootstrap.sh
           ./b2 -d0 headers
-          mkdir /usr/local/include/boost
+          sudo mkdir /usr/local/include/boost
           sudo cp -rp boost/* /usr/local/include/boost
 
       - name: Compile
