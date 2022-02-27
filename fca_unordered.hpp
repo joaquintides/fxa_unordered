@@ -335,7 +335,7 @@ public:
   template<typename Key>
   iterator find(const Key& x)const
   {
-    return find(x,buckets.position(h(x)));
+    return find(x,buckets.at(buckets.position(h(x))));
   }
   
 private:
@@ -363,8 +363,8 @@ private:
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
     auto hash=h(x);
-    auto pos=buckets.position(hash);
-    auto it=find(x,pos);
+    auto itb=buckets.at(buckets.position(hash));
+    auto it=find(x,itb);
     if(it!=end())return {it,false};
         
     if(size_+1>ml){
@@ -397,10 +397,9 @@ private:
       }
       buckets=std::move(new_buckets);
       ml=max_load();
-      pos=buckets.position(hash);
+      itb=buckets.at(buckets.position(hash));
     }
     
-    auto itb=buckets.at(pos);
     auto p=new_node(std::forward<Value>(x));
     buckets.insert_node(itb,p);
     ++size_;
@@ -408,9 +407,8 @@ private:
   }
   
   template<typename Key>
-  iterator find(const Key& x,size_type pos)const
+  iterator find(const Key& x,bucket_iterator<node_type> itb)const
   {
-    auto itb=buckets.at(pos);
     for(auto p=itb->node;p;p=p->next){
       if(pred(x,p->value))return {p,itb};
     }
