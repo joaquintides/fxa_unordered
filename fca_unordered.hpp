@@ -84,7 +84,7 @@ struct bucket_group
 {
   static constexpr std::size_t N=sizeof(std::size_t)*8;
 
-  bucket<Node> buckets[N];
+  bucket<Node> buckets[N]={};
   std::size_t  bitmask=0;
   bucket_group *next=nullptr,*prev=nullptr;
 };
