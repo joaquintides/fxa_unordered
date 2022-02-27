@@ -87,7 +87,7 @@ jobs:
           git checkout boost-1.78.0
           git submodule update --init
           cmd /c bootstrap.bat
-          b2.exe -d0 headers
+          .\b2.exe -d0 headers
 
       - name: Compile
         shell: cmd
