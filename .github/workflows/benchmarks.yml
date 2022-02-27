@@ -47,7 +47,7 @@ jobs:
           ./bootstrap.sh
           ./b2 -d0 headers
           sudo mkdir /usr/local/include/boost
-          sudo cp -rp boost/* /usr/local/include/boost
+          sudo cp -rp boost/* /usr/local/include/boost/
 
       - name: Compile
         run: |
