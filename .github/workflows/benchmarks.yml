@@ -40,9 +40,10 @@ jobs:
           
       - name: Install Boost
         run: |
-          git clone -b boost-1.78.0 --depth 1 https://github.com/boostorg/boost.git boost-root
+          git clone https://github.com/boostorg/boost.git boost-root
           cd boost-root
-          git submodule update
+          git checkout boost-1.78.0
+          git submodule update --init
           ./bootstrap.sh
           ./b2 -d0 headers
           sudo cp -rp * /usr/local/include/
