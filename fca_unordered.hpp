@@ -428,7 +428,7 @@ private:
     return {nullptr,{}};
   }
      
-  size_type max_load()
+  size_type max_load()const
   {
     float fml=mlf*static_cast<float>(buckets.size());
     auto res=(std::numeric_limits<size_type>::max)();
