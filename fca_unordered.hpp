@@ -233,7 +233,7 @@ private:
 template<typename T>
 struct node
 {
-  node *next=nullptr;
+  node *next;
   T    value;
 };
 
