@@ -37,6 +37,15 @@ jobs:
           sudo -E apt-add-repository -y ppa:ubuntu-toolchain-r/test
           sudo apt-get update
           sudo apt install -y ${{matrix.install}}
+          
+      - name: Install Boost
+        run: |
+          git clone -b boost-1.78.0 --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          git submodule update
+          ./bootstrap.sh
+          ./b2 -d0 headers
+          sudo cp -rp * /usr/local/include/
 
       - name: Compile
         run: |
