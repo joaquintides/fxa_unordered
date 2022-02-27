@@ -44,16 +44,16 @@ struct bucket_array_base
   {
     switch(size){
       default:
-      case  sizes[0]: return position<0>(hash);
-      case  sizes[1]: return position<1>(hash);
-      case  sizes[2]: return position<2>(hash);
-      case  sizes[3]: return position<3>(hash);
-      case  sizes[4]: return position<4>(hash);
-      case  sizes[5]: return position<5>(hash);
-      case  sizes[6]: return position<6>(hash);
-      case  sizes[7]: return position<7>(hash);
-      case  sizes[8]: return position<8>(hash);
-      case  sizes[9]: return position<9>(hash);
+      case  sizes[0]: return  position<0>(hash);
+      case  sizes[1]: return  position<1>(hash);
+      case  sizes[2]: return  position<2>(hash);
+      case  sizes[3]: return  position<3>(hash);
+      case  sizes[4]: return  position<4>(hash);
+      case  sizes[5]: return  position<5>(hash);
+      case  sizes[6]: return  position<6>(hash);
+      case  sizes[7]: return  position<7>(hash);
+      case  sizes[8]: return  position<8>(hash);
+      case  sizes[9]: return  position<9>(hash);
       case sizes[10]: return position<10>(hash);
       case sizes[11]: return position<11>(hash);
       case sizes[12]: return position<12>(hash);
@@ -91,7 +91,7 @@ struct bucket_group
 
 inline std::size_t set_bit(std::size_t n){return std::size_t(1)<<n;}
 inline std::size_t reset_bit(std::size_t n){return ~(std::size_t(1)<<n);}
-inline std::size_t reset_first_bits(std::size_t n) // n >0
+inline std::size_t reset_first_bits(std::size_t n) // n>0
 {
   return ~(~(std::size_t(0))>>(sizeof(std::size_t)*8-n));
 }
