@@ -61,8 +61,9 @@ jobs:
           
       - name: Install Abseil
         run: |
+          cd $GITHUB_WORKSPACE
           git clone -b lts_2021_11_02 https://github.com/abseil/abseil-cpp.git abseil-root
-          cp -rp abseil-root/absl $GITHUB_WORKSPACE
+          cp -rp abseil-root/absl/ ./
 
       - name: Compile
         run: |
@@ -113,8 +114,9 @@ jobs:
       - name: Install Abseil
         shell: powershell
         run: |
+          cd $GITHUB_WORKSPACE
           git clone -b lts_2021_11_02 https://github.com/abseil/abseil-cpp.git abseil-root
-          cp -rp abseil-root/absl $GITHUB_WORKSPACE
+          cp -rp abseil-root/absl/ ./
 
       - name: Compile
         shell: cmd
