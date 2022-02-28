@@ -80,7 +80,7 @@ jobs:
       matrix:
         include:
           - compiler: cl
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
             sourcefile: string.cpp
             outputfile: benchmark.exe            
             os: windows-2019
