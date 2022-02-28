@@ -15,24 +15,24 @@ jobs:
       matrix:
         include:
           - compiler: g++-11
-            compileroptions: -std=c++2a -O3 -DNDEBUG
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: string.cpp
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11
           - compiler: g++-11
-            compileroptions: -std=c++2a -O3 -DNDEBUG
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: uint64.cpp
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11
           - compiler: clang++
-            compileroptions: -std=c++2a -O3 -DNDEBUG
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: string.cpp
             outputfile: benchmark
             os: ubuntu-20.04
           - compiler: clang++
-            compileroptions: -std=c++2a -O3 -DNDEBUG
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: uint64.cpp
             outputfile: benchmark
             os: ubuntu-20.04
@@ -58,6 +58,14 @@ jobs:
           ./bootstrap.sh
           ./b2 -d0 headers
           sudo cp -rp * /usr/local/include/
+          
+      - name: Install Abseil
+        run: |
+          git clone https://github.com/boostorg/boost.git abseil-root
+          cd abseil-root
+          git checkout 20211102.0
+          cd ..
+          cp -rp abseil-root/absl .
 
       - name: Compile
         run: |
@@ -80,7 +88,7 @@ jobs:
             outputfile: benchmark.exe            
             os: windows-2019
           - compiler: cl
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
             sourcefile: uint64.cpp
             outputfile: benchmark.exe            
             os: windows-2019
@@ -104,6 +112,15 @@ jobs:
           git submodule update --init
           cmd /c bootstrap.bat
           .\b2.exe -d0 headers
+
+      - name: Install Abseil
+        shell: powershell
+        run: |
+          git clone https://github.com/boostorg/boost.git abseil-root
+          cd abseil-root
+          git checkout 20211102.0
+          cd ..
+          cp -rp abseil-root/absl .
 
       - name: Compile
         shell: cmd
