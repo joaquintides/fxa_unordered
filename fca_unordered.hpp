@@ -84,7 +84,7 @@ struct bucket_group
 {
   static constexpr std::size_t N=sizeof(std::size_t)*8;
 
-  bucket<Node> buckets[N]={};
+  bucket<Node> *buckets;
   std::size_t  bitmask=0;
   bucket_group *next=nullptr,*prev=nullptr;
 };
@@ -102,37 +102,33 @@ struct bucket_iterator:public boost::iterator_facade<
 {
 public:
   bucket_iterator()=default;
-  
-  void advance_to_next_nonempty()
-  {
-    if((n=boost::core::countr_zero(pbg->bitmask&reset_first_bits(n+1)))>=N){
-      pbg=pbg->next;
-      n=boost::core::countr_zero(pbg->bitmask);
-    }
-  }
-    
+      
 private:
   friend class boost::iterator_core_access;
   template <typename,typename> friend class bucket_array;
   
   static constexpr auto N=bucket_group<Node>::N;
 
-  bucket_iterator(bucket_group<Node>* pbg,std::size_t n):pbg{pbg},n{n}{}
+  bucket_iterator(bucket<Node>* p,bucket_group<Node>* pbg):p{p},pbg{pbg}{}
 
-  auto& dereference()const noexcept{return pbg->buckets[n];}
-  bool equal(const bucket_iterator& x)const noexcept
-    {return pbg==x.pbg&&n==x.n;}
+  auto& dereference()const noexcept{return *p;}
+  bool equal(const bucket_iterator& x)const noexcept{return p==x.p;}
 
   void increment()noexcept
   {
-   if(++n>=N){
-     ++pbg;
-     n=0;
-   }
+    auto n=std::size_t(boost::core::countr_zero(
+      pbg->bitmask&reset_first_bits((p-pbg->buckets)+1)));
+    if(n<N){
+      p=pbg->buckets+n;
+    }
+    else{
+      pbg=pbg->next;
+      p=pbg->buckets+boost::core::countr_zero(pbg->bitmask);
+    }
   }
 
+  bucket<Node>       *p=nullptr;
   bucket_group<Node> *pbg=nullptr; 
-  std::size_t        n=0; 
 };
   
 template<typename Node,typename Allocator>
@@ -148,20 +144,29 @@ public:
   
   bucket_array(size_type n,const Allocator& al):
     size_(super::sizes[super::size_index(n)]),
-    v(size_/N+1,al)
+    buckets(size_+1,al),
+    groups(size_/N+1,al)
   {
-    auto [pbg,m]=end();
-    pbg->bitmask|=set_bit(m);
+    auto [p,pbg]=end();
+    auto m=p-&buckets[0];
+    pbg->buckets=&buckets[N*(m/N)];
+    pbg->bitmask|=set_bit(m%N);
     pbg->next=pbg->prev=pbg;
   }
   
   bucket_array(bucket_array&&)=default;
   bucket_array& operator=(bucket_array&&)=default;
   
-  iterator begin()const{return at(0);}
-  iterator end()const{return at(size());}
-  size_type size()const{return size_;}
-  iterator at(size_type n)const{return {const_cast<group*>(&v[n/N]),n%N};}
+  iterator begin()const{return ++end();}
+  iterator end()const{return at(size_);}
+  size_type size()const{return size_;} // change name
+  iterator at(size_type n)const
+  {
+    return {
+      const_cast<value_type*>(&buckets[n]),
+      const_cast<group*>(&groups[n/N])
+    };
+  }
   
   size_type position(std::size_t hash)const
   {
@@ -171,14 +176,16 @@ public:
   void insert_node(iterator itb,node_type* p)noexcept
   {
     if(!itb->node){ // empty bucket
-      auto [pbg,n]=itb;
+      auto [p,pbg]=itb;
+      auto n=p-&buckets[0];
       if(!pbg->bitmask){ // empty group
-          pbg->next=v.back().next;
-          pbg->next->prev=pbg;
-          pbg->prev=&v.back();
-          pbg->prev->next=pbg;
+        pbg->buckets=&buckets[N*(n/N)];
+        pbg->next=groups.back().next;
+        pbg->next->prev=pbg;
+        pbg->prev=&groups.back();
+        pbg->prev->next=pbg;
       }
-      pbg->bitmask|=set_bit(n);
+      pbg->bitmask|=set_bit(n%N);
     }
     p->next=itb->node;
     itb->node=p;
@@ -200,13 +207,13 @@ public:
   
   void unlink_bucket(iterator itb)noexcept
   {
-    auto [pbg,n]=itb;
-    if(!(pbg->bitmask&=reset_bit(n)))unlink_group(pbg);
+    auto [p,pbg]=itb;
+    if(!(pbg->bitmask&=reset_bit(p-pbg->buckets)))unlink_group(pbg);
   }
   
   void unlink_empty_buckets()noexcept
   {
-    auto pbg=&v.front(),last=&v.back();
+    auto pbg=&groups.front(),last=&groups.back();
     for(;pbg!=last;++pbg){
       for(std::size_t n=0;n<N;++n){
         if(!pbg->buckets[n].node)pbg->bitmask&=reset_bit(n);
@@ -219,6 +226,9 @@ public:
   }
 
 private:
+  using bucket_allocator_type=
+    typename std::allocator_traits<Allocator>::
+      template rebind_alloc<value_type>;
   using group=bucket_group<Node>;
   using group_allocator_type=
     typename std::allocator_traits<Allocator>::
@@ -231,8 +241,9 @@ private:
     pbg->prev=pbg->next=nullptr;
   }
 
-  std::size_t                             size_;
-  std::vector<group,group_allocator_type> v;
+  std::size_t                                   size_;
+  std::vector<value_type,bucket_allocator_type> buckets;
+  std::vector<group,group_allocator_type>       groups;
 };
 
 template<typename T>
@@ -278,10 +289,7 @@ public:
     
     void increment()noexcept
     {
-      if(!(p=p->next)){
-        itb.advance_to_next_nonempty();
-        p=itb->node;
-      }
+      if(!(p=p->next))p=(++itb)->node;
     }
   
     node_type       *p=nullptr; 
@@ -296,8 +304,7 @@ public:
   
   const_iterator begin()const noexcept
   {
-    auto itb=buckets.end();
-    itb.advance_to_next_nonempty();
+    auto itb=buckets.begin();
     return {itb->node,itb};
   }
     
