@@ -343,7 +343,7 @@ public:
   {
     return find(x,buckets.at(buckets.position(h(x))));
   }
-  
+
 private:
   template<typename Value>
   node_type* new_node(Value&& x)
@@ -374,35 +374,7 @@ private:
     if(it!=end())return {it,false};
         
     if(size_+1>ml){
-      std::size_t bc =(std::numeric_limits<std::size_t>::max)();
-      float       fbc=1.0f+static_cast<float>(size_+1)/mlf;
-      if(bc>fbc)bc=static_cast<std::size_t>(fbc);
-
-      bucket_array_type new_buckets(bc,al);
-      try{
-        for(auto& b:buckets){            
-          for(auto p=b.node;p;){
-            auto next_p=p->next;
-            new_buckets.insert_node(
-              new_buckets.at(new_buckets.position(h(p->value))),p);
-            b.node=p=next_p;
-          }
-        }
-      }
-      catch(...){
-        for(auto& b:new_buckets){
-          for(auto p=b.node;p;){
-            auto next_p=p->next;
-            delete_node(p);
-            --size_;
-            p=next_p;
-          }
-        }
-        buckets.unlink_empty_buckets();
-        throw;
-      }
-      buckets=std::move(new_buckets);
-      ml=max_load();
+      rehash(size_+1);
       itb=buckets.at(buckets.position(hash));
     }
     
@@ -410,6 +382,39 @@ private:
     buckets.insert_node(itb,p);
     ++size_;
     return {{p,itb},true};
+  }
+
+  void rehash(size_type n)
+  {
+    std::size_t bc =(std::numeric_limits<std::size_t>::max)();
+    float       fbc=1.0f+static_cast<float>(n)/mlf;
+    if(bc>fbc)bc=static_cast<std::size_t>(fbc);
+
+    bucket_array_type new_buckets(bc,al);
+    try{
+      for(auto& b:buckets){            
+        for(auto p=b.node;p;){
+          auto next_p=p->next;
+          new_buckets.insert_node(
+            new_buckets.at(new_buckets.position(h(p->value))),p);
+          b.node=p=next_p;
+        }
+      }
+    }
+    catch(...){
+      for(auto& b:new_buckets){
+        for(auto p=b.node;p;){
+          auto next_p=p->next;
+          delete_node(p);
+          --size_;
+          p=next_p;
+        }
+      }
+      buckets.unlink_empty_buckets();
+      throw;
+    }
+    buckets=std::move(new_buckets);
+    ml=max_load();   
   }
   
   template<typename Key>
