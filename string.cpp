@@ -286,6 +286,8 @@ template<class K, class V> using absl_flat_hash_map_fnv1a =
 
 template<class K, class V> using fca_unordered_map_fnv1a =
   fca_unordered_map<K, V, fnv1a_hash>;
+template<class K, class V> using fca_simple_unordered_map_fnv1a =
+  fca_simple_unordered_map<K, V, fnv1a_hash>;
 //
 
 int main()
