@@ -147,10 +147,9 @@ public:
     buckets(size_+1,al),
     groups(size_/N+1,al)
   {
-    auto [p,pbg]=end();
-    auto m=p-&buckets[0];
-    pbg->buckets=&buckets[N*(m/N)];
-    pbg->bitmask|=set_bit(m%N);
+    auto pbg=&groups.back();
+    pbg->buckets=&buckets[N*(size_/N)];
+    pbg->bitmask=set_bit(size_%N);
     pbg->next=pbg->prev=pbg;
   }
   
@@ -159,7 +158,7 @@ public:
   
   iterator begin()const{return ++end();}
   iterator end()const{return at(size_);}
-  size_type size()const{return size_;} // change name
+  size_type capacity()const{return size_;}
   iterator at(size_type n)const
   {
     return {
@@ -445,7 +444,7 @@ private:
      
   size_type max_load()const
   {
-    float fml=mlf*static_cast<float>(buckets.size());
+    float fml=mlf*static_cast<float>(buckets.capacity());
     auto res=(std::numeric_limits<size_type>::max)();
     if(res>fml)res=static_cast<size_type>(fml);
     return res;
