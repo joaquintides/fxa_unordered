@@ -51,25 +51,24 @@ jobs:
           
       - name: Install Boost
         run: |
+          cd $GITHUB_WORKSPACE
           git clone https://github.com/boostorg/boost.git boost-root
           cd boost-root
           git checkout boost-1.78.0
           git submodule update --init
           ./bootstrap.sh
           ./b2 -d0 headers
-          sudo cp -rp * /usr/local/include/
           
       - name: Install Abseil
         run: |
           cd $GITHUB_WORKSPACE
           git clone -b lts_2021_11_02 https://github.com/abseil/abseil-cpp.git abseil-root
-          cp -rp abseil-root/absl/ ./
 
       - name: Compile
         run: |
           cd $GITHUB_WORKSPACE
           ${{matrix.compiler}} --version
-          ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.compileroptions}} -o ${{matrix.outputfile}}
+          ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.compileroptions}} -o ${{matrix.outputfile}} -I$GITHUB_WORKSPACE/boost-root -I$GITHUB_WORKSPACE/abseil-root
 
       - name: Run benchmarks
         run: |
@@ -99,11 +98,7 @@ jobs:
       - name: Install Boost
         shell: powershell
         run: |
-          if ( -Not (Test-Path -Path "C:\opt\github") )
-          {
-            mkdir -p C:\opt\github
-          }
-          cd C:\opt\github
+          cd $GITHUB_WORKSPACE
           git clone https://github.com/boostorg/boost.git boost-root
           cd boost-root
           git checkout boost-1.78.0
@@ -116,14 +111,14 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE
           git clone -b lts_2021_11_02 https://github.com/abseil/abseil-cpp.git abseil-root
-          cp -rp abseil-root/absl/ ./
 
       - name: Compile
         shell: cmd
         run: |
           cd %GITHUB_WORKSPACE%
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          set INCLUDE=%INCLUDE%;C:\opt\github\boost-root
+          set INCLUDE=%INCLUDE%;C%GITHUB_WORKSPACE%\boost-root
+          set INCLUDE=%INCLUDE%;C%GITHUB_WORKSPACE%\abseil-root
           echo %INCLUDE%
           ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.compileroptions}}
 
