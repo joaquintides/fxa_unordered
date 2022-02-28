@@ -98,7 +98,7 @@ jobs:
       - name: Install Boost
         shell: powershell
         run: |
-          cd $GITHUB_WORKSPACE
+          cd %GITHUB_WORKSPACE%
           git clone https://github.com/boostorg/boost.git boost-root
           cd boost-root
           git checkout boost-1.78.0
@@ -109,7 +109,7 @@ jobs:
       - name: Install Abseil
         shell: powershell
         run: |
-          cd $GITHUB_WORKSPACE
+          cd %GITHUB_WORKSPACE%
           git clone -b lts_2021_11_02 https://github.com/abseil/abseil-cpp.git abseil-root
 
       - name: Compile
@@ -117,8 +117,8 @@ jobs:
         run: |
           cd %GITHUB_WORKSPACE%
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          set INCLUDE=%INCLUDE%;C%GITHUB_WORKSPACE%\boost-root
-          set INCLUDE=%INCLUDE%;C%GITHUB_WORKSPACE%\abseil-root
+          set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\boost-root
+          set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\abseil-root
           echo %INCLUDE%
           ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.compileroptions}}
 
