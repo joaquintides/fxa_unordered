@@ -61,10 +61,7 @@ jobs:
           
       - name: Install Abseil
         run: |
-          git clone https://github.com/boostorg/boost.git abseil-root
-          cd abseil-root
-          git checkout 20211102.0
-          cd ..
+          git clone -b lts_2021_11_02 https://github.com/abseil/abseil-cpp.git abseil-root
           cp -rp abseil-root/absl .
 
       - name: Compile
@@ -116,10 +113,7 @@ jobs:
       - name: Install Abseil
         shell: powershell
         run: |
-          git clone https://github.com/boostorg/boost.git abseil-root
-          cd abseil-root
-          git checkout 20211102.0
-          cd ..
+          git clone -b lts_2021_11_02 https://github.com/abseil/abseil-cpp.git abseil-root
           cp -rp abseil-root/absl .
 
       - name: Compile
