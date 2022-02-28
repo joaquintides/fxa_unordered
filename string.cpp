@@ -2,7 +2,7 @@
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 //
-// Modified by Joaquin M Lopez Munoz: added fca_unordered_map
+// Modified by Joaquin M Lopez Munoz: added fca_*_unordered_map
 // Copyright 2022 Joaquin M Lopez Munoz.
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
