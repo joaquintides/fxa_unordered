@@ -16,13 +16,13 @@ jobs:
         include:
           - compiler: g++-11
             compileroptions: -std=c++2a -O3 -DNDEBUG
-            sourcefile: string.cpp
+            sourcefile: [string.cpp, uint64.cpp]
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11
           - compiler: clang++
             compileroptions: -std=c++2a -O3 -DNDEBUG
-            sourcefile: string.cpp
+            sourcefile: [string.cpp, uint64.cpp]
             outputfile: benchmark
             os: ubuntu-20.04
 
@@ -65,7 +65,7 @@ jobs:
         include:
           - compiler: cl
             compileroptions: /std:c++latest /O2 /D "NDEBUG" /EHsc /MD /Fe:benchmark.exe
-            sourcefile: string.cpp
+            sourcefile: [string.cpp, uint64.cpp]
             outputfile: benchmark.exe            
             os: windows-2019
 
