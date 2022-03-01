@@ -12,6 +12,7 @@
 #define FCA_SIMPLE_UNORDERED_HPP
  
 #include <algorithm>
+#include <boost/container_hash/hash.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <functional>
 #include <limits>
@@ -160,7 +161,7 @@ struct node
 };
 
 template<
-  typename T,typename Hash=std::hash<T>,typename Pred=std::equal_to<T>,
+  typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>
 >
 class fca_unordered_set
@@ -421,7 +422,7 @@ struct map_pred_adaptor
 
 template<
   typename Key,typename Value,
-  typename Hash=std::hash<Key>,typename Pred=std::equal_to<Key>,
+  typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
   typename Allocator=std::allocator<map_value_adaptor<Key,Value>>
 >
 using fca_unordered_map=fca_unordered_set<
@@ -440,7 +441,7 @@ using fca_simple_unordered_set=
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=59498
 template<
   typename Key,typename Value,
-  typename Hash=std::hash<Key>,typename Pred=std::equal_to<Key>,
+  typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
   typename Allocator=
     std::allocator<fca_simple_unordered_impl::map_value_adaptor<Key,Value>>
 >
