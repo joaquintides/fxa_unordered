@@ -13,6 +13,7 @@
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
 #include <boost/core/detail/splitmix64.hpp>
+#include <boost/config.hpp>
 #include "fca_simple_unordered.hpp"
 #include "fca_unordered.hpp"
 #ifdef HAVE_ABSEIL
@@ -69,7 +70,7 @@ static void init_indices()
     }
 }
 
-template<class Map> void test_insert( Map& map, std::chrono::steady_clock::time_point & t1 )
+template<class Map> void BOOST_NOINLINE test_insert( Map& map, std::chrono::steady_clock::time_point & t1 )
 {
     for( unsigned i = 1; i <= N; ++i )
     {
@@ -95,7 +96,7 @@ template<class Map> void test_insert( Map& map, std::chrono::steady_clock::time_
     std::cout << std::endl;
 }
 
-template<class Map> void test_lookup( Map& map, std::chrono::steady_clock::time_point & t1 )
+template<class Map> void BOOST_NOINLINE test_lookup( Map& map, std::chrono::steady_clock::time_point & t1 )
 {
     std::uint64_t s;
     
@@ -141,7 +142,7 @@ template<class Map> void test_lookup( Map& map, std::chrono::steady_clock::time_
     std::cout << std::endl;
 }
 
-template<class Map> void test_iteration( Map& map, std::chrono::steady_clock::time_point & t1 )
+template<class Map> void BOOST_NOINLINE test_iteration( Map& map, std::chrono::steady_clock::time_point & t1 )
 {
     auto it = map.begin();
 
@@ -162,7 +163,7 @@ template<class Map> void test_iteration( Map& map, std::chrono::steady_clock::ti
     std::cout << std::endl;
 }
 
-template<class Map> void test_erase( Map& map, std::chrono::steady_clock::time_point & t1 )
+template<class Map> void BOOST_NOINLINE test_erase( Map& map, std::chrono::steady_clock::time_point & t1 )
 {
     for( unsigned i = 1; i <= N; ++i )
     {
@@ -194,7 +195,7 @@ template<class Map> void test_erase( Map& map, std::chrono::steady_clock::time_p
 
 static std::vector< std::pair<std::string, long long> > times;
 
-template<template<class...> class Map> void test( char const* label )
+template<template<class...> class Map> void BOOST_NOINLINE test( char const* label )
 {
     std::cout << label << ":\n\n";
 
