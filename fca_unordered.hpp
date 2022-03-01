@@ -313,8 +313,7 @@ public:
     
   const_iterator end()const noexcept
   {
-    auto itb=buckets.end();
-    return {itb->node,itb};
+    return {};
   }
   
   size_type size()const noexcept{return size_;}
