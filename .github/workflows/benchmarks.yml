@@ -64,11 +64,16 @@ jobs:
           cd $GITHUB_WORKSPACE
           git clone -b lts_2021_11_02 https://github.com/abseil/abseil-cpp.git abseil-root
 
+      - name: Install fastrange
+        run: |
+          cd $GITHUB_WORKSPACE
+          git clone https://github.com/lemire/fastrange.git fastrange-root
+
       - name: Compile
         run: |
           cd $GITHUB_WORKSPACE
           ${{matrix.compiler}} --version
-          ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.compileroptions}} -o ${{matrix.outputfile}} -I$GITHUB_WORKSPACE/boost-root -I$GITHUB_WORKSPACE/abseil-root
+          ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.compileroptions}} -o ${{matrix.outputfile}} -I$GITHUB_WORKSPACE/boost-root -I$GITHUB_WORKSPACE/abseil-root -I$GITHUB_WORKSPACE/fastrange-root
 
       - name: Run benchmarks
         run: |
@@ -112,6 +117,12 @@ jobs:
           cd %GITHUB_WORKSPACE%
           git clone -b lts_2021_11_02 https://github.com/abseil/abseil-cpp.git abseil-root
 
+      - name: Install fastrange
+        shell: cmd
+        run: |
+          cd %GITHUB_WORKSPACE%
+          git clone https://github.com/lemire/fastrange.git fastrange-root
+
       - name: Compile
         shell: cmd
         run: |
@@ -119,6 +130,7 @@ jobs:
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\boost-root
           set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\abseil-root
+          set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\fastrange-root
           echo %INCLUDE%
           ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.compileroptions}}
 

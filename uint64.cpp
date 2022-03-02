@@ -233,7 +233,21 @@ template<class K, class V> using multi_index_map = multi_index_container<
   >
 >;
 
-// pow2 and pow2+Fibonacci size policies for fca_unordered
+// alternative size policies for fca_unordered
+
+template<class K, class V, class H=boost::hash<K>>
+using fca_frng_unordered_map =
+  fca_unordered_map<
+    K, V, H,std::equal_to<K>,
+    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::prime_frng_size>;
+
+template<class K, class V, class H=boost::hash<K>>
+using fca_frng_fib_unordered_map =
+  fca_unordered_map<
+    K, V, H,std::equal_to<K>,
+    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::prime_frng_fib_size>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_pow2_unordered_map =
@@ -258,9 +272,14 @@ int main()
     test<multi_index_map>( "multi_index_map" );
     test<fca_simple_unordered_map>( "fca_simple_unordered_map" );
     test<fca_unordered_map>( "fca_unordered_map" );
-    
-    // pow2 is spectacularly slow for consecutive uint64 insertion
+
+    // frng is spectacularly slow for consecutive uint64 insertion
     // (as expected, boost::hash is the identity and position ignores low bits)
+    //test<fca_frng_unordered_map>( "fca_frng_unordered_map" );
+    
+    test<fca_frng_fib_unordered_map>( "fca_frng_fib_unordered_map" );
+
+    // same as frng
     // test<fca_pow2_unordered_map>( "fca_pow2_unordered_map" );
     
     test<fca_pow2_fib_unordered_map>( "fca_pow2_fib_unordered_map" );

@@ -18,6 +18,7 @@
 #include <limits>
 #include <memory>
 #include <vector>
+#include "fastrange.h"
 
 namespace fca_unordered_impl{
     
@@ -76,6 +77,29 @@ struct prime_size
       case 23: return position<23>(hash);
       case 24: return position<24>(hash);
     }
+  }
+};
+
+struct prime_frng_size:prime_size
+{      
+  static inline std::size_t position(std::size_t hash,std::size_t size_index)
+  {
+    return fastrangesize(hash,prime_size::sizes[size_index]);
+  }
+};
+
+struct prime_frng_fib_size:prime_frng_size
+{      
+  static inline std::size_t mix_hash(std::size_t hash)
+  {
+    // https://en.wikipedia.org/wiki/Hash_function#Fibonacci_hashing
+    const std::size_t m=11400714819323198485ull;
+    return hash*m;
+  } 
+
+  static inline std::size_t position(std::size_t hash,std::size_t size_index)
+  {
+    return prime_frng_size::position(mix_hash(hash),size_index);
   }
 };
 
