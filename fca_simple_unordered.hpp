@@ -30,7 +30,7 @@ struct bucket_array_base
     1572869ul,3145739ul,6291469ul,12582917ul,25165843ul,
     50331653ul,100663319ul,201326611ul,402653189ul,805306457ul,};
     
-  static inline std::size_t size_index(std::size_t n)
+  static std::size_t size_index(std::size_t n)
   {
     const std::size_t *bound=std::lower_bound(
       std::begin(sizes),std::end(sizes),n);
@@ -38,35 +38,38 @@ struct bucket_array_base
     return bound-sizes;
   }
   
-  static inline std::size_t position(std::size_t hash,std::size_t size_index)
+  template<std::size_t SizeIndex,std::size_t Size=sizes[SizeIndex]>
+  static std::size_t position(std::size_t hash){return hash%Size;}
+    
+  static std::size_t position(std::size_t hash,std::size_t size_index)
   {
     switch(size_index){
       default:
-      case   0: return hash%53ul;
-      case   1: return hash%97ul;
-      case   2: return hash%193ul;
-      case   3: return hash%389ul;
-      case   4: return hash%769ul;
-      case   5: return hash%1543ul;
-      case   6: return hash%3079ul;
-      case   7: return hash%6151ul;
-      case   8: return hash%12289ul;
-      case   9: return hash%24593ul;
-      case  10: return hash%49157ul;
-      case  11: return hash%98317ul;
-      case  12: return hash%196613ul;
-      case  13: return hash%393241ul;
-      case  14: return hash%786433ul;
-      case  15: return hash%1572869ul;
-      case  16: return hash%3145739ul;
-      case  17: return hash%6291469ul;
-      case  18: return hash%12582917ul;
-      case  19: return hash%25165843ul;
-      case  20: return hash%50331653ul;
-      case  21: return hash%100663319ul;
-      case  22: return hash%201326611ul;
-      case  23: return hash%402653189ul;
-      case  24: return hash%805306457ul;
+      case  0: return position<0>(hash);
+      case  1: return position<1>(hash);
+      case  2: return position<2>(hash);
+      case  3: return position<3>(hash);
+      case  4: return position<4>(hash);
+      case  5: return position<5>(hash);
+      case  6: return position<6>(hash);
+      case  7: return position<7>(hash);
+      case  8: return position<8>(hash);
+      case  9: return position<9>(hash);
+      case 10: return position<10>(hash);
+      case 11: return position<11>(hash);
+      case 12: return position<12>(hash);
+      case 13: return position<13>(hash);
+      case 14: return position<14>(hash);
+      case 15: return position<15>(hash);
+      case 16: return position<16>(hash);
+      case 17: return position<17>(hash);
+      case 18: return position<18>(hash);
+      case 19: return position<19>(hash);
+      case 20: return position<20>(hash);
+      case 21: return position<21>(hash);
+      case 22: return position<22>(hash);
+      case 23: return position<23>(hash);
+      case 24: return position<24>(hash);
     }
   }
 };
