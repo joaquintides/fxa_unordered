@@ -258,7 +258,11 @@ int main()
     test<multi_index_map>( "multi_index_map" );
     test<fca_simple_unordered_map>( "fca_simple_unordered_map" );
     test<fca_unordered_map>( "fca_unordered_map" );
-    test<fca_pow2_unordered_map>( "fca_pow2_unordered_map" );
+    
+    // pow2 is spectacularly slow for consecutive uint64 insertion
+    // (as expected, boost::hash is the identity and position ignores low bits)
+    // test<fca_pow2_unordered_map>( "fca_pow2_unordered_map" );
+    
     test<fca_pow2_fib_unordered_map>( "fca_pow2_fib_unordered_map" );
 
     // test<std::map>( "std::map" );
