@@ -21,7 +21,7 @@
 
 namespace fca_unordered_impl{
     
-struct bucket_array_base
+struct prime_size
 {
   constexpr static std::size_t sizes[]={
     53ul,97ul,193ul,389ul,769ul,
@@ -30,18 +30,23 @@ struct bucket_array_base
     1572869ul,3145739ul,6291469ul,12582917ul,25165843ul,
     50331653ul,100663319ul,201326611ul,402653189ul,805306457ul,};
     
-  static std::size_t size_index(std::size_t n)
+  static inline std::size_t size_index(std::size_t n)
   {
     const std::size_t *bound=std::lower_bound(
       std::begin(sizes),std::end(sizes),n);
     if(bound==std::end(sizes))--bound;
     return bound-sizes;
   }
+
+  static inline std::size_t size(std::size_t size_index)
+  {
+    return sizes[size_index];
+  }
   
   template<std::size_t SizeIndex,std::size_t Size=sizes[SizeIndex]>
   static std::size_t position(std::size_t hash){return hash%Size;}
     
-  static std::size_t position(std::size_t hash,std::size_t size_index)
+  static inline std::size_t position(std::size_t hash,std::size_t size_index)
   {
     switch(size_index){
       default:
@@ -71,6 +76,41 @@ struct bucket_array_base
       case 23: return position<23>(hash);
       case 24: return position<24>(hash);
     }
+  }
+};
+
+struct pow2_size
+{
+  static inline std::size_t size_index(std::size_t n)
+  {
+    return n<=32?
+      5:
+      static_cast<std::size_t>(boost::core::bit_width(n-1));
+  }
+
+  static inline std::size_t size(std::size_t size_index)
+  {
+     return std::size_t(1)<<size_index;  
+  }
+    
+  static inline std::size_t position(std::size_t hash,std::size_t size_index)
+  {
+    return hash>>(sizeof(std::size_t)*8-size_index);
+  }
+};
+
+struct pow2_fib_size:pow2_size
+{
+  static inline std::size_t mix_hash(std::size_t hash)
+  {
+    // https://en.wikipedia.org/wiki/Hash_function#Fibonacci_hashing
+    const std::size_t m=11400714819323198485ull;
+    return hash*m;
+  } 
+
+  static inline std::size_t position(std::size_t hash,std::size_t size_index)
+  {
+    return pow2_size::position(mix_hash(hash),size_index);
   }
 };
 
@@ -106,7 +146,7 @@ public:
       
 private:
   friend class boost::iterator_core_access;
-  template <typename,typename> friend class bucket_array;
+  template <typename,typename,typename> friend class bucket_array;
   
   static constexpr auto N=bucket_group<Node>::N;
 
@@ -132,10 +172,12 @@ private:
   bucket_group<Node> *pbg=nullptr; 
 };
   
-template<typename Node,typename Allocator>
-class bucket_array:bucket_array_base
+template<
+  typename Node,typename Allocator,typename SizePolicy
+>
+class bucket_array
 {
-  using super=bucket_array_base;
+  using size_policy=SizePolicy;
   using node_type=Node;
 
 public:
@@ -144,8 +186,8 @@ public:
   using iterator=bucket_iterator<Node>;
   
   bucket_array(size_type n,const Allocator& al):
-    size_index_(super::size_index(n)),
-    size_(super::sizes[size_index_]),
+    size_index_(size_policy::size_index(n)),
+    size_(size_policy::size(size_index_)),
     buckets(size_+1,al),
     groups(size_/N+1,al)
   {
@@ -173,7 +215,7 @@ public:
   
   size_type position(std::size_t hash)const
   {
-    return super::position(hash,size_index_);
+    return size_policy::position(hash,size_index_);
   }
 
   void insert_node(iterator itb,node_type* p)noexcept
@@ -258,7 +300,7 @@ struct node
 
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
-  typename Allocator=std::allocator<T>
+  typename Allocator=std::allocator<T>,typename SizePolicy=prime_size
 >
 class fca_unordered_set
 {
@@ -267,7 +309,8 @@ class fca_unordered_set
     typename std::allocator_traits<Allocator>::
       template rebind_alloc<node_type>;
   using node_alloc_traits=std::allocator_traits<node_allocator_type>;
-  using bucket_array_type=bucket_array<node_type,node_allocator_type>;
+  using bucket_array_type=
+    bucket_array<node_type,node_allocator_type,SizePolicy>;
   using bucket=typename bucket_array_type::value_type;
   using bucket_iterator=typename bucket_array_type::iterator;
     
@@ -518,12 +561,13 @@ struct map_pred_adaptor
 template<
   typename Key,typename Value,
   typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
-  typename Allocator=std::allocator<map_value_adaptor<Key,Value>>
+  typename Allocator=std::allocator<map_value_adaptor<Key,Value>>,
+  typename SizePolicy=prime_size
 >
 using fca_unordered_map=fca_unordered_set<
   map_value_adaptor<Key,Value>,
   map_hash_adaptor<Hash>,map_pred_adaptor<Pred>,
-  Allocator
+  Allocator,SizePolicy
 >;
 
 } // namespace fca_unordered

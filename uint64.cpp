@@ -233,6 +233,22 @@ template<class K, class V> using multi_index_map = multi_index_container<
   >
 >;
 
+// pow2 and pow2+Fibonacci size policies for fca_unordered
+
+template<class K, class V, class H=boost::hash<K>>
+using fca_pow2_unordered_map =
+  fca_unordered_map<
+    K, V, H,std::equal_to<K>,
+    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::pow2_size>;
+
+template<class K, class V, class H=boost::hash<K>>
+using fca_pow2_fib_unordered_map =
+  fca_unordered_map<
+    K, V, H,std::equal_to<K>,
+    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::pow2_fib_size>;
+
 int main()
 {
     init_indices();
@@ -242,6 +258,8 @@ int main()
     test<multi_index_map>( "multi_index_map" );
     test<fca_simple_unordered_map>( "fca_simple_unordered_map" );
     test<fca_unordered_map>( "fca_unordered_map" );
+    test<fca_pow2_unordered_map>( "fca_pow2_unordered_map" );
+    test<fca_pow2_fib_unordered_map>( "fca_pow2_fib_unordered_map" );
 
     // test<std::map>( "std::map" );
 
