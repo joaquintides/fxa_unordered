@@ -46,37 +46,18 @@ struct prime_size
   
   template<std::size_t SizeIndex,std::size_t Size=sizes[SizeIndex]>
   static std::size_t position(std::size_t hash){return hash%Size;}
-    
+
+  constexpr static std::size_t (*positions[])(std::size_t)={
+    position<0>,position<1>,position<2>,position<3>,position<4>,
+    position<5>,position<6>,position<7>,position<8>,position<9>,
+    position<10>,position<11>,position<12>,position<13>,position<14>,
+    position<15>,position<16>,position<17>,position<18>,position<19>,
+    position<20>,position<21>,position<22>,position<23>,position<24>,
+  };
+
   static inline std::size_t position(std::size_t hash,std::size_t size_index)
   {
-    switch(size_index){
-      default:
-      case  0: return position<0>(hash);
-      case  1: return position<1>(hash);
-      case  2: return position<2>(hash);
-      case  3: return position<3>(hash);
-      case  4: return position<4>(hash);
-      case  5: return position<5>(hash);
-      case  6: return position<6>(hash);
-      case  7: return position<7>(hash);
-      case  8: return position<8>(hash);
-      case  9: return position<9>(hash);
-      case 10: return position<10>(hash);
-      case 11: return position<11>(hash);
-      case 12: return position<12>(hash);
-      case 13: return position<13>(hash);
-      case 14: return position<14>(hash);
-      case 15: return position<15>(hash);
-      case 16: return position<16>(hash);
-      case 17: return position<17>(hash);
-      case 18: return position<18>(hash);
-      case 19: return position<19>(hash);
-      case 20: return position<20>(hash);
-      case 21: return position<21>(hash);
-      case 22: return position<22>(hash);
-      case 23: return position<23>(hash);
-      case 24: return position<24>(hash);
-    }
+    return positions[size_index](hash);
   }
 };
 
