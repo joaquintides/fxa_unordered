@@ -61,6 +61,40 @@ struct prime_size
   }
 };
 
+struct prime_switch_size:prime_size
+{
+  static std::size_t position(std::size_t hash,std::size_t size_index)
+  {
+    switch(size_index){
+      default:
+      case  0: return prime_size::position<0>(hash);
+      case  1: return prime_size::position<1>(hash);
+      case  2: return prime_size::position<2>(hash);
+      case  3: return prime_size::position<3>(hash);
+      case  5: return prime_size::position<5>(hash);
+      case  6: return prime_size::position<6>(hash);
+      case  7: return prime_size::position<7>(hash);
+      case  8: return prime_size::position<8>(hash);
+      case  9: return prime_size::position<9>(hash);
+      case 10: return prime_size::position<10>(hash);
+      case 11: return prime_size::position<11>(hash);
+      case 12: return prime_size::position<12>(hash);
+      case 13: return prime_size::position<13>(hash);
+      case 14: return prime_size::position<14>(hash);
+      case 15: return prime_size::position<15>(hash);
+      case 16: return prime_size::position<16>(hash);
+      case 17: return prime_size::position<17>(hash);
+      case 18: return prime_size::position<18>(hash);
+      case 19: return prime_size::position<19>(hash);
+      case 20: return prime_size::position<20>(hash);
+      case 21: return prime_size::position<21>(hash);
+      case 22: return prime_size::position<22>(hash);
+      case 23: return prime_size::position<23>(hash);
+      case 24: return prime_size::position<24>(hash);
+    }
+  }
+};
+
 struct prime_frng_size:prime_size
 {      
   static inline std::size_t position(std::size_t hash,std::size_t size_index)

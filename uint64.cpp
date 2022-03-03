@@ -236,6 +236,13 @@ template<class K, class V> using multi_index_map = multi_index_container<
 // alternative size policies for fca_unordered
 
 template<class K, class V, class H=boost::hash<K>>
+using fca_switch_unordered_map =
+  fca_unordered_map<
+    K, V, H,std::equal_to<K>,
+    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::prime_switch_size>;
+
+template<class K, class V, class H=boost::hash<K>>
 using fca_frng_unordered_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
@@ -272,6 +279,7 @@ int main()
     test<multi_index_map>( "multi_index_map" );
     test<fca_simple_unordered_map>( "fca_simple_unordered_map" );
     test<fca_unordered_map>( "fca_unordered_map" );
+    test<fca_switch_unordered_map>( "fca_switch_unordered_map" );
 
     // frng is spectacularly slow for consecutive uint64 insertion
     // (as expected, boost::hash is the identity and position ignores low bits)
