@@ -357,28 +357,31 @@ template<class K, class V> using absl_flat_hash_map_fnv1a =
 int main()
 {
     init_indices();
+    
+    // To reduce clutter, we omit non-FNV-1a tests (different underlying hash
+    // functions) and frng and pow2 altogether (hash bits lost in the process)
 
-    test<std::unordered_map>( "std::unordered_map" );
+    // test<std::unordered_map>( "std::unordered_map" );
     test<std_unordered_map_fnv1a>( "std::unordered_map, FNV-1a" );
-    test<boost::unordered_map>( "boost::unordered_map" );
+    // test<boost::unordered_map>( "boost::unordered_map" );
     test<boost_unordered_map_fnv1a>( "boost::unordered_map, FNV-1a" );
-    test<multi_index_map>( "multi_index_map" );
+    // test<multi_index_map>( "multi_index_map" );
     test<multi_index_map_fnv1a>( "multi_index_map, FNV-1a" );
-    test<fca_simple_unordered_map>( "fca_simple_unordered_map" );
+    // test<fca_simple_unordered_map>( "fca_simple_unordered_map" );
     test<fca_simple_unordered_map_fnv1a>( "fca_simple_unordered_map, FNV-1a" );
-    test<fca_unordered_map>( "fca_unordered_map" );
+    // test<fca_unordered_map>( "fca_unordered_map" );
     test<fca_unordered_map_fnv1a>( "fca_unordered_map, FNV-1a" );
-    test<fca_switch_unordered_map>( "fca_switch_unordered_map" );
+    // test<fca_switch_unordered_map>( "fca_switch_unordered_map" );
     test<fca_switch_unordered_map_fnv1a>( "fca_switch_unordered_map, FNV-1a" );
-    test<fca_fmod_unordered_map>( "fca_fmod_unordered_map" );
+    // test<fca_fmod_unordered_map>( "fca_fmod_unordered_map" );
     test<fca_fmod_unordered_map_fnv1a>( "fca_fmod_unordered_map, FNV-1a" );
-    test<fca_frng_unordered_map>( "fca_frng_unordered_map" );
-    test<fca_frng_unordered_map_fnv1a>( "fca_frng_unordered_map, FNV-1a" );
-    test<fca_frng_fib_unordered_map>( "fca_frng_fib_unordered_map" );
+    // test<fca_frng_unordered_map>( "fca_frng_unordered_map" );
+    // test<fca_frng_unordered_map_fnv1a>( "fca_frng_unordered_map, FNV-1a" );
+    // test<fca_frng_fib_unordered_map>( "fca_frng_fib_unordered_map" );
     test<fca_frng_fib_unordered_map_fnv1a>( "fca_frng_fib_unordered_map, FNV-1a" );
-    test<fca_pow2_unordered_map>( "fca_pow2_unordered_map" );
-    test<fca_pow2_unordered_map_fnv1a>( "fca_pow2_unordered_map, FNV-1a" );
-    test<fca_pow2_fib_unordered_map>( "fca_pow2_fib_unordered_map" );
+    // test<fca_pow2_unordered_map>( "fca_pow2_unordered_map" );
+    // test<fca_pow2_unordered_map_fnv1a>( "fca_pow2_unordered_map, FNV-1a" );
+    // test<fca_pow2_fib_unordered_map>( "fca_pow2_fib_unordered_map" );
     test<fca_pow2_fib_unordered_map_fnv1a>( "fca_pow2_fib_unordered_map, FNV-1a" );
 
     // test<std::map>( "std::map" );
