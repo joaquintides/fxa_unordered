@@ -95,6 +95,70 @@ struct prime_switch_size:prime_size
   }
 };
 
+struct prime_fmod_size
+{
+  constexpr static std::size_t sizes[]={
+    53ul,97ul,193ul,389ul,769ul,
+    1543ul,3079ul,6151ul,12289ul,24593ul,
+    49157ul,98317ul,196613ul,393241ul,786433ul,
+    1572869ul,3145739ul,6291469ul,12582917ul,25165843ul,
+    50331653ul,100663319ul,201326611ul,402653189ul,805306457ul,};
+
+  constexpr static uint64_t inv_sizes[]={
+    348051774975651918ull,190172619316593316ull,95578984837873325ull,
+    47420935922132524ull,23987963684927896ull,11955116055547344ull,
+    5991147799191151ull,2998982941588287ull,1501077717772769ull,
+    750081082979285ull,375261795343686ull,187625172388393ull,
+    93822606204624ull,46909513691883ull,23456218233098ull,
+    11728086747027ull,5864041509391ull,2932024948977ull,
+    1466014921160ull,733007198436ull,366503839517ull,
+    183251896093ull,91625960335ull,45812983922ull,22906489714ull,
+  };
+    
+  static inline std::size_t size_index(std::size_t n)
+  {
+    const std::size_t *bound=std::lower_bound(
+      std::begin(sizes),std::end(sizes),n);
+    if(bound==std::end(sizes))--bound;
+    return bound-sizes;
+  }
+
+  static inline std::size_t size(std::size_t size_index)
+  {
+    return sizes[size_index];
+  }
+
+  // https://github.com/lemire/fastmod
+
+#ifdef _MSC_VER
+  static inline uint64_t mul128_u32(uint64_t lowbits, uint32_t d)
+  {
+    return __umulh(lowbits, d);
+  }
+#else // _MSC_VER
+  static inline uint64_t mul128_u32(uint64_t lowbits, uint32_t d)
+  {
+    return ((__uint128_t)lowbits * d) >> 64;
+  }
+#endif
+
+  static inline uint32_t fastmod_u32(uint32_t a, uint64_t M, uint32_t d)
+  {
+    uint64_t lowbits = M * a;
+    return (uint32_t)(mul128_u32(lowbits, d));
+  }
+
+  static inline std::size_t position(std::size_t hash,std::size_t size_index)
+  {
+    std::size_t res=fastmod_u32(
+      uint32_t(hash),inv_sizes[size_index],uint32_t(sizes[size_index]));
+    res+=fastmod_u32(
+      uint32_t(hash>>32),inv_sizes[size_index],uint32_t(sizes[size_index]));
+    res-=int(res>=sizes[size_index])*sizes[size_index];
+    return res;
+  }
+};
+
 struct prime_frng_size:prime_size
 {      
   static inline std::size_t position(std::size_t hash,std::size_t size_index)
