@@ -150,12 +150,9 @@ struct prime_fmod_size
 
   static inline std::size_t position(std::size_t hash,std::size_t size_index)
   {
-    std::size_t res=fastmod_u32(
-      uint32_t(hash),inv_sizes[size_index],uint32_t(sizes[size_index]));
-    res+=fastmod_u32(
-      uint32_t(hash>>32),inv_sizes[size_index],uint32_t(sizes[size_index]));
-    res-=int(res>=sizes[size_index])*sizes[size_index];
-    return res;
+    return fastmod_u32(
+      uint32_t(hash)+uint32_t(hash>>32),
+      inv_sizes[size_index],uint32_t(sizes[size_index]));
   }
 };
 
