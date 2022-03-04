@@ -388,10 +388,10 @@ int main()
 
 #ifdef HAVE_ABSEIL
 
-    test<absl::node_hash_map>( "absl::node_hash_map" );
+    // test<absl::node_hash_map>( "absl::node_hash_map" );
     test<absl_node_hash_map_fnv1a>( "absl::node_hash_map, FNV-1a" );
 
-    test<absl::flat_hash_map>( "absl::flat_hash_map" );
+    // test<absl::flat_hash_map>( "absl::flat_hash_map" );
     test<absl_flat_hash_map_fnv1a>( "absl::flat_hash_map, FNV-1a" );
 
 #endif
