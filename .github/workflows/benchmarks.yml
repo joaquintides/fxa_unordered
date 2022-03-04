@@ -26,28 +26,28 @@ jobs:
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11
-          - compiler: clang++
+          - compiler: clang++-12
             compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: string.cpp
             outputfile: benchmark
             os: ubuntu-20.04
-          - compiler: clang++-11
+          - compiler: clang++-12
             compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             sourcefile: string.cpp
             outputfile: benchmark
             os: ubuntu-20.04
-            install: libc++-11-dev libc++abi-11-dev
-          - compiler: clang++
+            install: libc++-12-dev libc++abi-12-dev
+          - compiler: clang++-12
             compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: uint64.cpp
             outputfile: benchmark
             os: ubuntu-20.04
-          - compiler: clang++-11
+          - compiler: clang++-12
             compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             sourcefile: uint64.cpp
             outputfile: benchmark
             os: ubuntu-20.04
-            install: libc++-11-dev libc++abi-11-dev
+            install: libc++-12-dev libc++abi-12-dev
 
     runs-on: ${{matrix.os}}
 
