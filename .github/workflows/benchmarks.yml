@@ -22,6 +22,12 @@ jobs:
             install: g++-11
           - compiler: g++-11
             compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            sourcefile: uint32.cpp
+            outputfile: benchmark
+            os: ubuntu-20.04
+            install: g++-11
+          - compiler: g++-11
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: uint64.cpp
             outputfile: benchmark
             os: ubuntu-20.04
@@ -32,16 +38,27 @@ jobs:
             outputfile: benchmark
             os: ubuntu-20.04
           - compiler: clang++-12
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            sourcefile: uint32.cpp
+            outputfile: benchmark
+            os: ubuntu-20.04
+          - compiler: clang++-12
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            sourcefile: uint64.cpp
+            outputfile: benchmark
+            os: ubuntu-20.04
+          - compiler: clang++-12
             compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             sourcefile: string.cpp
             outputfile: benchmark
             os: ubuntu-20.04
             install: libc++-12-dev libc++abi-12-dev
           - compiler: clang++-12
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
-            sourcefile: uint64.cpp
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            sourcefile: uint32.cpp
             outputfile: benchmark
             os: ubuntu-20.04
+            install: libc++-12-dev libc++abi-12-dev
           - compiler: clang++-12
             compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             sourcefile: uint64.cpp
@@ -99,6 +116,11 @@ jobs:
           - compiler: cl
             compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
             sourcefile: string.cpp
+            outputfile: benchmark.exe            
+            os: windows-2019
+          - compiler: cl
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            sourcefile: uint32.cpp
             outputfile: benchmark.exe            
             os: windows-2019
           - compiler: cl
