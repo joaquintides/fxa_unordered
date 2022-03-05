@@ -1,5 +1,5 @@
 /* Proof of concept of closed-addressing, O(1)-erase, standards-compliant
- * unordered associative containers.
+ * (or almost) unordered associative containers.
  *
  * Copyright 2022 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
@@ -235,22 +235,22 @@ inline std::size_t reset_first_bits(std::size_t n) // n>0
   return ~(~(std::size_t(0))>>(sizeof(std::size_t)*8-n));
 }
 
-struct bucket_iterator:public boost::iterator_facade<
-  bucket_iterator,bucket,boost::forward_traversal_tag>
+struct grouped_bucket_iterator:public boost::iterator_facade<
+  grouped_bucket_iterator,bucket,boost::forward_traversal_tag>
 {
 public:
-  bucket_iterator()=default;
+  grouped_bucket_iterator()=default;
       
 private:
   friend class boost::iterator_core_access;
-  template <typename,typename> friend class bucket_array;
+  template <typename,typename> friend class grouped_bucket_array;
   
   static constexpr auto N=bucket_group::N;
 
-  bucket_iterator(bucket* p,bucket_group* pbg):p{p},pbg{pbg}{}
+  grouped_bucket_iterator(bucket* p,bucket_group* pbg):p{p},pbg{pbg}{}
 
   auto& dereference()const noexcept{return *p;}
-  bool equal(const bucket_iterator& x)const noexcept{return p==x.p;}
+  bool equal(const grouped_bucket_iterator& x)const noexcept{return p==x.p;}
 
   void increment()noexcept
   {
@@ -269,8 +269,18 @@ private:
   bucket_group *pbg=nullptr; 
 };
   
+template<typename T>
+struct span
+{
+  auto begin()const noexcept{return data;} 
+  auto end()const noexcept{return data+size;} 
+  
+  T           *data;
+  std::size_t size;
+};
+
 template<typename Allocator,typename SizePolicy>
-class bucket_array
+class grouped_bucket_array
 {
   using size_policy=SizePolicy;
   using node_type=bucket; // as node is required to derive from bucket
@@ -279,9 +289,11 @@ public:
   using value_type=bucket;
   using size_type=std::size_t;
   using allocator_type=Allocator;
-  using iterator=bucket_iterator;
+  using iterator=grouped_bucket_iterator;
   
-  bucket_array(size_type n,const Allocator& al):
+  static constexpr bool has_constant_iterator_increment=true;
+
+  grouped_bucket_array(size_type n,const Allocator& al):
     size_index_(size_policy::size_index(n)),
     size_(size_policy::size(size_index_)),
     buckets(size_+1,al),
@@ -293,8 +305,8 @@ public:
     pbg->next=pbg->prev=pbg;
   }
   
-  bucket_array(bucket_array&&)=default;
-  bucket_array& operator=(bucket_array&&)=default;
+  grouped_bucket_array(grouped_bucket_array&&)=default;
+  grouped_bucket_array& operator=(grouped_bucket_array&&)=default;
   
   iterator begin()const{return ++at(size_);}
 
@@ -315,7 +327,7 @@ public:
     };
   }
 
-  auto& raw(){return buckets;}
+  auto raw(){return span<value_type>{buckets.data(),size_};}
   
   size_type position(std::size_t hash)const
   {
@@ -353,13 +365,7 @@ public:
     *pp=(*pp)->next;
     if(!itb->next)unlink_bucket(itb);
   }
-  
-  void unlink_bucket(iterator itb)noexcept
-  {
-    auto [p,pbg]=itb;
-    if(!(pbg->bitmask&=reset_bit(p-pbg->buckets)))unlink_group(pbg);
-  }
-  
+    
   void unlink_empty_buckets()noexcept
   {
     auto pbg=&groups.front(),last=&groups.back();
@@ -381,6 +387,12 @@ private:
       template rebind_alloc<group>;
   static constexpr auto N=group::N;
   
+  void unlink_bucket(iterator itb)
+  {
+    auto [p,pbg]=itb;
+    if(!(pbg->bitmask&=reset_bit(p-pbg->buckets)))unlink_group(pbg);
+  }
+
   void unlink_group(group* pbg){
     pbg->next->prev=pbg->prev;
     pbg->prev->next=pbg->next;
@@ -392,6 +404,97 @@ private:
   std::vector<group,group_allocator_type> groups;
 };
 
+struct simple_bucket_iterator:public boost::iterator_facade<
+  simple_bucket_iterator,bucket,boost::forward_traversal_tag>
+{
+public:
+  simple_bucket_iterator()=default;
+      
+private:
+  friend class boost::iterator_core_access;
+  template <typename,typename> friend class simple_bucket_array;
+  
+  simple_bucket_iterator(bucket* p):p{p}{}
+
+  auto& dereference()const noexcept{return *p;}
+  bool equal(const simple_bucket_iterator& x)const noexcept{return p==x.p;}
+  void increment()noexcept{while(!(++p)->next);}
+
+  bucket *p=nullptr;
+};
+
+template<typename Allocator,typename SizePolicy>
+class simple_bucket_array
+{
+  using size_policy=SizePolicy;
+  using node_type=bucket; // as node is required to derive from bucket
+
+public:
+  using value_type=bucket;
+  using size_type=std::size_t;
+  using allocator_type=Allocator;
+  using iterator=simple_bucket_iterator;
+  
+  static constexpr bool has_constant_iterator_increment=false;
+  
+  simple_bucket_array(size_type n,const Allocator& al):
+    size_index_(size_policy::size_index(n)),
+    size_(size_policy::size(size_index_)),
+    buckets(size_+1,al)
+  {
+    buckets.back().next=&buckets.back();
+  }
+  
+  simple_bucket_array(simple_bucket_array&&)=default;
+  simple_bucket_array& operator=(simple_bucket_array&&)=default;
+  
+  iterator begin()const{return begin_;}
+  iterator end()const{return at(size_);} 
+  size_type capacity()const{return size_;}
+  iterator at(size_type n)const{return const_cast<value_type*>(&buckets[n]);}
+
+  auto raw(){return span<value_type>{buckets.data(),size_};}
+  
+  size_type position(std::size_t hash)const
+  {
+    return size_policy::position(hash,size_index_);
+  }
+
+  void insert_node(iterator itb,node_type* p)noexcept
+  {
+    p->next=itb->next;
+    itb->next=p;
+    if(begin_.p>itb.p)begin_=itb;
+  }
+  
+  void extract_node(iterator itb,node_type* p)noexcept
+  {
+    node_type** pp=&itb->next;
+    while((*pp)!=p)pp=&(*pp)->next;
+    *pp=p->next;
+    adjust_begin(itb);
+  }
+
+  void extract_node_after(iterator itb,node_type** pp)noexcept
+  {
+    *pp=(*pp)->next;
+    adjust_begin(itb);
+  }
+  
+  void unlink_empty_buckets()noexcept{adjust_begin(begin_);}
+
+private:    
+  void adjust_begin(iterator itb)
+  {
+    if(begin_==itb&&!begin_->next)++begin_;
+  }
+
+  std::size_t                            size_index_,size_;
+  std::vector<value_type,allocator_type> buckets;
+  iterator                               begin_=end(); 
+                                         // cached to guarantee O(1) begin()
+};
+
 template<typename T>
 struct node:bucket
 {
@@ -400,7 +503,8 @@ struct node:bucket
 
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
-  typename Allocator=std::allocator<T>,typename SizePolicy=prime_size
+  typename Allocator=std::allocator<T>,typename SizePolicy=prime_size,
+  template<typename,typename> class BucketArray=grouped_bucket_array
 >
 class fca_unordered_set
 {
@@ -413,7 +517,7 @@ class fca_unordered_set
     typename std::allocator_traits<Allocator>::
       template rebind_alloc<bucket>;
   using bucket_array_type=
-    bucket_array<bucket_allocator_type,SizePolicy>;
+    BucketArray<bucket_allocator_type,SizePolicy>;
   using bucket_iterator=typename bucket_array_type::iterator;
     
 public:
@@ -449,7 +553,7 @@ public:
   
   ~fca_unordered_set()
   {
-    for(auto first=begin(),last=end();first!=last;)first=erase(first);
+    for(auto first=begin(),last=end();first!=last;)erase(first++);
   }
   
   const_iterator begin()const noexcept
@@ -469,14 +573,22 @@ public:
   auto insert(const T& x){return insert_impl(x);}
   auto insert(T&& x){return insert_impl(std::move(x));}
   
-  iterator erase(const_iterator pos)
+  auto erase(const_iterator pos)
   {
-    auto [p,itb]=pos;
-    ++pos;
-    buckets.extract_node(itb,p);
-    delete_node(p);
-    --size_;
-    return pos;
+    if constexpr(bucket_array_type::has_constant_iterator_increment){
+      auto [p,itb]=pos;
+      ++pos;
+      buckets.extract_node(itb,p);
+      delete_node(p);
+      --size_;
+      return pos;
+    }
+    else{
+      auto [p,itb]=pos;
+      buckets.extract_node(itb,p);
+      delete_node(p);
+      --size_;
+    }
   }
   
   template<typename Key>
@@ -670,12 +782,13 @@ template<
   typename Key,typename Value,
   typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
   typename Allocator=std::allocator<map_value_adaptor<Key,Value>>,
-  typename SizePolicy=prime_size
+  typename SizePolicy=prime_size,
+  template<typename,typename> class BucketArray=grouped_bucket_array
 >
 using fca_unordered_map=fca_unordered_set<
   map_value_adaptor<Key,Value>,
   map_hash_adaptor<Hash>,map_pred_adaptor<Pred>,
-  Allocator,SizePolicy
+  Allocator,SizePolicy,BucketArray
 >;
 
 } // namespace fca_unordered

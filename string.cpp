@@ -2,7 +2,7 @@
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 //
-// Modified by Joaquin M Lopez Munoz: added fca_*_unordered_map
+// Modified by Joaquin M Lopez Munoz: added fca[_*]_unordered[_bucket]_map
 // Copyright 2022 Joaquin M Lopez Munoz.
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
@@ -218,7 +218,7 @@ template<class K, class V> using multi_index_map = multi_index_container<
   >
 >;
 
-// alternative size policies for fca_unordered
+// alternative size policies / bucket arrays for fca_unordered
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_switch_unordered_map =
@@ -261,6 +261,14 @@ using fca_pow2_fib_unordered_map =
     K, V, H,std::equal_to<K>,
     std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::pow2_fib_size>;
+
+template<class K, class V, class H=boost::hash<K>>
+using fca_fmod_unordered_bucket_map =
+  fca_unordered_map<
+    K, V, H,std::equal_to<K>,
+    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::prime_fmod_size,
+    fca_unordered_impl::simple_bucket_array>;
 
 // fnv1a_hash
 
@@ -343,6 +351,9 @@ template<class K, class V> using fca_pow2_unordered_map_fnv1a =
 template<class K, class V> using fca_pow2_fib_unordered_map_fnv1a =
   fca_pow2_fib_unordered_map<K, V, fnv1a_hash>;
 
+template<class K, class V> using fca_fmod_unordered_bucket_map_fnv1a =
+  fca_fmod_unordered_bucket_map<K, V, fnv1a_hash>;
+
 #ifdef HAVE_ABSEIL
 
 template<class K, class V> using absl_node_hash_map_fnv1a =
@@ -383,6 +394,9 @@ int main()
     // test<fca_pow2_unordered_map_fnv1a>( "fca_pow2_unordered_map, FNV-1a" );
     // test<fca_pow2_fib_unordered_map>( "fca_pow2_fib_unordered_map" );
     test<fca_pow2_fib_unordered_map_fnv1a>( "fca_pow2_fib_unordered_map, FNV-1a" );
+
+    // test<fca_fmod_unordered_bucket_map>( "fca_fmod_unordered_bucket_map" );
+    test<fca_fmod_unordered_bucket_map_fnv1a>( "fca_fmod_unordered_bucket_map, FNV-1a" );
 
     // test<std::map>( "std::map" );
 
