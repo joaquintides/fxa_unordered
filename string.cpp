@@ -268,7 +268,7 @@ using fca_fmod_unordered_bucket_map =
     K, V, H,std::equal_to<K>,
     std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::prime_fmod_size,
-    fca_unordered_impl::simple_bucket_array>;
+    fca_unordered_impl::simple_buckets>;
 
 // fnv1a_hash
 

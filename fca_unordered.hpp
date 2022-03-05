@@ -291,8 +291,6 @@ public:
   using allocator_type=Allocator;
   using iterator=grouped_bucket_iterator;
   
-  static constexpr bool has_constant_iterator_increment=true;
-
   grouped_bucket_array(size_type n,const Allocator& al):
     size_index_(size_policy::size_index(n)),
     size_(size_policy::size(size_index_)),
@@ -404,6 +402,14 @@ private:
   std::vector<group,group_allocator_type> groups;
 };
 
+struct grouped_buckets
+{
+  static constexpr bool has_constant_iterator_increment=true;
+
+  template<typename Allocator,typename SizePolicy>
+  using array_type=grouped_bucket_array<Allocator,SizePolicy>;
+};
+
 struct simple_bucket_iterator:public boost::iterator_facade<
   simple_bucket_iterator,bucket,boost::forward_traversal_tag>
 {
@@ -434,9 +440,7 @@ public:
   using size_type=std::size_t;
   using allocator_type=Allocator;
   using iterator=simple_bucket_iterator;
-  
-  static constexpr bool has_constant_iterator_increment=false;
-  
+   
   simple_bucket_array(size_type n,const Allocator& al):
     size_index_(size_policy::size_index(n)),
     size_(size_policy::size(size_index_)),
@@ -495,6 +499,14 @@ private:
                                          // cached to guarantee O(1) begin()
 };
 
+struct simple_buckets
+{
+  static constexpr bool has_constant_iterator_increment=false;
+
+  template<typename Allocator,typename SizePolicy>
+  using array_type=simple_bucket_array<Allocator,SizePolicy>;
+};
+
 template<typename T>
 struct node:bucket
 {
@@ -503,8 +515,8 @@ struct node:bucket
 
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
-  typename Allocator=std::allocator<T>,typename SizePolicy=prime_size,
-  template<typename,typename> class BucketArray=grouped_bucket_array
+  typename Allocator=std::allocator<T>,
+  typename SizePolicy=prime_size,typename BucketArrayPolicy=grouped_buckets
 >
 class fca_unordered_set
 {
@@ -517,7 +529,8 @@ class fca_unordered_set
     typename std::allocator_traits<Allocator>::
       template rebind_alloc<bucket>;
   using bucket_array_type=
-    BucketArray<bucket_allocator_type,SizePolicy>;
+    typename BucketArrayPolicy::
+      template array_type<bucket_allocator_type,SizePolicy>;
   using bucket_iterator=typename bucket_array_type::iterator;
     
 public:
@@ -575,7 +588,7 @@ public:
   
   auto erase(const_iterator pos)
   {
-    if constexpr(bucket_array_type::has_constant_iterator_increment){
+    if constexpr(BucketArrayPolicy::has_constant_iterator_increment){
       auto [p,itb]=pos;
       ++pos;
       buckets.extract_node(itb,p);
@@ -782,13 +795,12 @@ template<
   typename Key,typename Value,
   typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
   typename Allocator=std::allocator<map_value_adaptor<Key,Value>>,
-  typename SizePolicy=prime_size,
-  template<typename,typename> class BucketArray=grouped_bucket_array
+  typename SizePolicy=prime_size,typename BucketArrayPolicy=grouped_buckets
 >
 using fca_unordered_map=fca_unordered_set<
   map_value_adaptor<Key,Value>,
   map_hash_adaptor<Hash>,map_pred_adaptor<Pred>,
-  Allocator,SizePolicy,BucketArray
+  Allocator,SizePolicy,BucketArrayPolicy
 >;
 
 } // namespace fca_unordered
