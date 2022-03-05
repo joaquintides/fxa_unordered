@@ -217,7 +217,7 @@ struct pow2_fib_size:pow2_size
 template<typename Node>
 struct bucket
 {
-  Node *node=nullptr;
+  Node *next=nullptr;
 };
 
 template<typename Node>
@@ -320,7 +320,7 @@ public:
 
   void insert_node(iterator itb,node_type* p)noexcept
   {
-    if(!itb->node){ // empty bucket
+    if(!itb->next){ // empty bucket
       auto [p,pbg]=itb;
       auto n=p-&buckets[0];
       if(!pbg->bitmask){ // empty group
@@ -332,22 +332,22 @@ public:
       }
       pbg->bitmask|=set_bit(n%N);
     }
-    p->next=itb->node;
-    itb->node=p;
+    p->next=itb->next;
+    itb->next=p;
   }
   
   void extract_node(iterator itb,node_type* p)noexcept
   {
-    node_type** pp=&itb->node;
+    node_type** pp=&itb->next;
     while((*pp)!=p)pp=&(*pp)->next;
     *pp=p->next;
-    if(!itb->node)unlink_bucket(itb);
+    if(!itb->next)unlink_bucket(itb);
   }
 
   void extract_node_after(iterator itb,node_type** pp)noexcept
   {
     *pp=(*pp)->next;
-    if(!itb->node)unlink_bucket(itb);
+    if(!itb->next)unlink_bucket(itb);
   }
   
   void unlink_bucket(iterator itb)noexcept
@@ -361,12 +361,12 @@ public:
     auto pbg=&groups.front(),last=&groups.back();
     for(;pbg!=last;++pbg){
       for(std::size_t n=0;n<N;++n){
-        if(!pbg->buckets[n].node)pbg->bitmask&=reset_bit(n);
+        if(!pbg->buckets[n].next)pbg->bitmask&=reset_bit(n);
       }
       if(!pbg->bitmask&&pbg->next)unlink_group(pbg);
     }
     for(std::size_t n=0;n<size_%N;++n){ // do not check end bucket
-      if(!pbg->buckets[n].node)pbg->bitmask&=reset_bit(n);
+      if(!pbg->buckets[n].next)pbg->bitmask&=reset_bit(n);
     }
   }
 
@@ -392,10 +392,9 @@ private:
 };
 
 template<typename T>
-struct node
+struct node:bucket<node<T>>
 {
-  node *next;
-  T    value;
+  T value;
 };
 
 template<
@@ -435,7 +434,7 @@ public:
     
     void increment()noexcept
     {
-      if(!(p=p->next))p=(++itb)->node;
+      if(!(p=p->next))p=(++itb)->next;
     }
   
     node_type       *p=nullptr; 
@@ -451,7 +450,7 @@ public:
   const_iterator begin()const noexcept
   {
     auto itb=buckets.begin();
-    return {itb->node,itb};
+    return {itb->next,itb};
   }
     
   const_iterator end()const noexcept
@@ -545,17 +544,17 @@ private:
     bucket_array_type new_buckets(bc,al);
     try{
       for(auto& b:buckets.raw()){            
-        for(auto p=b.node;p;){
+        for(auto p=b.next;p;){
           auto next_p=p->next;
           new_buckets.insert_node(
             new_buckets.at(new_buckets.position(h(p->value))),p);
-          b.node=p=next_p;
+          b.next=p=next_p;
         }
       }
     }
     catch(...){
       for(auto& b:new_buckets){
-        for(auto p=b.node;p;){
+        for(auto p=b.next;p;){
           auto next_p=p->next;
           delete_node(p);
           --size_;
@@ -572,7 +571,7 @@ private:
   template<typename Key>
   iterator find(const Key& x,bucket_iterator itb)const
   {
-    for(auto p=itb->node;p;p=p->next){
+    for(auto p=itb->next;p;p=p->next){
       if(pred(x,p->value))return {p,itb};
     }
     return end();
@@ -582,7 +581,7 @@ private:
   std::pair<node_type**,bucket_iterator> find_prev(const Key& x)const
   {
     auto itb=buckets.at(buckets.position(h(x)));
-    for(auto pp=&itb->node;*pp;pp=&(*pp)->next){
+    for(auto pp=&itb->next;*pp;pp=&(*pp)->next){
       if(pred(x,(*pp)->value))return {pp,itb};
     }
     return {nullptr,{}};
