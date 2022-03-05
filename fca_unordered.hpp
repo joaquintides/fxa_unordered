@@ -300,9 +300,17 @@ public:
   bucket_array(bucket_array&&)=default;
   bucket_array& operator=(bucket_array&&)=default;
   
-  iterator begin()const{return ++end();}
-  iterator end()const{return at(size_);}
+  iterator begin()const{return ++at(size_);}
+
+  iterator end()const 
+  {
+    // micro optimization: no need to return the bucket group
+    // as end() is not incrementable
+    return {const_cast<value_type*>(&buckets.back()),nullptr};
+  }
+
   size_type capacity()const{return size_;}
+
   iterator at(size_type n)const
   {
     return {
@@ -455,7 +463,8 @@ public:
     
   const_iterator end()const noexcept
   {
-    return {};
+    auto itb=buckets.end();
+    return {itb->next,itb};
   }
   
   size_type size()const noexcept{return size_;}
