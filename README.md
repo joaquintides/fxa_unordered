@@ -70,3 +70,20 @@ Going from a given bucket to the next occupied one is implemented as follows:
   <ul>The memory overhead added by bucket groups is 4 bits per bucket.</ul>
 </div>
 
+```cpp
+template<
+  typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
+  typename Allocator=std::allocator<T>
+>
+class fca_simple_unordered_set;
+
+template<
+  typename Key,typename Value,
+  typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
+  typename Allocator=std::allocator</* equivalent to std::pair<const Key,Value> */>
+>
+class fca_simple_unordered_map;
+```
+
+Abandoned experiment where individual occupied buckets where linked in a bidirectional
+list. Outperformed by `fca_unordered_[set|map]` with `grouped_buckets`.
