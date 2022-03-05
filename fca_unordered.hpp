@@ -214,18 +214,16 @@ struct pow2_fib_size:pow2_size
   }
 };
 
-template<typename Node>
 struct bucket
 {
-  Node *next=nullptr;
+  bucket *next=nullptr;
 };
 
-template<typename Node>
 struct bucket_group
 {
   static constexpr std::size_t N=sizeof(std::size_t)*8;
 
-  bucket<Node> *buckets;
+  bucket       *buckets;
   std::size_t  bitmask=0;
   bucket_group *next=nullptr,*prev=nullptr;
 };
@@ -237,20 +235,19 @@ inline std::size_t reset_first_bits(std::size_t n) // n>0
   return ~(~(std::size_t(0))>>(sizeof(std::size_t)*8-n));
 }
 
-template<typename Node>
 struct bucket_iterator:public boost::iterator_facade<
-  bucket_iterator<Node>,bucket<Node>,boost::forward_traversal_tag>
+  bucket_iterator,bucket,boost::forward_traversal_tag>
 {
 public:
   bucket_iterator()=default;
       
 private:
   friend class boost::iterator_core_access;
-  template <typename,typename,typename> friend class bucket_array;
+  template <typename,typename> friend class bucket_array;
   
-  static constexpr auto N=bucket_group<Node>::N;
+  static constexpr auto N=bucket_group::N;
 
-  bucket_iterator(bucket<Node>* p,bucket_group<Node>* pbg):p{p},pbg{pbg}{}
+  bucket_iterator(bucket* p,bucket_group* pbg):p{p},pbg{pbg}{}
 
   auto& dereference()const noexcept{return *p;}
   bool equal(const bucket_iterator& x)const noexcept{return p==x.p;}
@@ -268,22 +265,21 @@ private:
     }
   }
 
-  bucket<Node>       *p=nullptr;
-  bucket_group<Node> *pbg=nullptr; 
+  bucket       *p=nullptr;
+  bucket_group *pbg=nullptr; 
 };
   
-template<
-  typename Node,typename Allocator,typename SizePolicy
->
+template<typename Allocator,typename SizePolicy>
 class bucket_array
 {
   using size_policy=SizePolicy;
-  using node_type=Node;
+  using node_type=bucket; // as node is required to derive from bucket
 
 public:
-  using value_type=bucket<Node>;
+  using value_type=bucket;
   using size_type=std::size_t;
-  using iterator=bucket_iterator<Node>;
+  using allocator_type=Allocator;
+  using iterator=bucket_iterator;
   
   bucket_array(size_type n,const Allocator& al):
     size_index_(size_policy::size_index(n)),
@@ -379,10 +375,7 @@ public:
   }
 
 private:
-  using bucket_allocator_type=
-    typename std::allocator_traits<Allocator>::
-      template rebind_alloc<value_type>;
-  using group=bucket_group<Node>;
+  using group=bucket_group;
   using group_allocator_type=
     typename std::allocator_traits<Allocator>::
       template rebind_alloc<group>;
@@ -394,13 +387,13 @@ private:
     pbg->prev=pbg->next=nullptr;
   }
 
-  std::size_t                                   size_index_,size_;
-  std::vector<value_type,bucket_allocator_type> buckets;
-  std::vector<group,group_allocator_type>       groups;
+  std::size_t                             size_index_,size_;
+  std::vector<value_type,allocator_type>  buckets;
+  std::vector<group,group_allocator_type> groups;
 };
 
 template<typename T>
-struct node:bucket<node<T>>
+struct node:bucket
 {
   T value;
 };
@@ -416,9 +409,11 @@ class fca_unordered_set
     typename std::allocator_traits<Allocator>::
       template rebind_alloc<node_type>;
   using node_alloc_traits=std::allocator_traits<node_allocator_type>;
+  using bucket_allocator_type=
+    typename std::allocator_traits<Allocator>::
+      template rebind_alloc<bucket>;
   using bucket_array_type=
-    bucket_array<node_type,node_allocator_type,SizePolicy>;
-  using bucket=typename bucket_array_type::value_type;
+    bucket_array<bucket_allocator_type,SizePolicy>;
   using bucket_iterator=typename bucket_array_type::iterator;
     
 public:
@@ -442,7 +437,9 @@ public:
     
     void increment()noexcept
     {
-      if(!(p=p->next))p=(++itb)->next;
+      if(!(p=static_cast<node_type*>(p->next))){
+        p=static_cast<node_type*>((++itb)->next);
+      }
     }
   
     node_type       *p=nullptr; 
@@ -458,13 +455,13 @@ public:
   const_iterator begin()const noexcept
   {
     auto itb=buckets.begin();
-    return {itb->next,itb};
+    return {static_cast<node_type *>(itb->next),itb};
   }
     
   const_iterator end()const noexcept
   {
     auto itb=buckets.end();
-    return {itb->next,itb};
+    return {static_cast<node_type *>(itb->next),itb};
   }
   
   size_type size()const noexcept{return size_;}
@@ -492,7 +489,7 @@ public:
     else{
       auto p=*pp;
       buckets.extract_node_after(itb,pp);
-      delete_node(p);
+      delete_node(static_cast<node_type*>(p));
       --size_;
       return 1;
     }
@@ -556,7 +553,8 @@ private:
         for(auto p=b.next;p;){
           auto next_p=p->next;
           new_buckets.insert_node(
-            new_buckets.at(new_buckets.position(h(p->value))),p);
+            new_buckets.at(
+              new_buckets.position(h(static_cast<node_type*>(p)->value))),p);
           b.next=p=next_p;
         }
       }
@@ -565,7 +563,7 @@ private:
       for(auto& b:new_buckets){
         for(auto p=b.next;p;){
           auto next_p=p->next;
-          delete_node(p);
+          delete_node(static_cast<node_type*>(p));
           --size_;
           p=next_p;
         }
@@ -581,17 +579,19 @@ private:
   iterator find(const Key& x,bucket_iterator itb)const
   {
     for(auto p=itb->next;p;p=p->next){
-      if(pred(x,p->value))return {p,itb};
+      if(pred(x,static_cast<node_type*>(p)->value)){
+        return {static_cast<node_type*>(p),itb};
+      }
     }
     return end();
   }
   
   template<typename Key>
-  std::pair<node_type**,bucket_iterator> find_prev(const Key& x)const
+  std::pair<bucket**,bucket_iterator> find_prev(const Key& x)const
   {
     auto itb=buckets.at(buckets.position(h(x)));
     for(auto pp=&itb->next;*pp;pp=&(*pp)->next){
-      if(pred(x,(*pp)->value))return {pp,itb};
+      if(pred(x,static_cast<node_type*>(*pp)->value))return {pp,itb};
     }
     return {nullptr,{}};
   }
