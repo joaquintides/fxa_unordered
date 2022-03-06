@@ -839,7 +839,8 @@ private:
   }
   
   template<typename Key>
-  std::pair<bucket**,bucket_iterator> find_prev(const Key& x)const
+  std::pair<fca_unordered_impl::bucket**,bucket_iterator>
+  find_prev(const Key& x)const
   {
     auto itb=buckets.at(buckets.position(h(x)));
     for(auto pp=&itb->next;*pp;pp=&(*pp)->next){
