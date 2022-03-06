@@ -86,8 +86,6 @@ requirements for unordered associative containers:
 * It is not possible to provide [node extraction](https://en.cppreference.com/w/cpp/container/node_handle)
   capabilities.
 
-Currently, `grouped_buckets` is the only bucket array policy supporting node embedding.
-
 ```cpp
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
