@@ -1,5 +1,5 @@
 # fca_unordered
-Proof of concept of closed-addressing, O(1)-erase, standards-compliant unordered associative containers.
+Proof of concept of closed-addressing unordered associative containers.
 * [Development Plan for Boost.Unordered](https://pdimov.github.io/articles/unordered_dev_plan.html)
 * [Benchmark results](https://github.com/joaquintides/fca_unordered/actions) for this PoC
 
@@ -7,7 +7,8 @@ Proof of concept of closed-addressing, O(1)-erase, standards-compliant unordered
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
-  typename SizePolicy=prime_size,typename BucketArrayPolicy=grouped_buckets
+  typename SizePolicy=prime_size,typename BucketArrayPolicy=grouped_buckets,
+  typename EmbedNode=std::false_type
 >
 class fca_unordered_set;
 
@@ -15,7 +16,8 @@ template<
   typename Key,typename Value,
   typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
   typename Allocator=std::allocator</* equivalent to std::pair<const Key,Value> */>,
-  typename SizePolicy=prime_size,typename BucketArrayPolicy=grouped_buckets
+  typename SizePolicy=prime_size,typename BucketArrayPolicy=grouped_buckets,
+  typename EmbedNode=std::false_type
 >
 class fca_unordered_map;
 ```
@@ -72,6 +74,19 @@ Going from a given bucket to the next occupied one is implemented as follows:
 <div style="list-style-type: none;margin-left: 40px;">
   <ul>The memory overhead added by bucket groups is 4 bits per bucket.</ul>
 </div>
+
+**`EmbedNode`**
+
+If `EmbedNode::value` is true, buckets are extended to hold space for a node, so that
+no additional memory allocation is needed to insert the first element in the bucket.
+The resulting container deviates in a number of important aspects from the C++ standard
+requirements for unordered associative containers:
+* Pointer stability is not mantained on rehashing.
+* The elements of the container must be movable.
+* It is not possible to provide [node extraction](https://en.cppreference.com/w/cpp/container/node_handle)
+  capabilities.
+
+Currently, `grouped_buckets` is the only bucket array policy supporting node embedding.
 
 ```cpp
 template<
