@@ -922,12 +922,13 @@ template<
   typename Key,typename Value,
   typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
   typename Allocator=std::allocator<map_value_adaptor<Key,Value>>,
-  typename SizePolicy=prime_size,typename BucketArrayPolicy=grouped_buckets
+  typename SizePolicy=prime_size,typename BucketArrayPolicy=grouped_buckets,
+  typename EmbedNode=std::false_type
 >
 using fca_unordered_map=fca_unordered_set<
   map_value_adaptor<Key,Value>,
   map_hash_adaptor<Hash>,map_pred_adaptor<Pred>,
-  Allocator,SizePolicy,BucketArrayPolicy
+  Allocator,SizePolicy,BucketArrayPolicy,EmbedNode
 >;
 
 } // namespace fca_unordered
