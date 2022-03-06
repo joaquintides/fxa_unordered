@@ -432,6 +432,7 @@ private:
 template<typename Allocator,typename SizePolicy>
 class simple_bucket_array
 {
+protected:
   using size_policy=SizePolicy;
   using node_type=bucket; // as node is required to derive from bucket
 
@@ -452,7 +453,13 @@ public:
   simple_bucket_array(simple_bucket_array&&)=default;
   simple_bucket_array& operator=(simple_bucket_array&&)=default;
   
-  iterator begin()const{return begin_;}
+  iterator begin()const
+  {
+    auto it=at(0);
+    if(!it->next)++it;
+    return it;
+  }
+  
   iterator end()const{return at(size_);} 
   size_type capacity()const{return size_;}
   iterator at(size_type n)const{return const_cast<value_type*>(&buckets[n]);}
@@ -468,7 +475,6 @@ public:
   {
     p->next=itb->next;
     itb->next=p;
-    if(begin_.p>itb.p)begin_=itb;
   }
   
   void extract_node(iterator itb,node_type* p)noexcept
@@ -476,27 +482,18 @@ public:
     node_type** pp=&itb->next;
     while((*pp)!=p)pp=&(*pp)->next;
     *pp=p->next;
-    adjust_begin(itb);
   }
 
   void extract_node_after(iterator itb,node_type** pp)noexcept
   {
     *pp=(*pp)->next;
-    adjust_begin(itb);
   }
   
-  void unlink_empty_buckets()noexcept{adjust_begin(begin_);}
+  void unlink_empty_buckets()noexcept{}
 
 private:    
-  void adjust_begin(iterator itb)
-  {
-    if(begin_==itb&&!begin_->next)++begin_;
-  }
-
   std::size_t                            size_index_,size_;
   std::vector<value_type,allocator_type> buckets;
-  iterator                               begin_=end(); 
-                                         // cached to guarantee O(1) begin()
 };
 
 struct simple_buckets
@@ -505,6 +502,63 @@ struct simple_buckets
 
   template<typename Allocator,typename SizePolicy>
   using array_type=simple_bucket_array<Allocator,SizePolicy>;
+};
+
+template<typename Allocator,typename SizePolicy>
+class bcached_simple_bucket_array:
+  public simple_bucket_array<Allocator,SizePolicy>
+{
+  using super=simple_bucket_array<Allocator,SizePolicy>;
+  using node_type=typename super::node_type;
+  
+public:
+  using iterator=typename super::iterator;
+   
+  using super::super;
+   
+  bcached_simple_bucket_array(bcached_simple_bucket_array&&)=default;
+  bcached_simple_bucket_array& operator=(bcached_simple_bucket_array&&)
+    =default;
+
+  iterator begin()const{return begin_;}
+  
+  void insert_node(iterator itb,node_type* p)noexcept
+  {
+    super::insert_node(itb,p);
+    if(&*begin_>&*itb)begin_=itb;
+  }
+  
+  void extract_node(iterator itb,node_type* p)noexcept
+  {
+    super::extract_node(itb,p);
+    adjust_begin(itb);
+  }
+
+  void extract_node_after(iterator itb,node_type** pp)noexcept
+  {
+    super::extract_node_after(itb,pp);
+    adjust_begin(itb);
+  }
+  
+  void unlink_empty_buckets()noexcept
+  {
+    super::unlink_empty_buckets();
+    adjust_begin(begin_);
+  }
+
+private:    
+  void adjust_begin(iterator itb)
+  {
+    if(begin_==itb&&!begin_->next)++begin_;
+  }
+
+  iterator begin_=super::end(); 
+};
+
+struct bcached_simple_buckets:simple_buckets
+{
+  template<typename Allocator,typename SizePolicy>
+  using array_type=bcached_simple_bucket_array<Allocator,SizePolicy>;
 };
 
 template<typename T>

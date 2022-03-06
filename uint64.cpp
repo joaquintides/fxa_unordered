@@ -285,6 +285,14 @@ using fca_fmod_unordered_bucket_map =
     fca_unordered_impl::prime_fmod_size,
     fca_unordered_impl::simple_buckets>;
 
+template<class K, class V, class H=boost::hash<K>>
+using fca_fmod_bcached_unordered_bucket_map =
+  fca_unordered_map<
+    K, V, H,std::equal_to<K>,
+    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::prime_fmod_size,
+    fca_unordered_impl::bcached_simple_buckets>;
+
 int main()
 {
     init_indices();
@@ -309,6 +317,7 @@ int main()
     test<fca_pow2_fib_unordered_map>( "fca_pow2_fib_unordered_map" );
 
     test<fca_fmod_unordered_bucket_map>( "fca_fmod_unordered_bucket_map" );
+    test<fca_fmod_bcached_unordered_bucket_map>( "fca_fmod_bcached_unordered_bucket_map" );
 
     // test<std::map>( "std::map" );
 
