@@ -44,17 +44,20 @@ hash value, which, as it happens with `prime_frng_size`, works poorly for low qu
 **`BucketArrayPolicy`**
 * `simple_buckets`: The bucket array is a plain vector of node pointers without additional metadata.
 The resulting container deviates from the C++ standard requirements for unordered associative
-containers in two aspects:
+containers in three aspects:
   * Iterator increment is not constant but gets slower as the number of empty buckets grow;
     see [N2023](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2023.pdf) for details.
   * Because of the former, `erase(iterator)` returns `void` instead of an iterator to the next
     element.
+  * `begin()` is not constant time (hopping to the first occupied bucket is required).
 <div style="list-style-type: none;margin-left: 40px;">
   <ul>This policy is used to simulate <code>unordered_bucket_map</code> as specified in the
     <a href="https://pdimov.github.io/articles/unordered_dev_plan.html">Development Plan for Boost.Unordered</a>.
   </ul>
 </div>
 
+* `bcached_simple_buckets`: Same as `simple_buckets`, but a reference to the first occupied bucket
+is kept and updated so as to provide constant-time `begin()`.
 * `grouped_buckets`: The resulting container is fully standards-compliant, including constant
 iteration and average constant `erasure(iterator)`. Besides the usual bucket array, a vector
 of *bucket group* metadata is kept. Buckets are logically grouped in 32/64 (depending on the
