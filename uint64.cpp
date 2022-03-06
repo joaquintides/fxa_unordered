@@ -1,7 +1,7 @@
 // Copyright 2021 Peter Dimov.
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
-// Modified by Joaquin M Lopez Munoz: added fca[_*]_unordered[_bucket]_map
+// Modified by Joaquin M Lopez Munoz: added fca[_*]_unordered[_*]_map
 // Copyright 2022 Joaquin M Lopez Munoz.
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt

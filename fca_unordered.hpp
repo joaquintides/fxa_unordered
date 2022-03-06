@@ -1,5 +1,4 @@
-/* Proof of concept of closed-addressing, O(1)-erase, standards-compliant
- * (or almost) unordered associative containers.
+/* Proof of concept of closed-addressing unordered associative containers.
  *
  * Copyright 2022 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
