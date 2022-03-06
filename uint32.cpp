@@ -301,6 +301,24 @@ using fca_fmod_unordered_hybrid_map =
     fca_unordered_impl::grouped_buckets,
     std::true_type /* EmbedNode */ >;
 
+template<class K, class V, class H=boost::hash<K>>
+using fca_fmod_unordered_hybrid_bucket_map =
+  fca_unordered_map<
+    K, V, H,std::equal_to<K>,
+    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::prime_fmod_size,
+    fca_unordered_impl::simple_buckets,
+    std::true_type /* EmbedNode */ >;
+
+template<class K, class V, class H=boost::hash<K>>
+using fca_fmod_bcached_unordered_hybrid_bucket_map =
+  fca_unordered_map<
+    K, V, H,std::equal_to<K>,
+    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::prime_fmod_size,
+    fca_unordered_impl::bcached_simple_buckets,
+    std::true_type /* EmbedNode */ >;
+
 int main()
 {
     init_indices();
@@ -329,6 +347,9 @@ int main()
     test<fca_fmod_bcached_unordered_bucket_map>( "fca_fmod_bcached_unordered_bucket_map" );
 
     test<fca_fmod_unordered_hybrid_map>( "fca_fmod_unordered_hybrid_map" );
+
+    test<fca_fmod_unordered_hybrid_bucket_map>( "fca_fmod_unordered_hybrid_bucket_map" );
+    test<fca_fmod_bcached_unordered_hybrid_bucket_map>( "fca_fmod_bcached_unordered_hybrid_bucket_map" );
 
     // test<std::map>( "std::map" );
 

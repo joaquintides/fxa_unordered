@@ -294,7 +294,7 @@ struct span
   std::size_t size;
 };
 
-template<typename Allocator,typename SizePolicy,typename Payload=void>
+template<typename Allocator,typename SizePolicy,typename Payload>
 class grouped_bucket_array
 {
   using size_policy=SizePolicy;
@@ -424,30 +424,32 @@ struct grouped_buckets
 {
   static constexpr bool has_constant_iterator_increment=true;
 
-  template<typename Allocator,typename SizePolicy,typename Payload=void>
+  template<typename Allocator,typename SizePolicy,typename Payload>
   using array_type=grouped_bucket_array<Allocator,SizePolicy,Payload>;
 };
 
+
+template<typename Bucket>
 struct simple_bucket_iterator:public boost::iterator_facade<
-  simple_bucket_iterator,bucket,boost::forward_traversal_tag>
+  simple_bucket_iterator<Bucket>,Bucket,boost::forward_traversal_tag>
 {
 public:
   simple_bucket_iterator()=default;
       
 private:
   friend class boost::iterator_core_access;
-  template <typename,typename> friend class simple_bucket_array;
+  template <typename,typename,typename> friend class simple_bucket_array;
   
-  simple_bucket_iterator(bucket* p):p{p}{}
+  simple_bucket_iterator(Bucket* p):p{p}{}
 
   auto& dereference()const noexcept{return *p;}
   bool equal(const simple_bucket_iterator& x)const noexcept{return p==x.p;}
   void increment()noexcept{while(!(++p)->next);}
 
-  bucket *p=nullptr;
+  Bucket *p=nullptr;
 };
 
-template<typename Allocator,typename SizePolicy>
+template<typename Allocator,typename SizePolicy,typename Payload>
 class simple_bucket_array
 {
 protected:
@@ -455,10 +457,10 @@ protected:
   using node_type=bucket; // as node is required to derive from bucket
 
 public:
-  using value_type=bucket;
+  using value_type=extended_bucket<Payload>;
   using size_type=std::size_t;
   using allocator_type=Allocator;
-  using iterator=simple_bucket_iterator;
+  using iterator=simple_bucket_iterator<value_type>;
    
   simple_bucket_array(size_type n,const Allocator& al):
     size_index_(size_policy::size_index(n)),
@@ -502,7 +504,7 @@ public:
     *pp=p->next;
   }
 
-  void extract_node_after(iterator itb,node_type** pp)noexcept
+  void extract_node_after(iterator /*itb*/,node_type** pp)noexcept
   {
     *pp=(*pp)->next;
   }
@@ -510,23 +512,27 @@ public:
   void unlink_empty_buckets()noexcept{}
 
 private:    
-  std::size_t                            size_index_,size_;
-  std::vector<value_type,allocator_type> buckets;
+  using bucket_allocator_type=
+    typename std::allocator_traits<Allocator>::
+      template rebind_alloc<value_type>;      
+
+  std::size_t                                   size_index_,size_;
+  std::vector<value_type,bucket_allocator_type> buckets;
 };
 
 struct simple_buckets
 {
   static constexpr bool has_constant_iterator_increment=false;
 
-  template<typename Allocator,typename SizePolicy>
-  using array_type=simple_bucket_array<Allocator,SizePolicy>;
+  template<typename Allocator,typename SizePolicy,typename Payload>
+  using array_type=simple_bucket_array<Allocator,SizePolicy,Payload>;
 };
 
-template<typename Allocator,typename SizePolicy>
+template<typename Allocator,typename SizePolicy,typename Payload>
 class bcached_simple_bucket_array:
-  public simple_bucket_array<Allocator,SizePolicy>
+  public simple_bucket_array<Allocator,SizePolicy,Payload>
 {
-  using super=simple_bucket_array<Allocator,SizePolicy>;
+  using super=simple_bucket_array<Allocator,SizePolicy,Payload>;
   using node_type=typename super::node_type;
   
 public:
@@ -575,8 +581,8 @@ private:
 
 struct bcached_simple_buckets:simple_buckets
 {
-  template<typename Allocator,typename SizePolicy>
-  using array_type=bcached_simple_bucket_array<Allocator,SizePolicy>;
+  template<typename Allocator,typename SizePolicy,typename Payload>
+  using array_type=bcached_simple_bucket_array<Allocator,SizePolicy,Payload>;
 };
 
 template<typename T>
@@ -584,33 +590,6 @@ struct node:bucket
 {
   T value;
 };
-
-template<
-  typename BucketArrayPolicy,
-  typename Allocator,typename SizePolicy,typename PayLoad
->
-struct bucket_array_type_of_impl
-{
-  using type=typename BucketArrayPolicy::
-    template array_type<Allocator,SizePolicy,PayLoad>;
-};
-
-template<
-  typename BucketArrayPolicy,typename Allocator,typename SizePolicy
->
-struct bucket_array_type_of_impl<BucketArrayPolicy,Allocator,SizePolicy,void>
-{
-  using type=typename BucketArrayPolicy::
-    template array_type<Allocator,SizePolicy>;
-};
-
-template<
-  typename BucketArrayPolicy,
-  typename Allocator,typename SizePolicy,typename PayLoad
->
-using bucket_array_type_of=
-  typename bucket_array_type_of_impl<
-    BucketArrayPolicy,Allocator,SizePolicy,PayLoad>::type;
 
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
@@ -628,9 +607,10 @@ class fca_unordered_set
   using bucket_allocator_type=
     typename std::allocator_traits<Allocator>::
       template rebind_alloc<fca_unordered_impl::bucket>;
-  using bucket_array_type=bucket_array_type_of<
-    BucketArrayPolicy,bucket_allocator_type,SizePolicy,
-    std::conditional_t<EmbedNode::value,node_type,void>>;
+  using bucket_array_type=typename BucketArrayPolicy::
+    template array_type<
+      bucket_allocator_type,SizePolicy,
+      std::conditional_t<EmbedNode::value,node_type,void>>;
   using bucket=typename bucket_array_type::value_type;
   using bucket_iterator=typename bucket_array_type::iterator;
     

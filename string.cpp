@@ -278,7 +278,6 @@ using fca_fmod_bcached_unordered_bucket_map =
     fca_unordered_impl::prime_fmod_size,
     fca_unordered_impl::bcached_simple_buckets>;
 
-
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_hybrid_map =
   fca_unordered_map<
@@ -286,6 +285,24 @@ using fca_fmod_unordered_hybrid_map =
     std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::prime_fmod_size,
     fca_unordered_impl::grouped_buckets,
+    std::true_type /* EmbedNode */ >;
+
+template<class K, class V, class H=boost::hash<K>>
+using fca_fmod_unordered_hybrid_bucket_map =
+  fca_unordered_map<
+    K, V, H,std::equal_to<K>,
+    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::prime_fmod_size,
+    fca_unordered_impl::simple_buckets,
+    std::true_type /* EmbedNode */ >;
+
+template<class K, class V, class H=boost::hash<K>>
+using fca_fmod_bcached_unordered_hybrid_bucket_map =
+  fca_unordered_map<
+    K, V, H,std::equal_to<K>,
+    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::prime_fmod_size,
+    fca_unordered_impl::bcached_simple_buckets,
     std::true_type /* EmbedNode */ >;
 
 // fnv1a_hash
@@ -378,6 +395,12 @@ template<class K, class V> using fca_fmod_bcached_unordered_bucket_map_fnv1a =
 template<class K, class V> using fca_fmod_unordered_hybrid_map_fnv1a =                                 
   fca_fmod_unordered_hybrid_map<K, V, fnv1a_hash>;
 
+template<class K, class V> using fca_fmod_unordered_hybrid_bucket_map_fnv1a =
+  fca_fmod_unordered_hybrid_bucket_map<K, V, fnv1a_hash>;
+
+template<class K, class V> using fca_fmod_bcached_unordered_hybrid_bucket_map_fnv1a =
+  fca_fmod_bcached_unordered_hybrid_bucket_map<K, V, fnv1a_hash>;
+
 #ifdef HAVE_ABSEIL
 
 template<class K, class V> using absl_node_hash_map_fnv1a =
@@ -426,6 +449,11 @@ int main()
 
     // test<fca_fmod_unordered_hybrid_map>( "fca_fmod_unordered_hybrid_map" );
     test<fca_fmod_unordered_hybrid_map_fnv1a>( "fca_fmod_unordered_hybrid_map, FNV-1a" );
+
+    // test<fca_fmod_unordered_hybrid_bucket_map>( "fca_fmod_unordered_hybrid_bucket_map" );
+    test<fca_fmod_unordered_hybrid_bucket_map_fnv1a>( "fca_fmod_unordered_hybrid_bucket_map, FNV-1a" );
+    // test<fca_fmod_unordered_hybrid_bucket_map>( "fca_fmod_unordered_hybrid_bucket_map" );
+    test<fca_fmod_bcached_unordered_hybrid_bucket_map_fnv1a>( "fca_fmod_bcached_unordered_hybrid_bucket_map_fnv1a, FNV-1a" );
 
     // test<std::map>( "std::map" );
 
