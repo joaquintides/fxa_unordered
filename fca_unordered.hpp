@@ -17,6 +17,7 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <type_traits>
 #include <vector>
 #include "fastrange.h"
 
@@ -219,11 +220,25 @@ struct bucket
   bucket *next=nullptr;
 };
 
+template<typename Payload>
+struct extended_bucket:bucket
+{
+  Payload* data(){return reinterpret_cast<Payload*>(&storage);}
+  Payload& value(){return *data();}
+  
+  std::aligned_storage_t<sizeof(Payload),alignof(Payload)> storage;
+  bool                                                     has_payload=false;
+};
+
+template<>
+struct extended_bucket<void>:bucket{};
+
+template<typename Bucket>
 struct bucket_group
 {
   static constexpr std::size_t N=sizeof(std::size_t)*8;
 
-  bucket       *buckets;
+  Bucket       *buckets;
   std::size_t  bitmask=0;
   bucket_group *next=nullptr,*prev=nullptr;
 };
@@ -235,19 +250,20 @@ inline std::size_t reset_first_bits(std::size_t n) // n>0
   return ~(~(std::size_t(0))>>(sizeof(std::size_t)*8-n));
 }
 
+template<typename Bucket>
 struct grouped_bucket_iterator:public boost::iterator_facade<
-  grouped_bucket_iterator,bucket,boost::forward_traversal_tag>
+  grouped_bucket_iterator<Bucket>,Bucket,boost::forward_traversal_tag>
 {
 public:
   grouped_bucket_iterator()=default;
       
 private:
   friend class boost::iterator_core_access;
-  template <typename,typename> friend class grouped_bucket_array;
+  template <typename,typename,typename> friend class grouped_bucket_array;
   
-  static constexpr auto N=bucket_group::N;
+  static constexpr auto N=bucket_group<Bucket>::N;
 
-  grouped_bucket_iterator(bucket* p,bucket_group* pbg):p{p},pbg{pbg}{}
+  grouped_bucket_iterator(Bucket* p,bucket_group<Bucket>* pbg):p{p},pbg{pbg}{}
 
   auto& dereference()const noexcept{return *p;}
   bool equal(const grouped_bucket_iterator& x)const noexcept{return p==x.p;}
@@ -265,8 +281,8 @@ private:
     }
   }
 
-  bucket       *p=nullptr;
-  bucket_group *pbg=nullptr; 
+  Bucket               *p=nullptr;
+  bucket_group<Bucket> *pbg=nullptr; 
 };
   
 template<typename T>
@@ -279,17 +295,17 @@ struct span
   std::size_t size;
 };
 
-template<typename Allocator,typename SizePolicy>
+template<typename Allocator,typename SizePolicy,typename Payload=void>
 class grouped_bucket_array
 {
   using size_policy=SizePolicy;
   using node_type=bucket; // as node is required to derive from bucket
 
 public:
-  using value_type=bucket;
+  using value_type=extended_bucket<Payload>;
   using size_type=std::size_t;
   using allocator_type=Allocator;
-  using iterator=grouped_bucket_iterator;
+  using iterator=grouped_bucket_iterator<value_type>;
   
   grouped_bucket_array(size_type n,const Allocator& al):
     size_index_(size_policy::size_index(n)),
@@ -379,7 +395,10 @@ public:
   }
 
 private:
-  using group=bucket_group;
+  using bucket_allocator_type=
+    typename std::allocator_traits<Allocator>::
+      template rebind_alloc<value_type>;      
+  using group=bucket_group<value_type>;
   using group_allocator_type=
     typename std::allocator_traits<Allocator>::
       template rebind_alloc<group>;
@@ -397,17 +416,17 @@ private:
     pbg->prev=pbg->next=nullptr;
   }
 
-  std::size_t                             size_index_,size_;
-  std::vector<value_type,allocator_type>  buckets;
-  std::vector<group,group_allocator_type> groups;
+  std::size_t                                   size_index_,size_;
+  std::vector<value_type,bucket_allocator_type> buckets;
+  std::vector<group,group_allocator_type>       groups;
 };
 
 struct grouped_buckets
 {
   static constexpr bool has_constant_iterator_increment=true;
 
-  template<typename Allocator,typename SizePolicy>
-  using array_type=grouped_bucket_array<Allocator,SizePolicy>;
+  template<typename Allocator,typename SizePolicy,typename Payload=void>
+  using array_type=grouped_bucket_array<Allocator,SizePolicy,Payload>;
 };
 
 struct simple_bucket_iterator:public boost::iterator_facade<
@@ -568,9 +587,37 @@ struct node:bucket
 };
 
 template<
+  typename BucketArrayPolicy,
+  typename Allocator,typename SizePolicy,typename PayLoad
+>
+struct bucket_array_type_of_impl
+{
+  using type=typename BucketArrayPolicy::
+    template array_type<Allocator,SizePolicy,PayLoad>;
+};
+
+template<
+  typename BucketArrayPolicy,typename Allocator,typename SizePolicy
+>
+struct bucket_array_type_of_impl<BucketArrayPolicy,Allocator,SizePolicy,void>
+{
+  using type=typename BucketArrayPolicy::
+    template array_type<Allocator,SizePolicy>;
+};
+
+template<
+  typename BucketArrayPolicy,
+  typename Allocator,typename SizePolicy,typename PayLoad
+>
+using bucket_array_type_of=
+  typename bucket_array_type_of_impl<
+    BucketArrayPolicy,Allocator,SizePolicy,PayLoad>::type;
+
+template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
-  typename SizePolicy=prime_size,typename BucketArrayPolicy=grouped_buckets
+  typename SizePolicy=prime_size,typename BucketArrayPolicy=grouped_buckets,
+  typename EmbedNode=std::false_type
 >
 class fca_unordered_set
 {
@@ -581,10 +628,11 @@ class fca_unordered_set
   using node_alloc_traits=std::allocator_traits<node_allocator_type>;
   using bucket_allocator_type=
     typename std::allocator_traits<Allocator>::
-      template rebind_alloc<bucket>;
-  using bucket_array_type=
-    typename BucketArrayPolicy::
-      template array_type<bucket_allocator_type,SizePolicy>;
+      template rebind_alloc<fca_unordered_impl::bucket>;
+  using bucket_array_type=bucket_array_type_of<
+    BucketArrayPolicy,bucket_allocator_type,SizePolicy,
+    std::conditional_t<EmbedNode::value,node_type,void>>;
+  using bucket=typename bucket_array_type::value_type;
   using bucket_iterator=typename bucket_array_type::iterator;
     
 public:
@@ -646,14 +694,14 @@ public:
       auto [p,itb]=pos;
       ++pos;
       buckets.extract_node(itb,p);
-      delete_node(p);
+      delete_node(p,*itb);
       --size_;
       return pos;
     }
     else{
       auto [p,itb]=pos;
       buckets.extract_node(itb,p);
-      delete_node(p);
+      delete_node(static_cast<node_type*>(p),*itb);
       --size_;
     }
   }
@@ -668,7 +716,7 @@ public:
     else{
       auto p=*pp;
       buckets.extract_node_after(itb,pp);
-      delete_node(static_cast<node_type*>(p));
+      delete_node(static_cast<node_type*>(p),*itb);
       --size_;
       return 1;
     }
@@ -682,8 +730,17 @@ public:
 
 private:
   template<typename Value>
-  node_type* new_node(Value&& x)
+  node_type* new_node(Value&& x,bucket& b)
   {
+    if constexpr(EmbedNode::value){
+      if(!b.has_payload){
+        auto p=b.data();
+        node_alloc_traits::construct(al,&p->value,std::forward<Value>(x));
+        b.has_payload=true;
+        return p;
+      }
+    }
+    
     node_type* p=&*node_alloc_traits::allocate(al,1);
     try{
       node_alloc_traits::construct(al,&p->value,std::forward<Value>(x));
@@ -695,10 +752,17 @@ private:
     }
   }
   
-  void delete_node(node_type* p)
+  void delete_node(node_type* p,bucket& b)
   {
     node_alloc_traits::destroy(al,&p->value);
-    node_alloc_traits::deallocate(al,p,1);
+    
+    if constexpr(EmbedNode::value){
+      if(p==b.data())b.has_payload=false;
+      else           node_alloc_traits::deallocate(al,p,1);
+    }
+    else{
+      node_alloc_traits::deallocate(al,p,1);
+    }
   }
 
   template<typename Value>
@@ -714,7 +778,7 @@ private:
       itb=buckets.at(buckets.position(hash));
     }
     
-    auto p=new_node(std::forward<Value>(x));
+    auto p=new_node(std::forward<Value>(x),*itb);
     buckets.insert_node(itb,p);
     ++size_;
     return {{p,itb},true};
@@ -730,10 +794,19 @@ private:
     try{
       for(auto& b:buckets.raw()){            
         for(auto p=b.next;p;){
-          auto next_p=p->next;
-          new_buckets.insert_node(
-            new_buckets.at(
-              new_buckets.position(h(static_cast<node_type*>(p)->value))),p);
+          auto  next_p=p->next;
+          auto  itnewb=new_buckets.at(
+            new_buckets.position(h(static_cast<node_type*>(p)->value)));
+            
+          if constexpr(EmbedNode::value){
+            if(p==b.data()){
+              auto newp=new_node(std::move(b.data()->value),*itnewb);
+              node_alloc_traits::destroy(al,&b.data()->value);
+              b.has_payload=false;
+              p=newp;
+            }
+          }
+          new_buckets.insert_node(itnewb,p);
           b.next=p=next_p;
         }
       }
@@ -742,7 +815,7 @@ private:
       for(auto& b:new_buckets){
         for(auto p=b.next;p;){
           auto next_p=p->next;
-          delete_node(static_cast<node_type*>(p));
+          delete_node(static_cast<node_type*>(p),b);
           --size_;
           p=next_p;
         }
