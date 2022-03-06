@@ -375,7 +375,7 @@ template<class K, class V> using fca_fmod_unordered_bucket_map_fnv1a =
 template<class K, class V> using fca_fmod_bcached_unordered_bucket_map_fnv1a =
   fca_fmod_bcached_unordered_bucket_map<K, V, fnv1a_hash>;
 
-template<class K, class V> using fca_fmod_unordered_hybrid_map_fnv1a =
+template<class K, class V> using fca_fmod_unordered_hybrid_map_fnv1a =                                 
   fca_fmod_unordered_hybrid_map<K, V, fnv1a_hash>;
 
 #ifdef HAVE_ABSEIL
@@ -424,8 +424,8 @@ int main()
     // test<fca_fmod_bcached_unordered_bucket_map>( "fca_fmod_bcached_unordered_bucket_map" );
     test<fca_fmod_bcached_unordered_bucket_map_fnv1a>( "fca_fmod_bcached_unordered_bucket_map, FNV-1a" );
 
-    // test<fca_fmod_unordered_hybrid_map>( "fca_fmod_unordered_hydrid_map" );
-    test<fca_fmod_unordered_hydrid_map_fnv1a>( "fca_fmod_unordered_hydrid_map, FNV-1a" );
+    // test<fca_fmod_unordered_hybrid_map>( "fca_fmod_unordered_hybrid_map" );
+    test<fca_fmod_unordered_hybrid_map_fnv1a>( "fca_fmod_unordered_hybrid_map, FNV-1a" );
 
     // test<std::map>( "std::map" );
 
