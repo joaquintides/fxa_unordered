@@ -226,7 +226,6 @@ struct extended_bucket:bucket
   Payload& value(){return *data();}
   
   std::aligned_storage_t<sizeof(Payload),alignof(Payload)> storage;
-  bool                                                     has_payload=false;
 };
 
 template<>
@@ -591,6 +590,15 @@ struct node:bucket
   T value;
 };
 
+template<typename Node>
+struct embedded_node:Node
+{
+  embedded_node(){reset_payload();}
+
+  bool has_payload()const{return this->next!=this;}
+  void reset_payload(){this->next=this;}
+};
+
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
@@ -610,7 +618,7 @@ class fca_unordered_set
   using bucket_array_type=typename BucketArrayPolicy::
     template array_type<
       bucket_allocator_type,SizePolicy,
-      std::conditional_t<EmbedNode::value,node_type,void>>;
+      std::conditional_t<EmbedNode::value,embedded_node<node_type>,void>>;
   using bucket=typename bucket_array_type::value_type;
   using bucket_iterator=typename bucket_array_type::iterator;
     
@@ -712,10 +720,9 @@ private:
   node_type* new_node(Value&& x,bucket& b)
   {
     if constexpr(EmbedNode::value){
-      if(!b.has_payload){
+      if(!b.value().has_payload()){
         auto p=b.data();
         node_alloc_traits::construct(al,&p->value,std::forward<Value>(x));
-        b.has_payload=true;
         return p;
       }
     }
@@ -736,7 +743,7 @@ private:
     node_alloc_traits::destroy(al,&p->value);
     
     if constexpr(EmbedNode::value){
-      if(p==b.data())b.has_payload=false;
+      if(p==b.data())b.value().reset_payload();
       else           node_alloc_traits::deallocate(al,p,1);
     }
     else{
@@ -781,7 +788,7 @@ private:
             if(p==b.data()){
               auto newp=new_node(std::move(b.data()->value),*itnewb);
               node_alloc_traits::destroy(al,&b.data()->value);
-              b.has_payload=false;
+              b.value().reset_payload();
               p=newp;
             }
           }
