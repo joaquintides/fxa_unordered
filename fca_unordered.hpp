@@ -222,8 +222,15 @@ struct bucket
 template<typename Payload>
 struct extended_bucket:bucket
 {
+  extended_bucket(){reset_payload();}
+
   Payload* data(){return reinterpret_cast<Payload*>(&storage);}
+  const Payload* data()const{return reinterpret_cast<const Payload*>(&storage);}
   Payload& value(){return *data();}
+  const Payload& value()const{return *data();}
+  
+  bool has_payload()const{return data()->next!=data();}
+  void reset_payload(){data()->next=data();}
   
   std::aligned_storage_t<sizeof(Payload),alignof(Payload)> storage;
 };
@@ -590,15 +597,6 @@ struct node:bucket
   T value;
 };
 
-template<typename Node>
-struct embedded_node:Node
-{
-  embedded_node(){reset_payload();}
-
-  bool has_payload()const{return this->next!=this;}
-  void reset_payload(){this->next=this;}
-};
-
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
@@ -618,7 +616,7 @@ class fca_unordered_set
   using bucket_array_type=typename BucketArrayPolicy::
     template array_type<
       bucket_allocator_type,SizePolicy,
-      std::conditional_t<EmbedNode::value,embedded_node<node_type>,void>>;
+      std::conditional_t<EmbedNode::value,node_type,void>>;
   using bucket=typename bucket_array_type::value_type;
   using bucket_iterator=typename bucket_array_type::iterator;
     
@@ -720,7 +718,7 @@ private:
   node_type* new_node(Value&& x,bucket& b)
   {
     if constexpr(EmbedNode::value){
-      if(!b.value().has_payload()){
+      if(!b.has_payload()){
         auto p=b.data();
         node_alloc_traits::construct(al,&p->value,std::forward<Value>(x));
         return p;
@@ -743,7 +741,7 @@ private:
     node_alloc_traits::destroy(al,&p->value);
     
     if constexpr(EmbedNode::value){
-      if(p==b.data())b.value().reset_payload();
+      if(p==b.data())b.reset_payload();
       else           node_alloc_traits::deallocate(al,p,1);
     }
     else{
@@ -788,7 +786,7 @@ private:
             if(p==b.data()){
               auto newp=new_node(std::move(b.data()->value),*itnewb);
               node_alloc_traits::destroy(al,&b.data()->value);
-              b.value().reset_payload();
+              b.reset_payload();
               p=newp;
             }
           }
