@@ -707,7 +707,7 @@ private:
   {
     auto pb=&b;
     for(auto n=look_ahead(buckets,b);n;++pb,--n){
-      if(pb->has_payload())return pb;
+      if(!pb->has_payload())return pb;
     }
         
     return nullptr;
