@@ -14,6 +14,7 @@
 #include <boost/container_hash/hash.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <type_traits>
@@ -650,6 +651,8 @@ class hybrid_node_allocator:public dynamic_node_allocator<Node,Allocator>
   using super=dynamic_node_allocator<Node,Allocator>;
  
 public:
+  static constexpr std::ptrdiff_t LINEAR_PROBE_N=4;
+
   using node_type=Node;
   
   using super::super;
@@ -657,8 +660,8 @@ public:
   template<typename Value,typename RawBucketArray,typename Bucket>
   node_type* new_node(Value&& x,RawBucketArray buckets,Bucket& b)
   {  
-    if(!b.has_payload()){
-        auto p=b.data();
+    if(auto pb=find_available_bucket(buckets,b)){
+        auto p=pb->data();
         alloc_traits::construct(
           this->get_allocator(),&p->value,std::forward<Value>(x));
         return p;
@@ -669,22 +672,22 @@ public:
   template<typename RawBucketArray,typename Bucket>
   void delete_node(node_type* p,RawBucketArray buckets,Bucket& b)
   {
-    if(p==b.data()){
-      alloc_traits::destroy(this->get_allocator(),&p->value);
-      b.reset_payload();
+    if(auto pb=find_hosting_bucket(p,buckets,b)){
+      alloc_traits::destroy(this->get_allocator(),&pb->data()->value);
+      pb->reset_payload();
     }
     else super::delete_node(p,buckets,b);
   }
   
   template<typename RawBucketArray,typename Bucket>
   node_type* transfer_node(
-    node_type* p,RawBucketArray,Bucket& b,
+    node_type* p,RawBucketArray buckets,Bucket& b,
     RawBucketArray new_buckets,Bucket& newb)
   {
-    if(p==b.data()){
-      auto newp=new_node(std::move(b.data()->value),new_buckets,newb);
-      alloc_traits::destroy(al,&b.data()->value);
-      b.reset_payload();
+    if(auto pb=find_hosting_bucket(p,buckets,b)){
+      auto newp=new_node(std::move(pb->data()->value),new_buckets,newb);
+      alloc_traits::destroy(al,&pb->data()->value);
+      pb->reset_payload();
       return newp;
     }
     else return p;
@@ -692,6 +695,33 @@ public:
 
 private:
   using alloc_traits=std::allocator_traits<Allocator>;
+  
+  template<typename RawBucketArray,typename Bucket>
+  auto look_ahead(RawBucketArray buckets,Bucket& b)
+  {
+    return (std::min)(LINEAR_PROBE_N,std::distance(&b,buckets.end()));
+  }
+
+  template<typename RawBucketArray,typename Bucket>
+  Bucket* find_available_bucket(RawBucketArray buckets,Bucket& b)
+  {
+    auto pb=&b;
+    for(auto n=look_ahead(buckets,b);n;++pb,--n){
+      if(pb->has_payload())return pb;
+    }
+        
+    return nullptr;
+  }
+  
+  template<typename RawBucketArray,typename Bucket>
+  Bucket* find_hosting_bucket(node_type* p,RawBucketArray buckets,Bucket& b)
+  {
+    auto pb=&b;
+    for(auto n=look_ahead(buckets,b);n;++pb,--n){
+      if(p==pb->data())return pb;
+    }
+    return nullptr;
+  }
 
   Allocator al; 
 };
