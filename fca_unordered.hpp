@@ -10,8 +10,8 @@
 #define FCA_UNORDERED_HPP
 
 #include <algorithm>
-#include <boost/core/bit.hpp>
 #include <boost/container_hash/hash.hpp>
+#include <boost/core/bit.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <cstdint>
 #include <functional>
@@ -416,7 +416,6 @@ struct grouped_buckets
   using array_type=grouped_bucket_array<Bucket,Allocator,SizePolicy>;
 };
 
-
 template<typename Bucket>
 struct simple_bucket_iterator:public boost::iterator_facade<
   simple_bucket_iterator<Bucket>,Bucket,boost::forward_traversal_tag>
@@ -611,7 +610,7 @@ public:
   }
   
   template<typename RawBucketArray,typename Bucket>
-  node_type* transfer_node
+  node_type* relocate_node
     (node_type* p,RawBucketArray,Bucket&,RawBucketArray,Bucket&){return p;}    
 
 protected:
@@ -652,7 +651,6 @@ class hybrid_node_allocator:public dynamic_node_allocator<Node,Allocator>
  
 public:
   static constexpr std::ptrdiff_t LINEAR_PROBE_N=4;
-
   using node_type=Node;
   
   using super::super;
@@ -672,7 +670,7 @@ public:
   template<typename RawBucketArray,typename Bucket>
   void delete_node(node_type* p,RawBucketArray buckets,Bucket& b)
   {
-    if(auto pb=find_hosting_bucket(p,buckets,b)){
+    if(auto pb=find_hosting_bucket(p,buckets)){
       alloc_traits::destroy(this->get_allocator(),&pb->data()->value);
       pb->reset_payload();
     }
@@ -680,11 +678,11 @@ public:
   }
   
   template<typename RawBucketArray,typename Bucket>
-  node_type* transfer_node(
-    node_type* p,RawBucketArray buckets,Bucket& b,
+  node_type* relocate_node(
+    node_type* p,RawBucketArray buckets,Bucket&,
     RawBucketArray new_buckets,Bucket& newb)
   {
-    if(auto pb=find_hosting_bucket(p,buckets,b)){
+    if(auto pb=find_hosting_bucket(p,buckets)){
       auto newp=new_node(std::move(pb->data()->value),new_buckets,newb);
       alloc_traits::destroy(al,&pb->data()->value);
       pb->reset_payload();
@@ -696,12 +694,6 @@ public:
 private:
   using alloc_traits=std::allocator_traits<Allocator>;
   
-  template<typename RawBucketArray,typename Bucket>
-  auto look_ahead(RawBucketArray buckets,Bucket& b)
-  {
-    return (std::min)(LINEAR_PROBE_N,buckets.end()-&b);
-  }
-
   template<std::ptrdiff_t N,typename Bucket>
   Bucket* find_available_bucket(Bucket* pb,Bucket* pbend)
   {
@@ -717,35 +709,21 @@ private:
   template<typename RawBucketArray,typename Bucket>
   Bucket* find_available_bucket(RawBucketArray buckets,Bucket& b)
   {
-#if 0
-    auto pb=&b;
-    for(auto n=look_ahead(buckets,b);n;++pb,--n){
-      if(!pb->has_payload())return pb;
-    }     
-    return nullptr;
-#else
     return find_available_bucket<LINEAR_PROBE_N>(&b,buckets.end());
-#endif    
   }
   
-  template<typename RawBucketArray,typename Bucket>
-  Bucket* find_hosting_bucket(node_type* p,RawBucketArray buckets,Bucket& b)
+  template<typename RawBucketArray>
+  auto find_hosting_bucket(node_type* p,RawBucketArray buckets)
   {
-#if 0
-    auto pb=&b;
-    for(auto n=look_ahead(buckets,b);n;++pb,--n){
-      if(p==pb->data())return pb;
-    }
-    return nullptr;
-#else
+    using bucket=std::remove_reference_t<decltype(*buckets.begin())>;
+    
     std::uintptr_t u=(std::uintptr_t)p,
                    ubegin=(std::uintptr_t)buckets.begin(),
                    uend=(std::uintptr_t)buckets.end();
     if(ubegin<=u&&u<uend){
-      return (Bucket*)(ubegin+(u-ubegin)/sizeof(Bucket)*sizeof(Bucket));
+      return (bucket*)(ubegin+(u-ubegin)/sizeof(bucket)*sizeof(bucket));
     }
-    else return nullptr;
-#endif
+    else return (bucket*)nullptr;
   }
 
   Allocator al; 
@@ -892,7 +870,8 @@ private:
     node_type* p,bucket& b,bucket_array_type& new_buckets)
   {
     auto itnewb=new_buckets.at(new_buckets.position(h(p->value)));
-    p=node_allocator.transfer_node(p,buckets.raw(),b,new_buckets.raw(),*itnewb);
+    p=node_allocator.relocate_node(
+      p,buckets.raw(),b,new_buckets.raw(),*itnewb);
     new_buckets.insert_node(itnewb,p);
   }
 
@@ -1058,5 +1037,3 @@ using fca_unordered_impl::fca_unordered_set;
 using fca_unordered_impl::fca_unordered_map;
 
 #endif
-
-#include <iostream>
