@@ -726,7 +726,8 @@ private:
 #else
     return find_available_bucket<LINEAR_PROBE_N>(&b,buckets.end());
 #endif    
-  }  
+  }
+  
   template<typename RawBucketArray,typename Bucket>
   Bucket* find_hosting_bucket(node_type* p,RawBucketArray buckets,Bucket& b)
   {
@@ -738,10 +739,10 @@ private:
     return nullptr;
 #else
     std::uintptr_t u=(std::uintptr_t)p,
-                   ub=(std::uintptr_t)&b,
-                   ubend=(std::uintptr_t)buckets.end();
-    if(u>=ub&&u<=ubend){
-      return (Bucket*)(ub+(u-ub)/sizeof(Bucket)*sizeof(Bucket));
+                   ubegin=(std::uintptr_t)buckets.begin(),
+                   uend=(std::uintptr_t)buckets.end();
+    if(ubegin<=u&&u<uend){
+      return (Bucket*)(ubegin+(u-ubegin)/sizeof(Bucket)*sizeof(Bucket));
     }
     else return nullptr;
 #endif
