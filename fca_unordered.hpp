@@ -13,13 +13,12 @@
 #include <boost/core/bit.hpp>
 #include <boost/container_hash/hash.hpp>
 #include <boost/iterator/iterator_facade.hpp>
+#include <cstdint>
 #include <functional>
-#include <iterator>
 #include <limits>
 #include <memory>
 #include <type_traits>
 #include <vector>
-#include "fastrange.h"
 
 namespace fca_unordered_impl{
     
@@ -661,10 +660,10 @@ public:
   node_type* new_node(Value&& x,RawBucketArray buckets,Bucket& b)
   {  
     if(auto pb=find_available_bucket(buckets,b)){
-        auto p=pb->data();
-        alloc_traits::construct(
-          this->get_allocator(),&p->value,std::forward<Value>(x));
-        return p;
+      auto p=pb->data();
+      alloc_traits::construct(
+        this->get_allocator(),&p->value,std::forward<Value>(x));
+      return p;
     }
     else return super::new_node(x,buckets,b);
   }
@@ -699,7 +698,7 @@ private:
   template<typename RawBucketArray,typename Bucket>
   auto look_ahead(RawBucketArray buckets,Bucket& b)
   {
-    return (std::min)(LINEAR_PROBE_N,std::distance(&b,buckets.end()));
+    return (std::min)(LINEAR_PROBE_N,buckets.end()-&b);
   }
 
   template<typename RawBucketArray,typename Bucket>
@@ -716,11 +715,21 @@ private:
   template<typename RawBucketArray,typename Bucket>
   Bucket* find_hosting_bucket(node_type* p,RawBucketArray buckets,Bucket& b)
   {
+#if 0
     auto pb=&b;
     for(auto n=look_ahead(buckets,b);n;++pb,--n){
       if(p==pb->data())return pb;
     }
     return nullptr;
+#else
+    std::uintptr_t u=(std::uintptr_t)p,
+                   ub=(std::uintptr_t)&b,
+                   ubend=(std::uintptr_t)buckets.end();
+    if(u>=ub&&u<=ubend){
+      return (Bucket*)(ub+(u-ub)/sizeof(Bucket)*sizeof(Bucket));
+    }
+    else return nullptr;
+#endif
   }
 
   Allocator al; 
@@ -1033,3 +1042,5 @@ using fca_unordered_impl::fca_unordered_set;
 using fca_unordered_impl::fca_unordered_map;
 
 #endif
+
+#include <iostream>
