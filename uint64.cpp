@@ -300,7 +300,7 @@ using fca_fmod_unordered_hybrid_map =
     std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::prime_fmod_size,
     fca_unordered_impl::grouped_buckets,
-    std::true_type /* EmbedNode */ >;
+    fca_unordered_impl::hybrid_node_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_hybrid_bucket_map =
@@ -309,7 +309,7 @@ using fca_fmod_unordered_hybrid_bucket_map =
     std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::prime_fmod_size,
     fca_unordered_impl::simple_buckets,
-    std::true_type /* EmbedNode */ >;
+    fca_unordered_impl::hybrid_node_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_bcached_unordered_hybrid_bucket_map =
@@ -318,7 +318,7 @@ using fca_fmod_bcached_unordered_hybrid_bucket_map =
     std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::prime_fmod_size,
     fca_unordered_impl::bcached_simple_buckets,
-    std::true_type /* EmbedNode */ >;
+    fca_unordered_impl::hybrid_node_allocation>;
 
 int main()
 {
