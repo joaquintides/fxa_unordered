@@ -8,7 +8,7 @@ template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
   typename SizePolicy=prime_size,typename BucketArrayPolicy=grouped_buckets,
-  typename EmbedNode=std::false_type
+  typename NodeAllocationPolicy=dynamic_node_allocation
 >
 class fca_unordered_set;
 
@@ -17,7 +17,7 @@ template<
   typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
   typename Allocator=std::allocator</* equivalent to std::pair<const Key,Value> */>,
   typename SizePolicy=prime_size,typename BucketArrayPolicy=grouped_buckets,
-  typename EmbedNode=std::false_type
+  typename NodeAllocationPolicy=dynamic_node_allocation
 >
 class fca_unordered_map;
 ```
@@ -75,15 +75,16 @@ Going from a given bucket to the next occupied one is implemented as follows:
   <ul>The memory overhead added by bucket groups is 4 bits per bucket.</ul>
 </div>
 
-**`EmbedNode`**
-
-If `EmbedNode::value` is true, buckets are extended to hold space for a node, so that
-no additional memory allocation is needed to insert the first element in the bucket.
+**`NodeAllocationPolicy`**
+* `dynamic_node_allocation`: Nodes are allocated individually.
+* `hybrid_node_allocation`: Buckets are extended to hold space for a node. When inserting
+a new value in a bucket, that bucket and its three neighbors to the right are checked for
+available embedded space to hold the node; if no space is found, dynamic allocation is used.
 The resulting container deviates in a number of important aspects from the C++ standard
 requirements for unordered associative containers:
-* Pointer stability is not mantained on rehashing.
-* The elements of the container must be movable.
-* It is not possible to provide [node extraction](https://en.cppreference.com/w/cpp/container/node_handle)
+  * Pointer stability is not mantained on rehashing.
+  * The elements of the container must be movable.
+  * It is not possible to provide [node extraction](https://en.cppreference.com/w/cpp/container/node_handle)
   capabilities.
 
 ```cpp
