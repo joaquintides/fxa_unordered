@@ -686,7 +686,7 @@ public:
     else{
       auto [p,itb]=pos;
       buckets.extract_node(itb,p);
-      delete_node(static_cast<node_type*>(p),*itb);
+      delete_node(p,*itb);
       --size_;
     }
   }
@@ -714,14 +714,19 @@ public:
   }
 
 private:
+  static constexpr int LINEAR_PROB_N=4;
+
   template<typename Value>
   node_type* new_node(Value&& x,bucket& b)
   {
     if constexpr(EmbedNode::value){
-      if(!b.has_payload()){
-        auto p=b.data();
-        node_alloc_traits::construct(al,&p->value,std::forward<Value>(x));
-        return p;
+      auto pb=&b,pbend=buckets.raw().end();
+      for(int i=0;pb!=pbend&&i<LINEAR_PROB_N;++pb,++i){
+        if(!pb->has_payload()){
+          auto p=pb->data();
+          node_alloc_traits::construct(al,&p->value,std::forward<Value>(x));
+          return p;
+        }
       }
     }
     
@@ -741,12 +746,16 @@ private:
     node_alloc_traits::destroy(al,&p->value);
     
     if constexpr(EmbedNode::value){
-      if(p==b.data())b.reset_payload();
-      else           node_alloc_traits::deallocate(al,p,1);
+      auto pb=&b,pbend=buckets.raw().end();
+      for(int i=0;pb!=pbend&&i<LINEAR_PROB_N;++pb,++i){
+        if(p==pb->data()){
+          pb->reset_payload();
+          return;
+        }
+      }
     }
-    else{
-      node_alloc_traits::deallocate(al,p,1);
-    }
+
+    node_alloc_traits::deallocate(al,p,1);
   }
 
   template<typename Value>
@@ -783,11 +792,15 @@ private:
             new_buckets.position(h(static_cast<node_type*>(p)->value)));
             
           if constexpr(EmbedNode::value){
-            if(p==b.data()){
-              auto newp=new_node(std::move(b.data()->value),*itnewb);
-              node_alloc_traits::destroy(al,&b.data()->value);
-              b.reset_payload();
-              p=newp;
+            auto pb=&b,pbend=buckets.raw().end();
+            for(int i=0;pb!=pbend&&i<LINEAR_PROB_N;++pb,++i){
+              if(p==pb->data()){
+                auto newp=new_node(std::move(pb->data()->value),*itnewb);
+                node_alloc_traits::destroy(al,&pb->data()->value);
+                pb->reset_payload();
+                p=newp;
+                break;
+              }
             }
           }
           new_buckets.insert_node(itnewb,p);
