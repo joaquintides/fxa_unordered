@@ -702,17 +702,31 @@ private:
     return (std::min)(LINEAR_PROBE_N,buckets.end()-&b);
   }
 
+  template<std::ptrdiff_t N,typename Bucket>
+  Bucket* find_available_bucket(Bucket* pb,Bucket* pbend)
+  {
+    if constexpr(N==0)return nullptr;
+    else return
+      !pb->has_payload()?
+        pb:
+        pb+1==pbend?
+          nullptr:
+          find_available_bucket<N-1>(pb+1,pbend);
+  }
+
   template<typename RawBucketArray,typename Bucket>
   Bucket* find_available_bucket(RawBucketArray buckets,Bucket& b)
   {
+#if 0
     auto pb=&b;
     for(auto n=look_ahead(buckets,b);n;++pb,--n){
       if(!pb->has_payload())return pb;
-    }
-        
+    }     
     return nullptr;
-  }
-  
+#else
+    return find_available_bucket<LINEAR_PROBE_N>(&b,buckets.end());
+#endif    
+  }  
   template<typename RawBucketArray,typename Bucket>
   Bucket* find_hosting_bucket(node_type* p,RawBucketArray buckets,Bucket& b)
   {
