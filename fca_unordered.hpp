@@ -686,7 +686,7 @@ public:
     else{
       auto [p,itb]=pos;
       buckets.extract_node(itb,p);
-      delete_node(static_cast<node_type*>(p),*itb);
+      delete_node(p,*itb);
       --size_;
     }
   }
