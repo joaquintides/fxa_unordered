@@ -959,7 +959,7 @@ private:
   Hash                h;
   Pred                pred;
   node_allocator_type node_allocator{Allocator()};
-  float               mlf=0.875f;
+  float               mlf=1.0f;
   size_type           size_=0;
   bucket_array_type   buckets{0,node_allocator.get_allocator()};
   size_type           ml=max_load();  
