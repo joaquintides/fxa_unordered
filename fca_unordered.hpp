@@ -650,7 +650,7 @@ class hybrid_node_allocator:public dynamic_node_allocator<Node,Allocator>
   using super=dynamic_node_allocator<Node,Allocator>;
  
 public:
-  static constexpr std::ptrdiff_t LINEAR_PROBE_N=4;
+  static constexpr std::ptrdiff_t LINEAR_PROBE_N=10;
   using node_type=Node;
   
   using super::super;
