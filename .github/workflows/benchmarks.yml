@@ -83,8 +83,7 @@ jobs:
             os: ubuntu-20.04
             install: libc++-12-dev libc++abi-12-dev
 
-    # runs-on: ${{matrix.os}}
-    runs-on: [self-hosted, linux, x64]
+    runs-on: ${{matrix.os}}
 
     steps:
       - uses: actions/checkout@v2
@@ -110,23 +109,18 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE
           git clone -b lts_2021_11_02 https://github.com/abseil/abseil-cpp.git abseil-root
-
       - name: Install fastrange
         run: |
           cd $GITHUB_WORKSPACE
           git clone https://github.com/lemire/fastrange.git fastrange-root
-
       - name: Compile
         run: |
           cd $GITHUB_WORKSPACE
           ${{matrix.compiler}} --version
           ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.compileroptions}} -o ${{matrix.outputfile}} -I$GITHUB_WORKSPACE/boost-root -I$GITHUB_WORKSPACE/abseil-root -I$GITHUB_WORKSPACE/fastrange-root
-
       - name: Run benchmarks
         run: |
-          # ./${{matrix.outputfile}}
-          sudo cset shield --exec -- nice -n -20 sudo -u gha ./${{matrix.outputfile}}
-
+          ./${{matrix.outputfile}}
   windows:
     strategy:
       fail-fast: false
@@ -168,19 +162,16 @@ jobs:
           git submodule update --init
           cmd /c bootstrap.bat
           .\b2.exe -d0 headers
-
       - name: Install Abseil
         shell: cmd
         run: |
           cd %GITHUB_WORKSPACE%
           git clone -b lts_2021_11_02 https://github.com/abseil/abseil-cpp.git abseil-root
-
       - name: Install fastrange
         shell: cmd
         run: |
           cd %GITHUB_WORKSPACE%
           git clone https://github.com/lemire/fastrange.git fastrange-root
-
       - name: Compile
         shell: cmd
         run: |
@@ -191,7 +182,6 @@ jobs:
           set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\fastrange-root
           echo %INCLUDE%
           ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.compileroptions}}
-
       - name: Run benchmark
         shell: cmd
         run: |
