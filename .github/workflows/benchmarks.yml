@@ -66,7 +66,8 @@ jobs:
             os: ubuntu-20.04
             install: libc++-12-dev libc++abi-12-dev
 
-    runs-on: ${{matrix.os}}
+    # runs-on: ${{matrix.os}}
+    runs-on: [self-hosted, linux, x64]
 
     steps:
       - uses: actions/checkout@v2
@@ -106,7 +107,8 @@ jobs:
 
       - name: Run benchmarks
         run: |
-          ./${{matrix.outputfile}}
+          # ./${{matrix.outputfile}}
+          sudo cset shield --exec -- nice -n -20 sudo -u gha ./${{matrix.outputfile}}
 
   windows:
     strategy:
