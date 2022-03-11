@@ -406,8 +406,8 @@ int main()
 {
     init_indices();
 
-    test<std::unordered_map>( "std::unordered_map" );
-    test<boost::unordered_map>( "boost::unordered_map" );
+    test<std_unordered_map>( "std::unordered_map" );
+    test<boost_unordered_map>( "boost::unordered_map" );
     test<multi_index_map>( "multi_index_map" );
 
 #ifdef BENCHMARK_EVERYTHING
@@ -444,8 +444,8 @@ int main()
 #endif
     
 #ifdef HAVE_ABSEIL
-    test<absl::node_hash_map>( "absl::node_hash_map" );
-    test<absl::flat_hash_map>( "absl::flat_hash_map" );
+    test<absl_node_hash_map>( "absl::node_hash_map" );
+    test<absl_flat_hash_map>( "absl::flat_hash_map" );
 #endif
 
     std::cout << "---\n\n";
