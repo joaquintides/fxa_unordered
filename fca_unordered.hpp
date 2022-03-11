@@ -231,10 +231,14 @@ struct bucket_group
 };
 
 inline std::size_t set_bit(std::size_t n){return std::size_t(1)<<n;}
-inline std::size_t reset_bit(std::size_t n){return ~(std::size_t(1)<<n);}
+inline std::size_t reset_bit(std::size_t n){return ~set_bit(n);}
+inline std::size_t set_first_bits(std::size_t n) // n>0
+{
+  return ~(std::size_t(0))>>(sizeof(std::size_t)*8-n);
+}
 inline std::size_t reset_first_bits(std::size_t n) // n>0
 {
-  return ~(~(std::size_t(0))>>(sizeof(std::size_t)*8-n));
+  return ~set_first_bits(n);
 }
 
 template<typename Bucket>
@@ -308,7 +312,9 @@ public:
   
   grouped_bucket_array(grouped_bucket_array&&)=default;
   grouped_bucket_array& operator=(grouped_bucket_array&&)=default;
-  
+
+  allocator_type get_allocator(){return buckets.get_allocator();}
+
   iterator begin()const{return ++at(size_);}
 
   iterator end()const 
@@ -459,7 +465,9 @@ public:
   
   simple_bucket_array(simple_bucket_array&&)=default;
   simple_bucket_array& operator=(simple_bucket_array&&)=default;
-  
+
+  allocator_type get_allocator(){return buckets.get_allocator();}
+
   iterator begin()const
   {
     auto it=at(0);
@@ -584,7 +592,7 @@ class dynamic_node_allocator
 public:
   using node_type=Node;
   
-  dynamic_node_allocator(const Allocator& al):al{al}{}
+  dynamic_node_allocator(std::size_t /*n*/,const Allocator& al):al{al}{}
 
   auto& get_allocator(){return al;}
 
@@ -610,8 +618,10 @@ public:
   }
   
   template<typename RawBucketArray,typename Bucket>
-  node_type* relocate_node
-    (node_type* p,RawBucketArray,Bucket&,RawBucketArray,Bucket&){return p;}    
+  node_type* relocate_node(
+    node_type* p,RawBucketArray,Bucket&,
+    dynamic_node_allocator&,RawBucketArray,Bucket&)
+  {return p;}    
 
 protected:
   using alloc_traits=std::allocator_traits<Allocator>;
@@ -680,10 +690,12 @@ public:
   template<typename RawBucketArray,typename Bucket>
   node_type* relocate_node(
     node_type* p,RawBucketArray buckets,Bucket&,
+    hybrid_node_allocator& new_node_allocator,
     RawBucketArray new_buckets,Bucket& newb)
   {
     if(auto pb=find_hosting_bucket(p,buckets)){
-      auto newp=new_node(std::move(pb->data()->value),new_buckets,newb);
+      auto newp=new_node_allocator.new_node(
+        std::move(pb->data()->value),new_buckets,newb);
       alloc_traits::destroy(al,&pb->data()->value);
       pb->reset_payload();
       return newp;
@@ -736,6 +748,132 @@ struct hybrid_node_allocation
   
   template<typename Node,typename Allocator>
   using allocator_type=hybrid_node_allocator<Node,Allocator>;
+};
+
+template<typename T>
+struct uninitialized
+{
+  T* data(){return reinterpret_cast<T*>(&storage);}
+
+  std::aligned_storage_t<sizeof(T),alignof(T)> storage;
+};
+
+template<typename Node,typename Allocator>
+class linear_node_allocator
+{
+public:
+  static constexpr std::size_t N=sizeof(std::size_t)*8;
+  using allocator_type=Allocator;
+  using node_type=Node;
+  
+  linear_node_allocator(std::size_t n,const Allocator& al):
+    al(al),
+    nodes(n,al),
+    bitmask(n/N+1,al)
+  {
+    bitmask.back()=~std::size_t(0);
+    std::size_t nmod=n%N;
+    if(nmod)bitmask.back()&=reset_first_bits(nmod);
+  }
+
+  allocator_type get_allocator(){return al;}
+
+  template<typename Value,typename RawBucketArray,typename Bucket>
+  node_type* new_node(Value&& x,RawBucketArray buckets,Bucket& b)
+  {  
+    auto p=allocate_node(&b-buckets.begin());
+    try{
+      alloc_traits::construct(al,&p->value,std::forward<Value>(x));
+      return p;
+    }
+    catch(...){
+      deallocate_node(p);
+      throw;
+    }
+  }
+  
+  template<typename RawBucketArray,typename Bucket>
+  void delete_node(node_type* p,RawBucketArray,Bucket&)
+  {
+    alloc_traits::destroy(al,&p->value);
+    deallocate_node(p);
+  }
+  
+  template<typename RawBucketArray,typename Bucket>
+  node_type* relocate_node(
+    node_type* p,
+    RawBucketArray buckets,Bucket& b,
+    linear_node_allocator& new_node_allocator,
+    RawBucketArray new_buckets,Bucket& newb)
+  {
+    auto newp=new_node_allocator.new_node(
+      std::move(p->value),new_buckets,newb);
+    delete_node(p,buckets,b);
+    return newp;
+  }    
+
+private:
+  using alloc_traits=std::allocator_traits<Allocator>;
+  using uninitialized_node=uninitialized<Node>;
+  using uninitialized_node_allocator_type=typename alloc_traits::
+    template rebind_alloc<uninitialized_node>;
+  using size_t_allocator_type=typename alloc_traits::
+    template rebind_alloc<std::size_t>;
+
+  node_type* allocate_node(std::size_t n)
+  {
+    std::size_t ndiv=n/N,
+                nmod=n%N;
+
+    nmod=std::size_t(boost::core::countr_one(
+      nmod==0?
+        bitmask[ndiv]:
+        bitmask[ndiv]|set_first_bits(nmod)));
+    if(nmod<N){ // found in same group
+      bitmask[ndiv]|=set_bit(nmod);
+      return nodes[ndiv*N+nmod].data();
+    }
+      
+    if(ndiv+1<bitmask.size()){ // look till end
+      auto mdiv=ndiv+1;
+      while(bitmask[mdiv]==~std::size_t(0))++mdiv;
+      auto mmod=std::size_t(boost::core::countr_one(bitmask[mdiv])),
+           m=mdiv*N+mmod;
+      if(m<nodes.size()){
+        bitmask[mdiv]|=set_bit(mmod);
+        return nodes[m].data();
+      }
+    }
+
+    // look from beginning      
+    auto mdiv=0;
+    while(bitmask[mdiv]==~std::size_t(0))++mdiv;
+    auto mmod=std::size_t(boost::core::countr_one(bitmask[mdiv])),
+         m=mdiv*N+mmod;
+    bitmask[mdiv]|=set_bit(mmod);
+    return nodes[m].data();
+  }
+
+  void deallocate_node(node_type* p)
+  {
+    std::size_t n=reinterpret_cast<uninitialized_node*>(p)-nodes.data(),
+                ndiv=n/N,
+                nmod=n%N;
+    bitmask[ndiv]&=reset_bit(nmod);      
+  }
+
+  allocator_type                                                    al;
+  std::vector<uninitialized_node,uninitialized_node_allocator_type> nodes;
+  std::vector<std::size_t,size_t_allocator_type>                    bitmask;
+};
+
+struct linear_node_allocation
+{
+  template<typename Node>
+  using bucket_type=bucket;
+  
+  template<typename Node,typename Allocator>
+  using allocator_type=linear_node_allocator<Node,Allocator>;
 };
 
 template<
@@ -867,11 +1005,13 @@ private:
   }
 
   void transfer_node(
-    node_type* p,bucket& b,bucket_array_type& new_buckets)
+    node_type* p,bucket& b,
+    node_allocator_type& new_node_allocator,bucket_array_type& new_buckets)
   {
     auto itnewb=new_buckets.at(new_buckets.position(h(p->value)));
     p=node_allocator.relocate_node(
-      p,buckets.raw(),b,new_buckets.raw(),*itnewb);
+      p,buckets.raw(),b,
+      new_node_allocator,new_buckets.raw(),*itnewb);
     new_buckets.insert_node(itnewb,p);
   }
 
@@ -900,12 +1040,14 @@ private:
     float       fbc=1.0f+static_cast<float>(n)/mlf;
     if(bc>fbc)bc=static_cast<std::size_t>(fbc);
 
-    bucket_array_type new_buckets(bc,node_allocator.get_allocator());
+    bucket_array_type   new_buckets(bc,buckets.get_allocator());
+    node_allocator_type new_node_allocator(
+                          new_buckets.capacity(),new_buckets.get_allocator());
     try{
       for(auto& b:buckets.raw()){            
         for(auto p=b.next;p;){
           auto  next_p=p->next;
-          transfer_node(static_cast<node_type*>(p),b,new_buckets);
+          transfer_node(static_cast<node_type*>(p),b,new_node_allocator,new_buckets);
           b.next=p=next_p;
         }
       }
@@ -923,6 +1065,7 @@ private:
       throw;
     }
     buckets=std::move(new_buckets);
+    node_allocator=std::move(new_node_allocator);
     ml=max_load();   
   }
   
@@ -958,10 +1101,11 @@ private:
 
   Hash                h;
   Pred                pred;
-  node_allocator_type node_allocator{Allocator()};
   float               mlf=1.0f;
   size_type           size_=0;
-  bucket_array_type   buckets{0,node_allocator.get_allocator()};
+  bucket_array_type   buckets{0,Allocator()};
+  node_allocator_type node_allocator{
+                        buckets.capacity(),buckets.get_allocator()};
   size_type           ml=max_load();  
 };
 
