@@ -770,11 +770,7 @@ public:
     al(al),
     nodes(n,al),
     bitmask(n/N+1,al)
-  {
-    bitmask.back()=~std::size_t(0);
-    std::size_t nmod=n%N;
-    if(nmod)bitmask.back()&=reset_first_bits(nmod);
-  }
+  {}
 
   allocator_type get_allocator(){return al;}
 
@@ -830,28 +826,31 @@ private:
         bitmask[ndiv]:
         bitmask[ndiv]|set_first_bits(nmod)));
     if(nmod<N){ // found in same group
-      bitmask[ndiv]|=set_bit(nmod);
-      return nodes[ndiv*N+nmod].data();
+      n=ndiv*N+nmod;
+      if(n<nodes.size()){ // cover corner case: group is last
+        bitmask[ndiv]|=set_bit(nmod);
+        return nodes[n].data();
+      }
     }
       
     if(ndiv+1<bitmask.size()){ // look till end
-      auto mdiv=ndiv+1;
-      while(bitmask[mdiv]==~std::size_t(0))++mdiv;
-      auto mmod=std::size_t(boost::core::countr_one(bitmask[mdiv])),
-           m=mdiv*N+mmod;
-      if(m<nodes.size()){
-        bitmask[mdiv]|=set_bit(mmod);
-        return nodes[m].data();
+      ndiv=ndiv+1;
+      while(bitmask[ndiv]==~std::size_t(0))++ndiv;
+      nmod=std::size_t(boost::core::countr_one(bitmask[ndiv]));
+      n=ndiv*N+nmod;
+      if(n<nodes.size()){
+        bitmask[ndiv]|=set_bit(nmod);
+        return nodes[n].data();
       }
     }
 
     // look from beginning      
-    auto mdiv=0;
-    while(bitmask[mdiv]==~std::size_t(0))++mdiv;
-    auto mmod=std::size_t(boost::core::countr_one(bitmask[mdiv])),
-         m=mdiv*N+mmod;
-    bitmask[mdiv]|=set_bit(mmod);
-    return nodes[m].data();
+    ndiv=0;
+    while(bitmask[ndiv]==~std::size_t(0))++ndiv;
+    nmod=std::size_t(boost::core::countr_one(bitmask[ndiv]));
+    n=ndiv*N+nmod;
+    bitmask[ndiv]|=set_bit(nmod);
+    return nodes[n].data();
   }
 
   void deallocate_node(node_type* p)
