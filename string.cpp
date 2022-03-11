@@ -21,6 +21,7 @@
 # include "absl/container/node_hash_map.h"
 # include "absl/container/flat_hash_map.h"
 #endif
+#include <algorithm>
 #include <unordered_map>
 #include <cstdint>
 #include <iostream>
@@ -505,12 +506,10 @@ int main()
 #endif
     
     test<fca_pow2_fib_unordered_map_fnv1a>( "fca_pow2_fib_unordered_map, FNV-1a" );
-
     test<fca_fmod_unordered_bucket_map_fnv1a>( "fca_fmod_unordered_bucket_map, FNV-1a" );
 
 #ifdef BENCHMARK_EVERYTHING
     test<fca_fmod_bcached_unordered_bucket_map_fnv1a>( "fca_fmod_bcached_unordered_bucket_map, FNV-1a" );
-    
     test<fca_fmod_unordered_hybrid_map_fnv1a>( "fca_fmod_unordered_hybrid_map, FNV-1a" );
 #endif
 
@@ -527,9 +526,12 @@ int main()
 
     std::cout << "---\n\n";
 
+    int label_witdh = 0;
+    for( auto const& x: times ) label_witdh = (std::max)((int)( x.label_ + ": " ).size(), label_witdh);
+    
     for( auto const& x: times )
     {
-        std::cout << std::setw( 39 ) << ( x.label_ + ": " ) << std::setw( 5 ) << x.time_ << " ms, " << std::setw( 9 ) << x.bytes_ << " bytes in " << x.count_ << " allocations\n";
+        std::cout << std::setw( label_witdh ) << ( x.label_ + ": " ) << std::setw( 5 ) << x.time_ << " ms, " << std::setw( 9 ) << x.bytes_ << " bytes in " << x.count_ << " allocations\n";
     }
 }
 
