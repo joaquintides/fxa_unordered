@@ -1100,7 +1100,7 @@ private:
 
   Hash                h;
   Pred                pred;
-  float               mlf=1.0f;
+  float               mlf=0.875f;
   size_type           size_=0;
   bucket_array_type   buckets{0,Allocator()};
   node_allocator_type node_allocator{
