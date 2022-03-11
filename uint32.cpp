@@ -19,10 +19,12 @@
 # include "absl/container/node_hash_map.h"
 # include "absl/container/flat_hash_map.h"
 #endif
+#include <algorithm>
 #include <unordered_map>
 #include <map>
 #include <cstdint>
 #include <iostream>
+#include <iomanip>
 #include <chrono>
 
 using namespace std::chrono_literals;
@@ -192,11 +194,66 @@ template<class Map> void test_erase( Map& map, std::chrono::steady_clock::time_p
     std::cout << std::endl;
 }
 
-static std::vector< std::pair<std::string, long long> > times;
+// counting allocator
+
+static std::size_t s_alloc_bytes = 0;
+static std::size_t s_alloc_count = 0;
+
+template<class T> struct allocator
+{
+    using value_type = T;
+
+    allocator() = default;
+
+    template<class U> allocator( allocator<U> const & ) noexcept
+    {
+    }
+
+    template<class U> bool operator==( allocator<U> const & ) const noexcept
+    {
+        return true;
+    }
+
+    template<class U> bool operator!=( allocator<U> const& ) const noexcept
+    {
+        return false;
+    }
+
+    T* allocate( std::size_t n ) const
+    {
+        s_alloc_bytes += n * sizeof(T);
+        s_alloc_count++;
+
+        return std::allocator<T>().allocate( n );
+    }
+
+    void deallocate( T* p, std::size_t n ) const noexcept
+    {
+        s_alloc_bytes -= n * sizeof(T);
+        s_alloc_count--;
+
+        std::allocator<T>().deallocate( p, n );
+    }
+};
+
+//
+
+struct record
+{
+    std::string label_;
+    long long time_;
+    std::size_t bytes_;
+    std::size_t count_;
+};
+
+static std::vector<record> times;
 
 template<template<class...> class Map> void test( char const* label )
 {
     std::cout << label << ":\n\n";
+
+    s_alloc_bytes = 0;
+    s_alloc_count = 0;
 
     Map<std::uint32_t, std::uint32_t> map;
 
@@ -204,6 +261,10 @@ template<template<class...> class Map> void test( char const* label )
     auto t1 = t0;
 
     test_insert( map, t1 );
+
+    std::cout << "Memory: " << s_alloc_bytes << " bytes in " << s_alloc_count << " allocations\n\n";
+    record rec = { label, 0, s_alloc_bytes, s_alloc_count };
+    
     test_lookup( map, t1 );
     test_iteration( map, t1 );
     test_lookup( map, t1 );
@@ -212,7 +273,8 @@ template<template<class...> class Map> void test( char const* label )
     auto tN = std::chrono::steady_clock::now();
     std::cout << "Total: " << ( tN - t0 ) / 1ms << " ms\n\n";
 
-    times.push_back( { label, ( tN - t0 ) / 1ms } );
+    rec.time_ = ( tN - t0 ) / 1ms;
+    times.push_back( rec );
 }
 
 // multi_index emulation of unordered_map
@@ -229,8 +291,29 @@ template<class K, class V> using multi_index_map = multi_index_container<
   pair<K, V>,
   indexed_by<
     hashed_unique< member<pair<K, V>, K, &pair<K, V>::first> >
-  >
+  >,
+  ::allocator< pair<K, V> >
 >;
+
+// aliases using the counting allocator
+
+template<class K, class V> using allocator_for = ::allocator< std::pair<K const, V> >;
+
+template<class K, class V> using std_unordered_map =
+    std::unordered_map<K, V, std::hash<K>, std::equal_to<K>, allocator_for<K, V>>;
+
+template<class K, class V> using boost_unordered_map =
+    boost::unordered_map<K, V, boost::hash<K>, std::equal_to<K>, allocator_for<K, V>>;
+
+#ifdef HAVE_ABSEIL
+
+template<class K, class V> using absl_node_hash_map =
+    absl::node_hash_map<K, V, absl::container_internal::hash_default_hash<K>, absl::container_internal::hash_default_eq<K>, allocator_for<K, V>>;
+
+template<class K, class V> using absl_flat_hash_map =
+    absl::flat_hash_map<K, V, absl::container_internal::hash_default_hash<K>, absl::container_internal::hash_default_eq<K>, allocator_for<K, V>>;
+
+#endif
 
 // alternative size policies for fca_unordered
 
@@ -238,49 +321,49 @@ template<class K, class V, class H=boost::hash<K>>
 using fca_switch_unordered_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::prime_switch_size>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::prime_fmod_size>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_frng_unordered_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::prime_frng_size>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_frng_fib_unordered_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::prime_frng_fib_size>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_pow2_unordered_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::pow2_size>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_pow2_fib_unordered_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::pow2_fib_size>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_bucket_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::prime_fmod_size,
     fca_unordered_impl::simple_buckets>;
 
@@ -288,7 +371,7 @@ template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_bcached_unordered_bucket_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::prime_fmod_size,
     fca_unordered_impl::bcached_simple_buckets>;
 
@@ -296,7 +379,7 @@ template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_hybrid_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::prime_fmod_size,
     fca_unordered_impl::grouped_buckets,
     fca_unordered_impl::hybrid_node_allocation>;
@@ -305,7 +388,7 @@ template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_hybrid_bucket_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::prime_fmod_size,
     fca_unordered_impl::simple_buckets,
     fca_unordered_impl::hybrid_node_allocation>;
@@ -314,7 +397,7 @@ template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_bcached_unordered_hybrid_bucket_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    std::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::prime_fmod_size,
     fca_unordered_impl::bcached_simple_buckets,
     fca_unordered_impl::hybrid_node_allocation>;
@@ -327,11 +410,15 @@ int main()
     test<boost::unordered_map>( "boost::unordered_map" );
     test<multi_index_map>( "multi_index_map" );
 
+#ifdef BENCHMARK_EVERYTHING
     test<fca_simple_unordered_map>( "fca_simple_unordered_map" );
     test<fca_unordered_map>( "fca_unordered_map" );
     test<fca_switch_unordered_map>( "fca_switch_unordered_map" );
+#endif
+
     test<fca_fmod_unordered_map>( "fca_fmod_unordered_map" );
 
+#ifdef BENCHMARK_EVERYTHING
     // frng is spectacularly slow for consecutive uint64 insertion
     // (as expected, boost::hash is the identity and position ignores low bits)
     // test<fca_frng_unordered_map>( "fca_frng_unordered_map" );
@@ -340,31 +427,35 @@ int main()
 
     // same as frng
     // test<fca_pow2_unordered_map>( "fca_pow2_unordered_map" );
+#endif    
     
     test<fca_pow2_fib_unordered_map>( "fca_pow2_fib_unordered_map" );
-
     test<fca_fmod_unordered_bucket_map>( "fca_fmod_unordered_bucket_map" );
+
+#ifdef BENCHMARK_EVERYTHING
     test<fca_fmod_bcached_unordered_bucket_map>( "fca_fmod_bcached_unordered_bucket_map" );
-
     test<fca_fmod_unordered_hybrid_map>( "fca_fmod_unordered_hybrid_map" );
-
+#endif
+    
     test<fca_fmod_unordered_hybrid_bucket_map>( "fca_fmod_unordered_hybrid_bucket_map" );
+
+#ifdef BENCHMARK_EVERYTHING    
     test<fca_fmod_bcached_unordered_hybrid_bucket_map>( "fca_fmod_bcached_unordered_hybrid_bucket_map" );
-
-    // test<std::map>( "std::map" );
-
+#endif
+    
 #ifdef HAVE_ABSEIL
-
     test<absl::node_hash_map>( "absl::node_hash_map" );
     test<absl::flat_hash_map>( "absl::flat_hash_map" );
-
 #endif
 
     std::cout << "---\n\n";
 
+    int label_witdh = 0;
+    for( auto const& x: times ) label_witdh = (std::max)((int)( x.label_ + ": " ).size(), label_witdh);
+    
     for( auto const& x: times )
     {
-        std::cout << x.first << ": " << x.second << " ms\n";
+        std::cout << std::setw( label_witdh ) << ( x.label_ + ": " ) << std::setw( 5 ) << x.time_ << " ms, " << std::setw( 9 ) << x.bytes_ << " bytes in " << x.count_ << " allocations\n";
     }
 }
 
