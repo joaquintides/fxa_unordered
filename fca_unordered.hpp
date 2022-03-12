@@ -750,7 +750,15 @@ struct hybrid_node_allocation
   using allocator_type=hybrid_node_allocator<Node,Allocator>;
 };
 
-template<typename Allocator,bool FineFirstProbe>
+enum struct quadratic_prober_variant
+{
+  // ways to handle the group for the first location tried
+  standard, // every slot in the group considered
+  forward,  // only the slots from the location onwards
+  exact,    // only the exact slot for the location
+};
+
+template<typename Allocator,quadratic_prober_variant Variant>
 class quadratic_prober
 {
 public:
@@ -770,14 +778,18 @@ public:
     std::size_t ndiv=n/N,
                 nmod=n%N;
 
-    if constexpr(FineFirstProbe){
+    if constexpr(Variant==quadratic_prober_variant::standard){
+      nmod=std::size_t(boost::core::countr_one(bitmask[ndiv]));      
+    }
+    else if constexpr(Variant==quadratic_prober_variant::forward){
       nmod=std::size_t(boost::core::countr_one(
         nmod==0?
           bitmask[ndiv]:
           bitmask[ndiv]|set_first_bits(nmod)));
     }
     else{
-      nmod=std::size_t(boost::core::countr_one(bitmask[ndiv]));      
+      static_assert(Variant==quadratic_prober_variant::exact);
+      if(!(bitmask[ndiv]&set_bit(nmod)))nmod=N;
     }
     if(nmod>=N){ // first probe failed
       std::size_t i=1;
@@ -872,7 +884,8 @@ private:
 
   allocator_type                                                    al;
   std::vector<uninitialized_node,uninitialized_node_allocator_type> nodes;
-  quadratic_prober<size_t_allocator_type,false /* FineFirstProbe*/> prober;
+  quadratic_prober<
+    size_t_allocator_type,quadratic_prober_variant::standard>       prober;
 };
 
 struct linear_node_allocation
@@ -958,8 +971,9 @@ private:
     prober.deallocate((u-ubegin)/sizeof(bucket));      
   }
 
-  allocator_type                                                   al;
-  quadratic_prober<size_t_allocator_type,true /* FineFirstProbe*/> prober;
+  allocator_type                                           al;
+  quadratic_prober<
+    size_t_allocator_type,quadratic_prober_variant::exact> prober;
 };
 
 struct embedded_node_allocation
