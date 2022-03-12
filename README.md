@@ -86,6 +86,12 @@ requirements for unordered associative containers:
   * The elements of the container must be movable.
   * It is not possible to provide [node extraction](https://en.cppreference.com/w/cpp/container/node_handle)
   capabilities.
+* `linear_node_allocation`: Nodes are preallocated in a linear array and selected with
+quadratic probing using an occupancy bitmask. Same deviations from the C++ standard as
+`hybrid_node_allocation`.
+* `embedded_node_allocation`: Nodes are embedded into the buckets like in
+`hybrid_node_allocation`, but no dynamic allocation happens ever: selection is done
+through quadratic probing using the same technique as `linear_node_allocation`.
 
 ```cpp
 template<
