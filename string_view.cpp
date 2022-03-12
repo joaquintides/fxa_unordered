@@ -592,16 +592,16 @@ int main()
 
 #ifdef BENCHMARK_EVERYTHING
     test<fca_fmod_bcached_unordered_hybrid_bucket_map_fnv1a>( "fca_fmod_bcached_unordered_hybrid_bucket_map_fnv1a, FNV-1a" );
+    test<fca_fmod_unordered_linear_map_fnv1a>( "fca_fmod_unordered_linear_map, FNV-1a" );
 #endif
 
-    test<fca_fmod_unordered_linear_map_fnv1a>( "fca_fmod_unordered_linear_map, FNV-1a" );
     test<fca_fmod_unordered_linear_bucket_map_fnv1a>( "fca_fmod_unordered_linear_bucket_map, FNV-1a" );
 
 #ifdef BENCHMARK_EVERYTHING
     test<fca_fmod_bcached_unordered_linear_bucket_map_fnv1a>( "fca_fmod_bcached_unordered_linear_bucket_map_fnv1a, FNV-1a" );
+    test<fca_fmod_unordered_embedded_map_fnv1a>( "fca_fmod_unordered_embedded_map, FNV-1a" );
 #endif
     
-    test<fca_fmod_unordered_embedded_map_fnv1a>( "fca_fmod_unordered_embedded_map, FNV-1a" );
     test<fca_fmod_unordered_embedded_bucket_map_fnv1a>( "fca_fmod_unordered_embeddedd_bucket_map, FNV-1a" );
 
 #ifdef BENCHMARK_EVERYTHING
