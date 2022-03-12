@@ -825,8 +825,11 @@ private:
     std::size_t ndiv=n/N,
                 nmod=n%N;
 
-    nmod=std::size_t(boost::core::countr_one(bitmask[ndiv]));
-    if(nmod>=N){ // group full
+    nmod=std::size_t(boost::core::countr_one(
+     nmod==0?
+        bitmask[ndiv]:
+        bitmask[ndiv]|set_first_bits(nmod)));
+    if(nmod>=N){ // semigroup full
       std::size_t i=1;
       for(;;){
         ndiv=(ndiv+i)&pow2mask;
