@@ -767,10 +767,14 @@ public:
   using node_type=Node;
   
   linear_node_allocator(std::size_t n,const Allocator& al):
+    pow2mask(boost::core::bit_ceil((n+N-1)/N)-1),
     al(al),
     nodes(n,al),
-    bitmask(n/N+1,al)
-  {}
+    bitmask((n+N-1)/N,al)
+  {
+    std::size_t nmod=n%N;
+    bitmask.back()=~std::size_t(0)&reset_first_bits(nmod);  
+  }
 
   allocator_type get_allocator(){return al;}
 
@@ -821,36 +825,19 @@ private:
     std::size_t ndiv=n/N,
                 nmod=n%N;
 
-    nmod=std::size_t(boost::core::countr_one(
-      nmod==0?
-        bitmask[ndiv]:
-        bitmask[ndiv]|set_first_bits(nmod)));
-    if(nmod<N){ // found in same group
-      n=ndiv*N+nmod;
-      if(n<nodes.size()){ // cover corner case: group is last
-        bitmask[ndiv]|=set_bit(nmod);
-        return nodes[n].data();
-      }
-    }
-      
-    if(ndiv+1<bitmask.size()){ // look till end
-      ndiv=ndiv+1;
-      while(bitmask[ndiv]==~std::size_t(0))++ndiv;
-      nmod=std::size_t(boost::core::countr_one(bitmask[ndiv]));
-      n=ndiv*N+nmod;
-      if(n<nodes.size()){
-        bitmask[ndiv]|=set_bit(nmod);
-        return nodes[n].data();
+    nmod=std::size_t(boost::core::countr_one(bitmask[ndiv]));
+    if(nmod>=N){ // group full
+      std::size_t i=1;
+      for(;;){
+        ndiv=(ndiv+i)&pow2mask;
+        i+=1;
+        if(ndiv<bitmask.size()&&
+           (nmod=std::size_t(boost::core::countr_one(bitmask[ndiv])))<N)break;
       }
     }
 
-    // look from beginning      
-    ndiv=0;
-    while(bitmask[ndiv]==~std::size_t(0))++ndiv;
-    nmod=std::size_t(boost::core::countr_one(bitmask[ndiv]));
-    n=ndiv*N+nmod;
     bitmask[ndiv]|=set_bit(nmod);
-    return nodes[n].data();
+    return nodes[ndiv*N+nmod].data();
   }
 
   void deallocate_node(node_type* p)
@@ -861,6 +848,7 @@ private:
     bitmask[ndiv]&=reset_bit(nmod);      
   }
 
+  std::size_t                                                       pow2mask;
   allocator_type                                                    al;
   std::vector<uninitialized_node,uninitialized_node_allocator_type> nodes;
   std::vector<std::size_t,size_t_allocator_type>                    bitmask;
