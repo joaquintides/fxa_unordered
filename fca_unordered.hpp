@@ -897,6 +897,96 @@ struct linear_node_allocation
   using allocator_type=linear_node_allocator<Node,Allocator>;
 };
 
+template<typename Node,typename Allocator>
+class pool_node_allocator
+{
+public:
+  using allocator_type=Allocator;
+  using node_type=Node;
+  
+  pool_node_allocator(std::size_t n,const Allocator& al):
+    al(al),
+    nodes(n,al)
+  {}
+
+  allocator_type get_allocator(){return al;}
+
+  template<typename Value,typename RawBucketArray,typename Bucket>
+  node_type* new_node(Value&& x,RawBucketArray,Bucket&)
+  {  
+    auto p=allocate_node();
+    try{
+      alloc_traits::construct(al,&p->value,std::forward<Value>(x));
+      return p;
+    }
+    catch(...){
+      deallocate_node(p);
+      throw;
+    }
+  }
+  
+  template<typename RawBucketArray,typename Bucket>
+  void delete_node(node_type* p,RawBucketArray,Bucket&)
+  {
+    alloc_traits::destroy(al,&p->value);
+    deallocate_node(p);
+  }
+  
+  template<typename RawBucketArray,typename Bucket>
+  node_type* relocate_node(
+    node_type* p,
+    RawBucketArray buckets,Bucket& b,
+    pool_node_allocator& new_node_allocator,
+    RawBucketArray new_buckets,Bucket& newb)
+  {
+    auto newp=new_node_allocator.new_node(
+      std::move(p->value),new_buckets,newb);
+    delete_node(p,buckets,b);
+    return newp;
+  }    
+
+private:
+  using alloc_traits=std::allocator_traits<Allocator>;
+  using uninitialized_node=uninitialized<Node>;
+  using uninitialized_node_allocator_type=typename alloc_traits::
+    template rebind_alloc<uninitialized_node>;
+  using size_t_allocator_type=typename alloc_traits::
+    template rebind_alloc<std::size_t>;
+
+  node_type* allocate_node()
+  {
+    if(free){
+      auto p=free;
+      free=static_cast<node_type*>(free->next);
+      return p;
+    }
+    else{
+      return reinterpret_cast<node_type*>(&nodes[top++]);
+    }
+  }
+
+  void deallocate_node(node_type* p)
+  {
+    p->next=free;
+    free=p;
+  }
+
+  allocator_type                                          al;
+  std::size_t                                             top=0;
+  node_type                                               *free=nullptr;
+  std::vector<
+    uninitialized_node,uninitialized_node_allocator_type> nodes;
+};
+
+struct pool_node_allocation
+{
+  template<typename Node>
+  using bucket_type=bucket;
+  
+  template<typename Node,typename Allocator>
+  using allocator_type=pool_node_allocator<Node,Allocator>;
+};
+
 template<typename Node>
 struct embedded_node_allocator_bucket:bucket
 {

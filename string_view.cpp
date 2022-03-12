@@ -398,6 +398,33 @@ using fca_fmod_bcached_unordered_linear_bucket_map =
     fca_unordered_impl::linear_node_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
+using fca_fmod_unordered_pool_map =
+  fca_unordered_map<
+    K, V, H, std::equal_to<K>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::prime_fmod_size,
+    fca_unordered_impl::grouped_buckets,
+    fca_unordered_impl::pool_node_allocation>;
+
+template<class K, class V, class H=boost::hash<K>>
+using fca_fmod_unordered_pool_bucket_map =
+  fca_unordered_map<
+    K, V, H, std::equal_to<K>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::prime_fmod_size,
+    fca_unordered_impl::simple_buckets,
+    fca_unordered_impl::pool_node_allocation>;
+
+template<class K, class V, class H=boost::hash<K>>
+using fca_fmod_bcached_unordered_pool_bucket_map =
+  fca_unordered_map<
+    K, V, H, std::equal_to<K>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::prime_fmod_size,
+    fca_unordered_impl::bcached_simple_buckets,
+    fca_unordered_impl::pool_node_allocation>;
+
+template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_embedded_map =
   fca_unordered_map<
     K, V, H, std::equal_to<K>,
@@ -538,6 +565,15 @@ template<class K, class V> using fca_fmod_unordered_linear_bucket_map_fnv1a =
 template<class K, class V> using fca_fmod_bcached_unordered_linear_bucket_map_fnv1a =
   fca_fmod_bcached_unordered_linear_bucket_map<K, V, fnv1a_hash>;
 
+template<class K, class V> using fca_fmod_unordered_pool_map_fnv1a =                                 
+  fca_fmod_unordered_pool_map<K, V, fnv1a_hash>;
+
+template<class K, class V> using fca_fmod_unordered_pool_bucket_map_fnv1a =
+  fca_fmod_unordered_pool_bucket_map<K, V, fnv1a_hash>;
+
+template<class K, class V> using fca_fmod_bcached_unordered_pool_bucket_map_fnv1a =
+  fca_fmod_bcached_unordered_pool_bucket_map<K, V, fnv1a_hash>;
+
 template<class K, class V> using fca_fmod_unordered_embedded_map_fnv1a =                                 
   fca_fmod_unordered_embedded_map<K, V, fnv1a_hash>;
 
@@ -599,6 +635,13 @@ int main()
 
 #ifdef BENCHMARK_EVERYTHING
     test<fca_fmod_bcached_unordered_linear_bucket_map_fnv1a>( "fca_fmod_bcached_unordered_linear_bucket_map_fnv1a, FNV-1a" );
+    test<fca_fmod_unordered_pool_map_fnv1a>( "fca_fmod_unordered_pool_map, FNV-1a" );
+#endif
+
+    test<fca_fmod_unordered_pool_bucket_map_fnv1a>( "fca_fmod_unordered_pool_bucket_map, FNV-1a" );
+
+#ifdef BENCHMARK_EVERYTHING
+    test<fca_fmod_bcached_unordered_pool_bucket_map_fnv1a>( "fca_fmod_bcached_unordered_pool_bucket_map_fnv1a, FNV-1a" );
     test<fca_fmod_unordered_embedded_map_fnv1a>( "fca_fmod_unordered_embedded_map, FNV-1a" );
 #endif
     

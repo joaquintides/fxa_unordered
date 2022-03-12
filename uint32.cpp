@@ -429,6 +429,33 @@ using fca_fmod_bcached_unordered_linear_bucket_map =
     fca_unordered_impl::prime_fmod_size,
     fca_unordered_impl::bcached_simple_buckets,
     fca_unordered_impl::linear_node_allocation>;
+    
+template<class K, class V, class H=boost::hash<K>>
+using fca_fmod_unordered_pool_map =
+  fca_unordered_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::prime_fmod_size,
+    fca_unordered_impl::grouped_buckets,
+    fca_unordered_impl::pool_node_allocation>;
+
+template<class K, class V, class H=boost::hash<K>>
+using fca_fmod_unordered_pool_bucket_map =
+  fca_unordered_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::prime_fmod_size,
+    fca_unordered_impl::simple_buckets,
+    fca_unordered_impl::pool_node_allocation>;
+
+template<class K, class V, class H=boost::hash<K>>
+using fca_fmod_bcached_unordered_pool_bucket_map =
+  fca_unordered_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::prime_fmod_size,
+    fca_unordered_impl::bcached_simple_buckets,
+    fca_unordered_impl::pool_node_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_embedded_map =
@@ -503,6 +530,13 @@ int main()
 
 #ifdef BENCHMARK_EVERYTHING    
     test<fca_fmod_bcached_unordered_linear_bucket_map>( "fca_fmod_bcached_unordered_linear_bucket_map" );
+    test<fca_fmod_unordered_pool_map>( "fca_fmod_unordered_pool_map" );
+#endif
+    
+    test<fca_fmod_unordered_pool_bucket_map>( "fca_fmod_unordered_pool_bucket_map" );
+
+#ifdef BENCHMARK_EVERYTHING    
+    test<fca_fmod_bcached_unordered_pool_bucket_map>( "fca_fmod_bcached_unordered_pool_bucket_map" );
     test<fca_fmod_unordered_embedded_map>( "fca_fmod_unordered_embedded_map" );
 #endif
 
