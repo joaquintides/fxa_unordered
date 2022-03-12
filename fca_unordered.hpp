@@ -789,7 +789,7 @@ public:
     }
     else{
       static_assert(Variant==quadratic_prober_variant::exact);
-      if(!(bitmask[ndiv]&set_bit(nmod)))nmod=N;
+      if(bitmask[ndiv]&set_bit(nmod))nmod=N;
     }
     if(nmod>=N){ // first probe failed
       std::size_t i=1;
