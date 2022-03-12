@@ -89,6 +89,9 @@ requirements for unordered associative containers:
 * `linear_node_allocation`: Nodes are preallocated in a linear array and selected with
 quadratic probing using an occupancy bitmask. Same deviations from the C++ standard as
 `hybrid_node_allocation`.
+* `pool_node_allocation`: Nodes are preallocated in a linear array and selected
+incrementally as requested (with recycling of erased nodes). Same deviations from the
+C++ standard as `hybrid_node_allocation`.
 * `embedded_node_allocation`: Nodes are embedded into the buckets like in
 `hybrid_node_allocation`, but no dynamic allocation happens ever: selection is done
 through quadratic probing using the same technique as `linear_node_allocation`.
