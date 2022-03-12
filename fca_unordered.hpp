@@ -750,6 +750,61 @@ struct hybrid_node_allocation
   using allocator_type=hybrid_node_allocator<Node,Allocator>;
 };
 
+template<typename Allocator,bool FineFirstProbe>
+class quadratic_prober
+{
+public:
+  static constexpr std::size_t N=sizeof(std::size_t)*8;
+  using allocator_type=Allocator;
+
+  quadratic_prober(std::size_t n,const Allocator& al):
+    pow2mask(boost::core::bit_ceil((n+N-1)/N)-1),
+    bitmask((n+N-1)/N,al)
+  {
+    std::size_t nmod=n%N;
+    bitmask.back()=~std::size_t(0)&reset_first_bits(nmod);  
+  }
+
+  std::size_t allocate(std::size_t n)
+  {
+    std::size_t ndiv=n/N,
+                nmod=n%N;
+
+    if constexpr(FineFirstProbe){
+      nmod=std::size_t(boost::core::countr_one(
+        nmod==0?
+          bitmask[ndiv]:
+          bitmask[ndiv]|set_first_bits(nmod)));
+    }
+    else{
+      nmod=std::size_t(boost::core::countr_one(bitmask[ndiv]));      
+    }
+    if(nmod>=N){ // first probe failed
+      std::size_t i=1;
+      for(;;){
+        ndiv=(ndiv+i)&pow2mask;
+        i+=1;
+        if(ndiv<bitmask.size()&&
+           (nmod=std::size_t(boost::core::countr_one(bitmask[ndiv])))<N)break;
+      }
+    }
+
+    bitmask[ndiv]|=set_bit(nmod);
+    return ndiv*N+nmod;
+  }
+
+  void deallocate(std::size_t n)
+  {
+    std::size_t ndiv=n/N,
+                nmod=n%N;
+    bitmask[ndiv]&=reset_bit(nmod);      
+  }
+
+private:
+  std::size_t                        pow2mask;
+  std::vector<std::size_t,Allocator> bitmask;
+};
+
 template<typename T>
 struct uninitialized
 {
@@ -767,27 +822,23 @@ public:
   using node_type=Node;
   
   linear_node_allocator(std::size_t n,const Allocator& al):
-    pow2mask(boost::core::bit_ceil((n+N-1)/N)-1),
     al(al),
     nodes(n,al),
-    bitmask((n+N-1)/N,al)
-  {
-    std::size_t nmod=n%N;
-    bitmask.back()=~std::size_t(0)&reset_first_bits(nmod);  
-  }
+    prober(n,al)
+  {}
 
   allocator_type get_allocator(){return al;}
 
   template<typename Value,typename RawBucketArray,typename Bucket>
   node_type* new_node(Value&& x,RawBucketArray buckets,Bucket& b)
   {  
-    auto p=allocate_node(&b-buckets.begin());
+    auto p=nodes[prober.allocate(&b-buckets.begin())].data();
     try{
       alloc_traits::construct(al,&p->value,std::forward<Value>(x));
       return p;
     }
     catch(...){
-      deallocate_node(p);
+      prober.deallocate(p-reinterpret_cast<node_type*>(nodes.data()));
       throw;
     }
   }
@@ -796,7 +847,7 @@ public:
   void delete_node(node_type* p,RawBucketArray,Bucket&)
   {
     alloc_traits::destroy(al,&p->value);
-    deallocate_node(p);
+    prober.deallocate(p-reinterpret_cast<node_type*>(nodes.data()));
   }
   
   template<typename RawBucketArray,typename Bucket>
@@ -820,41 +871,9 @@ private:
   using size_t_allocator_type=typename alloc_traits::
     template rebind_alloc<std::size_t>;
 
-  node_type* allocate_node(std::size_t n)
-  {
-    std::size_t ndiv=n/N,
-                nmod=n%N;
-
-    nmod=std::size_t(boost::core::countr_one(
-     nmod==0?
-        bitmask[ndiv]:
-        bitmask[ndiv]|set_first_bits(nmod)));
-    if(nmod>=N){ // semigroup full
-      std::size_t i=1;
-      for(;;){
-        ndiv=(ndiv+i)&pow2mask;
-        i+=1;
-        if(ndiv<bitmask.size()&&
-           (nmod=std::size_t(boost::core::countr_one(bitmask[ndiv])))<N)break;
-      }
-    }
-
-    bitmask[ndiv]|=set_bit(nmod);
-    return nodes[ndiv*N+nmod].data();
-  }
-
-  void deallocate_node(node_type* p)
-  {
-    std::size_t n=reinterpret_cast<uninitialized_node*>(p)-nodes.data(),
-                ndiv=n/N,
-                nmod=n%N;
-    bitmask[ndiv]&=reset_bit(nmod);      
-  }
-
-  std::size_t                                                       pow2mask;
   allocator_type                                                    al;
   std::vector<uninitialized_node,uninitialized_node_allocator_type> nodes;
-  std::vector<std::size_t,size_t_allocator_type>                    bitmask;
+  quadratic_prober<size_t_allocator_type,false /* FineFirstProbe*/> prober;
 };
 
 struct linear_node_allocation
