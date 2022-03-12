@@ -639,9 +639,9 @@ struct dynamic_node_allocation
 };
 
 template<typename Node>
-struct extended_bucket:bucket
+struct hybrid_node_allocator_bucket:bucket
 {
-  extended_bucket(){reset_payload();}
+  hybrid_node_allocator_bucket(){reset_payload();}
 
   Node* data(){return reinterpret_cast<Node*>(&storage);}
   const Node* data()const{return reinterpret_cast<const Node*>(&storage);}
@@ -744,7 +744,7 @@ private:
 struct hybrid_node_allocation
 {
   template<typename Node>
-  using bucket_type=extended_bucket<Node>;
+  using bucket_type=hybrid_node_allocator_bucket<Node>;
   
   template<typename Node,typename Allocator>
   using allocator_type=hybrid_node_allocator<Node,Allocator>;
@@ -817,7 +817,6 @@ template<typename Node,typename Allocator>
 class linear_node_allocator
 {
 public:
-  static constexpr std::size_t N=sizeof(std::size_t)*8;
   using allocator_type=Allocator;
   using node_type=Node;
   
@@ -883,6 +882,93 @@ struct linear_node_allocation
   
   template<typename Node,typename Allocator>
   using allocator_type=linear_node_allocator<Node,Allocator>;
+};
+
+template<typename Node>
+struct embedded_node_allocator_bucket:bucket
+{
+  Node* data(){return reinterpret_cast<Node*>(&storage);}
+  const Node* data()const{return reinterpret_cast<const Node*>(&storage);}
+  Node& node(){return *data();}
+  const Node& value()const{return *data();}
+  
+  std::aligned_storage_t<sizeof(Node),alignof(Node)> storage;
+};
+
+template<typename Node,typename Allocator>
+class embedded_node_allocator
+{
+public:
+  using allocator_type=Allocator;
+  using node_type=Node;
+  
+  embedded_node_allocator(std::size_t n,const Allocator& al):
+    al(al),
+    prober(n,al)
+  {}
+
+  allocator_type get_allocator(){return al;}
+
+  template<typename Value,typename RawBucketArray,typename Bucket>
+  node_type* new_node(Value&& x,RawBucketArray buckets,Bucket& b)
+  {  
+    auto p=(buckets.begin()+prober.allocate(&b-buckets.begin()))->data();
+    try{
+      alloc_traits::construct(al,&p->value,std::forward<Value>(x));
+      return p;
+    }
+    catch(...){
+      deallocate_node(p,buckets);
+      throw;
+    }
+  }
+  
+  template<typename RawBucketArray,typename Bucket>
+  void delete_node(node_type* p,RawBucketArray buckets,Bucket&)
+  {
+    alloc_traits::destroy(al,&p->value);
+    deallocate_node(p,buckets);
+  }
+  
+  template<typename RawBucketArray,typename Bucket>
+  node_type* relocate_node(
+    node_type* p,
+    RawBucketArray buckets,Bucket& b,
+    embedded_node_allocator& new_node_allocator,
+    RawBucketArray new_buckets,Bucket& newb)
+  {
+    auto newp=new_node_allocator.new_node(
+      std::move(p->value),new_buckets,newb);
+    delete_node(p,buckets,b);
+    return newp;
+  }    
+
+private:
+  using alloc_traits=std::allocator_traits<Allocator>;
+  using size_t_allocator_type=typename alloc_traits::
+    template rebind_alloc<std::size_t>;
+
+  template<typename RawBucketArray>
+  void deallocate_node(node_type* p,RawBucketArray buckets)
+  {
+    using bucket=std::remove_reference_t<decltype(*buckets.begin())>;
+      
+    std::uintptr_t u=(std::uintptr_t)p,
+                   ubegin=(std::uintptr_t)buckets.begin();
+    prober.deallocate((u-ubegin)/sizeof(bucket));      
+  }
+
+  allocator_type                                                   al;
+  quadratic_prober<size_t_allocator_type,true /* FineFirstProbe*/> prober;
+};
+
+struct embedded_node_allocation
+{
+  template<typename Node>
+  using bucket_type=embedded_node_allocator_bucket<Node>;
+  
+  template<typename Node,typename Allocator>
+  using allocator_type=embedded_node_allocator<Node,Allocator>;
 };
 
 template<
