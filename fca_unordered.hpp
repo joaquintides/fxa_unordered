@@ -10,6 +10,7 @@
 #define FCA_UNORDERED_HPP
 
 #include <algorithm>
+#include <boost/config.hpp>
 #include <boost/container_hash/hash.hpp>
 #include <boost/core/bit.hpp>
 #include <boost/iterator/iterator_facade.hpp>
@@ -20,25 +21,6 @@
 #include <type_traits>
 #include <vector>
 #include "fastrange.h"
-
-// ripped from
-// https://github.com/abseil/abseil-cpp/blob/master/absl/base/config.h
-// https://github.com/abseil/abseil-cpp/blob/master/absl/base/optimization.h
-
-#ifdef __has_builtin
-#define FCA_HAVE_BUILTIN(x) __has_builtin(x)
-#else
-#define FCA_HAVE_BUILTIN(x) 0
-#endif
-
-#if FCA_HAVE_BUILTIN(__builtin_expect) || \
-    (defined(__GNUC__) && !defined(__clang__))
-#define FCA_PREDICT_FALSE(x) (__builtin_expect(false || (x), false))
-#define FCA_PREDICT_TRUE(x) (__builtin_expect(false || (x), true))
-#else
-#define FCA_PREDICT_FALSE(x) (x)
-#define FCA_PREDICT_TRUE(x) (x)
-#endif
 
 namespace fca_unordered_impl{
     
@@ -1241,7 +1223,7 @@ private:
     auto it=find(x,itb);
     if(it!=end())return {it,false};
         
-    if(FCA_PREDICT_FALSE(size_+1>ml)){
+    if(BOOST_UNLIKELY(size_+1>ml)){
       rehash(size_+1);
       itb=buckets.at(buckets.position(hash));
     }
@@ -1291,7 +1273,7 @@ private:
   iterator find(const Key& x,bucket_iterator itb)const
   {
     for(auto p=itb->next;p;p=p->next){
-      if(FCA_PREDICT_TRUE(pred(x,static_cast<node_type*>(p)->value))){
+      if(BOOST_LIKELY(pred(x,static_cast<node_type*>(p)->value))){
         return {static_cast<node_type*>(p),itb};
       }
     }
@@ -1304,7 +1286,7 @@ private:
   {
     auto itb=buckets.at(buckets.position(h(x)));
     for(auto pp=&itb->next;*pp;pp=&(*pp)->next){
-      if(FCA_PREDICT_TRUE(pred(x,static_cast<node_type*>(*pp)->value))){
+      if(BOOST_LIKELY(pred(x,static_cast<node_type*>(*pp)->value))){
         return {pp,itb};
       }
     }
