@@ -100,13 +100,20 @@ struct prime_switch_size:prime_size
 struct prime_fmod_size
 {
   constexpr static std::size_t sizes[]={
-    53ul,97ul,193ul,389ul,769ul,
-    1543ul,3079ul,6151ul,12289ul,24593ul,
-    49157ul,98317ul,196613ul,393241ul,786433ul,
-    1572869ul,3145739ul,6291469ul,12582917ul,25165843ul,
-    50331653ul,100663319ul,201326611ul,402653189ul,805306457ul,};
+    53ull,97ull,193ull,389ull,769ull,
+    1543ull,3079ull,6151ull,12289ull,24593ull,
+    49157ull,98317ull,196613ull,393241ull,786433ull,
+    1572869ull,3145739ull,6291469ull,12582917ull,25165843ull,
+    50331653ull,100663319ull,201326611ull,402653189ull,805306457ull,
+    1610612741ull,3221225473ull,
+    // more than 32 bits
+    6442450939ull,12884901893ull,25769803751ull,51539607551ull,
+    103079215111ull,206158430209ull,412316860441ull,824633720831ull,
+    1649267441651ull};
 
-  constexpr static uint64_t inv_sizes[]={
+  constexpr static std::size_t sizes_under_32bit=27;
+
+  constexpr static uint64_t inv_sizes32[]={
     348051774975651918ull,190172619316593316ull,95578984837873325ull,
     47420935922132524ull,23987963684927896ull,11955116055547344ull,
     5991147799191151ull,2998982941588287ull,1501077717772769ull,
@@ -114,9 +121,22 @@ struct prime_fmod_size
     93822606204624ull,46909513691883ull,23456218233098ull,
     11728086747027ull,5864041509391ull,2932024948977ull,
     1466014921160ull,733007198436ull,366503839517ull,
-    183251896093ull,91625960335ull,45812983922ull,22906489714ull,
-  };
-    
+    183251896093ull,91625960335ull,45812983922ull,
+    22906489714ull,11453246088ull,5726623060ull,};
+
+#ifndef _MSC_VER
+  constexpr static __uint128_t inv_sizes64[]={
+    (__uint128_t)0xAAAAAAACull<<64 | 0xE38E38EAF684BDBAull,
+    (__uint128_t)0x55555554ull<<64 | 0xC71C71C8097B425Eull,
+    (__uint128_t)0x2AAAAAABull<<64 | 0x5C71C71F5684BDAEull,
+    (__uint128_t)0x15555555ull<<64 | 0x571C71C71C97B426ull,
+    (__uint128_t)0xAAAAAAAull<<64 | 0xA78E38E38F212F69ull,
+    (__uint128_t)0x5555555ull<<64 | 0x5538E38E38E425EEull,
+    (__uint128_t)0x2AAAAAAull<<64 | 0xA9F8E38E3911DA13ull,
+    (__uint128_t)0x1555555ull<<64 | 0x55571C71C71C7426ull,
+    (__uint128_t)0xAAAAAAull<<64 | 0xAAB071C71C71F930ull,};
+#endif
+
   static inline std::size_t size_index(std::size_t n)
   {
     const std::size_t *bound=std::lower_bound(
@@ -150,11 +170,39 @@ struct prime_fmod_size
     return (uint32_t)(mul128_u32(lowbits, d));
   }
 
+#ifndef _MSC_VER
+  static inline uint64_t mul128_u64(__uint128_t lowbits, uint64_t d)
+  {
+    __uint128_t bottom_half = (lowbits & UINT64_C(0xFFFFFFFFFFFFFFFF)) * d; // Won't overflow
+    bottom_half >>= 64;  // Only need the top 64 bits, as we'll shift the lower half away;
+    __uint128_t top_half = (lowbits >> 64) * d;
+    __uint128_t both_halves = bottom_half + top_half; // Both halves are already shifted down by 64
+    both_halves >>= 64; // Get top half of both_halves
+    return (uint64_t)both_halves;
+  }
+
+  static inline uint64_t fastmod_u64(uint64_t a, __uint128_t M, uint64_t d)
+  {
+    __uint128_t lowbits = M * a;
+    return mul128_u64(lowbits, d);
+  }
+#endif
+
   static inline std::size_t position(std::size_t hash,std::size_t size_index)
   {
-    return fastmod_u32(
-      uint32_t(hash)+uint32_t(hash>>32),
-      inv_sizes[size_index],uint32_t(sizes[size_index]));
+    if(BOOST_LIKELY(size_index<sizes_under_32bit)){
+      return fastmod_u32(
+        uint32_t(hash)+uint32_t(hash>>32),
+        inv_sizes32[size_index],uint32_t(sizes[size_index]));
+    }
+    else{
+#ifdef _MSC_VER
+      return hash%sizes[size_index];
+#else
+      return fastmod_u64(
+        hash,inv_sizes64[size_index-sizes_under_32bit],sizes[size_index]);       
+#endif          
+    }
   }
 };
 
