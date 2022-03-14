@@ -231,7 +231,7 @@ struct prime_fmod_size
   }
 };
 
-struct prime_frng_size:prime_sizea
+struct prime_frng_size:prime_size
 {      
   static inline std::size_t position(std::size_t hash,std::size_t size_index)
   {
