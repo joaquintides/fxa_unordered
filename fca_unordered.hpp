@@ -14,6 +14,7 @@
 #include <boost/container_hash/hash.hpp>
 #include <boost/core/bit.hpp>
 #include <boost/iterator/iterator_facade.hpp>
+#include <climits>
 #include <cstdint>
 #include <functional>
 #include <limits>
@@ -97,22 +98,42 @@ struct prime_switch_size:prime_size
   }
 };
 
+#if defined(SIZE_MAX)
+#  if ((((SIZE_MAX>>16)>>16)>>16)>>15)!=0
+#  define FCA_HAS_64B_SIZE_T
+#  endif
+#elif defined(UINTPTR_MAX) /* used as proxy for std::size_t */
+#  if ((((UINTPTR_MAX>>16)>>16)>>16)>>15)!=0
+#  define FCA_HAS_64B_SIZE_T
+#  endif
+#endif
+
+#if !defined(BOOST_NO_INT64_T)&&\
+    (defined(BOOST_HAS_INT128) || (defined(BOOST_MSVC)&&defined(_WIN64)))
+#define FCA_FASTMOD_SUPPORT
+#endif
+
 struct prime_fmod_size
 {
   constexpr static std::size_t sizes[]={
-    53ull,97ull,193ull,389ull,769ull,
-    1543ull,3079ull,6151ull,12289ull,24593ull,
-    49157ull,98317ull,196613ull,393241ull,786433ull,
-    1572869ull,3145739ull,6291469ull,12582917ull,25165843ull,
-    50331653ull,100663319ull,201326611ull,402653189ull,805306457ull,
-    1610612741ull,3221225473ull,
+    53ul,97ul,193ul,389ul,769ul,
+    1543ul,3079ul,6151ul,12289ul,24593ul,
+    49157ul,98317ul,196613ul,393241ul,786433ul,
+    1572869ul,3145739ul,6291469ul,12582917ul,25165843ul,
+    50331653ul,100663319ul,201326611ul,402653189ul,805306457ul,
+    1610612741ul,3221225473ul,
+#if !defined(FCA_HAS_64B_SIZE_T)
+    4294967291ul};
+#else
     // more than 32 bits
     6442450939ull,12884901893ull,25769803751ull,51539607551ull,
     103079215111ull,206158430209ull,412316860441ull,824633720831ull,
     1649267441651ull};
 
-  constexpr static std::size_t sizes_under_32bit=27;
+    constexpr static std::size_t sizes_under_32bit=27;
+#endif
 
+#if defined(FCA_FASTMOD_SUPPORT)
   constexpr static uint64_t inv_sizes32[]={
     348051774975651918ull,190172619316593316ull,95578984837873325ull,
     47420935922132524ull,23987963684927896ull,11955116055547344ull,
@@ -122,20 +143,13 @@ struct prime_fmod_size
     11728086747027ull,5864041509391ull,2932024948977ull,
     1466014921160ull,733007198436ull,366503839517ull,
     183251896093ull,91625960335ull,45812983922ull,
-    22906489714ull,11453246088ull,5726623060ull,};
-
-#ifndef _MSC_VER
-  constexpr static __uint128_t inv_sizes64[]={
-    (__uint128_t)0xAAAAAAACull<<64 | 0xE38E38EAF684BDBAull,
-    (__uint128_t)0x55555554ull<<64 | 0xC71C71C8097B425Eull,
-    (__uint128_t)0x2AAAAAABull<<64 | 0x5C71C71F5684BDAEull,
-    (__uint128_t)0x15555555ull<<64 | 0x571C71C71C97B426ull,
-    (__uint128_t)0xAAAAAAAull<<64 | 0xA78E38E38F212F69ull,
-    (__uint128_t)0x5555555ull<<64 | 0x5538E38E38E425EEull,
-    (__uint128_t)0x2AAAAAAull<<64 | 0xA9F8E38E3911DA13ull,
-    (__uint128_t)0x1555555ull<<64 | 0x55571C71C71C7426ull,
-    (__uint128_t)0xAAAAAAull<<64 | 0xAAB071C71C71F930ull,};
-#endif
+    22906489714ull,11453246088ull,5726623060ull,
+#  if !defined(FCA_HAS_64B_SIZE_T)
+  };
+#  else
+    4294967302ull};
+#  endif /* !defined(FCA_HAS_64B_SIZE_T) */
+#endif /* defined(FCA_FASTMOD_SUPPORT) */
 
   static inline std::size_t size_index(std::size_t n)
   {
@@ -150,63 +164,74 @@ struct prime_fmod_size
     return sizes[size_index];
   }
 
+  template<std::size_t SizeIndex,std::size_t Size=sizes[SizeIndex]>
+  static std::size_t position(std::size_t hash){return hash%Size;}
+
+  constexpr static std::size_t (*positions[])(std::size_t)={
+#if !defined(FCA_FASTMOD_SUPPORT)
+    position<0>,position<1>,position<2>,position<3>,position<4>,
+    position<5>,position<6>,position<7>,position<8>,position<9>,
+    position<10>,position<11>,position<12>,position<13>,position<14>,
+    position<15>,position<16>,position<17>,position<18>,position<19>,
+    position<20>,position<21>,position<22>,position<23>,position<24>,
+    position<25>,position<26>,
+# if !defined(FCA_HAS_64B_SIZE_T)
+    position<27>,
+# endif
+#endif
+
+#if defined(FCA_HAS_64B_SIZE_T)
+    position<27>,position<28>,position<29>,position<30>,position<31>,
+    position<32>,position<33>,position<34>,position<35>,
+#endif
+  };
+
+#if defined(FCA_FASTMOD_SUPPORT)
   // https://github.com/lemire/fastmod
 
-#ifdef _MSC_VER
+#  if defined(_MSC_VER)
   static inline uint64_t mul128_u32(uint64_t lowbits, uint32_t d)
   {
     return __umulh(lowbits, d);
   }
-#else // _MSC_VER
+#  else
   static inline uint64_t mul128_u32(uint64_t lowbits, uint32_t d)
   {
-    return ((__uint128_t)lowbits * d) >> 64;
+    return ((unsigned __int128)lowbits * d) >> 64;
   }
-#endif
+#  endif /* defined(_MSC_VER) */
 
   static inline uint32_t fastmod_u32(uint32_t a, uint64_t M, uint32_t d)
   {
     uint64_t lowbits = M * a;
     return (uint32_t)(mul128_u32(lowbits, d));
   }
-
-#ifndef _MSC_VER
-  static inline uint64_t mul128_u64(__uint128_t lowbits, uint64_t d)
-  {
-    __uint128_t bottom_half = (lowbits & UINT64_C(0xFFFFFFFFFFFFFFFF)) * d; // Won't overflow
-    bottom_half >>= 64;  // Only need the top 64 bits, as we'll shift the lower half away;
-    __uint128_t top_half = (lowbits >> 64) * d;
-    __uint128_t both_halves = bottom_half + top_half; // Both halves are already shifted down by 64
-    both_halves >>= 64; // Get top half of both_halves
-    return (uint64_t)both_halves;
-  }
-
-  static inline uint64_t fastmod_u64(uint64_t a, __uint128_t M, uint64_t d)
-  {
-    __uint128_t lowbits = M * a;
-    return mul128_u64(lowbits, d);
-  }
-#endif
+#endif /* defined(FCA_FASTMOD_SUPPORT) */
 
   static inline std::size_t position(std::size_t hash,std::size_t size_index)
   {
+#if defined(FCA_FASTMOD_SUPPORT)
+# if defined(FCA_HAS_64B_SIZE_T)
     if(BOOST_LIKELY(size_index<sizes_under_32bit)){
       return fastmod_u32(
         uint32_t(hash)+uint32_t(hash>>32),
         inv_sizes32[size_index],uint32_t(sizes[size_index]));
     }
     else{
-#ifdef _MSC_VER
-      return hash%sizes[size_index];
-#else
-      return fastmod_u64(
-        hash,inv_sizes64[size_index-sizes_under_32bit],sizes[size_index]);       
-#endif          
+      return positions[size_index-sizes_under_32bit](hash);
     }
+# else
+    return fastmod_u32(
+      uint32_t(hash)+uint32_t(hash>>32),
+      inv_sizes32[size_index],uint32_t(sizes[size_index]));
+# endif /* defined(FCA_HAS_64B_SIZE_T) */
+#else
+    return positions[size_index](hash);
+#endif /* defined(FCA_FASTMOD_SUPPORT) */
   }
 };
 
-struct prime_frng_size:prime_size
+struct prime_frng_size:prime_sizea
 {      
   static inline std::size_t position(std::size_t hash,std::size_t size_index)
   {
