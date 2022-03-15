@@ -14,6 +14,43 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - name: dedicated-server
+            compiler: g++-11
+            architecture: -m64
+            sourcefile: string.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            outputfile: benchmark
+            os: [self-hosted, linux, x64]
+            install: g++-11
+            command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
+          # Add other self-hosted runner jobs:
+          # - name: dedicated-server
+          #   compiler: g++-11
+          #   architecture: -m64
+          #   sourcefile: string_view.cpp
+          #   compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+          #   outputfile: benchmark
+          #   os: [self-hosted, linux, x64]
+          #   install: g++-11
+          #   command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
+          # - name: dedicated-server
+          #   compiler: g++-11
+          #   architecture: -m64
+          #   sourcefile: uint32.cpp
+          #   compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+          #   outputfile: benchmark
+          #   os: [self-hosted, linux, x64]
+          #   install: g++-11
+          #   command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
+          # - name: dedicated-server
+          #   compiler: g++-11
+          #   architecture: -m64
+          #   sourcefile: uint64.cpp
+          #   compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+          #   outputfile: benchmark
+          #   os: [self-hosted, linux, x64]
+          #   install: g++-11
+          #   command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
           - compiler: g++-11
             architecture: -m64
             sourcefile: string.cpp
@@ -156,28 +193,28 @@ jobs:
             compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
-            install: libc++-12-dev libc++abi-12-dev gcc-multilib g++-multilib
+            install: libc++-12-dev:i386 libc++abi-12-dev:i386 gcc-multilib g++-multilib
           - compiler: clang++-12
             architecture: -m32
             sourcefile: string_view.cpp
             compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
-            install: libc++-12-dev libc++abi-12-dev gcc-multilib g++-multilib
+            install: libc++-12-dev:i386 libc++abi-12-dev:i386 gcc-multilib g++-multilib
           - compiler: clang++-12
             architecture: -m32
             sourcefile: uint32.cpp
             compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
-            install: libc++-12-dev libc++abi-12-dev gcc-multilib g++-multilib
+            install: libc++-12-dev:i386 libc++abi-12-dev:i386 gcc-multilib g++-multilib
           - compiler: clang++-12
             architecture: -m32
             sourcefile: uint64.cpp
             compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
-            install: libc++-12-dev libc++abi-12-dev gcc-multilib g++-multilib
+            install: libc++-12-dev:i386 libc++abi-12-dev:i386 gcc-multilib g++-multilib
 
     runs-on: ${{matrix.os}}
 
@@ -187,9 +224,10 @@ jobs:
       - name: Install packages
         if: matrix.install
         run: |
-          sudo -E apt-add-repository -y ppa:ubuntu-toolchain-r/test
+          # sudo -E apt-add-repository -y ppa:ubuntu-toolchain-r/test
+          if uname -p | grep -q 'x86_64'; then sudo dpkg --add-architecture i386 ; fi
           sudo apt-get update
-          sudo apt install -y ${{matrix.install}}
+          sudo apt-get install -y ${{matrix.install}}
           
       - name: Install Boost
         run: |
@@ -216,7 +254,13 @@ jobs:
           ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.architecture}} ${{matrix.compileroptions}} -o ${{matrix.outputfile}} -I$GITHUB_WORKSPACE/boost-root -I$GITHUB_WORKSPACE/abseil-root -I$GITHUB_WORKSPACE/fastrange-root
       - name: Run benchmarks
         run: |
-          ./${{matrix.outputfile}}
+          if [ -n "${{matrix.command}}" ]; then
+              echo "running benchmarks"
+              ${{matrix.command}}
+          else
+              echo "running benchmarks"
+              ./${{matrix.outputfile}}
+          fi
   windows:
     strategy:
       fail-fast: false
