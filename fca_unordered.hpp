@@ -28,7 +28,7 @@ namespace fca_unordered_impl{
 struct prime_size
 {
   constexpr static std::size_t sizes[]={
-    53ul,97ul,193ul,389ul,769ul,
+    13ul,29ul,53ul,97ul,193ul,389ul,769ul,
     1543ul,3079ul,6151ul,12289ul,24593ul,
     49157ul,98317ul,196613ul,393241ul,786433ul,
     1572869ul,3145739ul,6291469ul,12582917ul,25165843ul,
@@ -56,6 +56,7 @@ struct prime_size
     position<10>,position<11>,position<12>,position<13>,position<14>,
     position<15>,position<16>,position<17>,position<18>,position<19>,
     position<20>,position<21>,position<22>,position<23>,position<24>,
+    position<25>,position<26>,
   };
 
   static inline std::size_t position(std::size_t hash,std::size_t size_index)
@@ -94,6 +95,8 @@ struct prime_switch_size:prime_size
       case 22: return prime_size::position<22>(hash);
       case 23: return prime_size::position<23>(hash);
       case 24: return prime_size::position<24>(hash);
+      case 25: return prime_size::position<25>(hash);
+      case 26: return prime_size::position<26>(hash);
     }
   }
 };
@@ -116,7 +119,7 @@ struct prime_switch_size:prime_size
 struct prime_fmod_size
 {
   constexpr static std::size_t sizes[]={
-    53ul,97ul,193ul,389ul,769ul,
+    13ul,29ul,53ul,97ul,193ul,389ul,769ul,
     1543ul,3079ul,6151ul,12289ul,24593ul,
     49157ul,98317ul,196613ul,393241ul,786433ul,
     1572869ul,3145739ul,6291469ul,12582917ul,25165843ul,
@@ -133,15 +136,16 @@ struct prime_fmod_size
 
 #if defined(FCA_FASTMOD_SUPPORT)
   constexpr static uint64_t inv_sizes32[]={
-    348051774975651918ull,190172619316593316ull,95578984837873325ull,
-    47420935922132524ull,23987963684927896ull,11955116055547344ull,
-    5991147799191151ull,2998982941588287ull,1501077717772769ull,
-    750081082979285ull,375261795343686ull,187625172388393ull,
-    93822606204624ull,46909513691883ull,23456218233098ull,
-    11728086747027ull,5864041509391ull,2932024948977ull,
-    1466014921160ull,733007198436ull,366503839517ull,
-    183251896093ull,91625960335ull,45812983922ull,
-    22906489714ull,11453246088ull,5726623060ull,
+    1418980313362273202ull,636094623231363849ull,348051774975651918ull,
+    190172619316593316ull,95578984837873325ull,47420935922132524ull,
+    23987963684927896ull,11955116055547344ull,5991147799191151ull,
+    2998982941588287ull,1501077717772769ull,750081082979285ull,
+    375261795343686ull,187625172388393ull,93822606204624ull,
+    46909513691883ull,23456218233098ull,11728086747027ull,
+    5864041509391ull,2932024948977ull,1466014921160ull,
+    733007198436ull,366503839517ull,183251896093ull,
+    91625960335ull,45812983922ull,22906489714ull,
+    11453246088ull,5726623060ull,
 #  if !defined(FCA_HAS_64B_SIZE_T)
   };
 #  else
@@ -172,15 +176,15 @@ struct prime_fmod_size
     position<10>,position<11>,position<12>,position<13>,position<14>,
     position<15>,position<16>,position<17>,position<18>,position<19>,
     position<20>,position<21>,position<22>,position<23>,position<24>,
-    position<25>,position<26>,
+    position<25>,position<26>,position<27>,position<28>,
 # if !defined(FCA_HAS_64B_SIZE_T)
-    position<27>,
+    position<29>,
 # endif
 #endif
 
 #if defined(FCA_HAS_64B_SIZE_T)
-    position<27>,position<28>,position<29>,position<30>,position<31>,
-    position<32>,position<33>,position<34>,position<35>,
+    position<29>,position<30>,position<31>,position<32>,position<33>,
+    position<34>,position<35>,position<36>,position<37>,
 #endif
   };
 
