@@ -127,21 +127,49 @@ jobs:
       matrix:
         include:
           - compiler: cl
+            architecture: x64
             compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
             sourcefile: string.cpp
             outputfile: benchmark.exe            
             os: windows-2019
           - compiler: cl
+            architecture: x64
             compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
             sourcefile: string_view.cpp
             outputfile: benchmark.exe            
             os: windows-2019
           - compiler: cl
+            architecture: x64
             compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
             sourcefile: uint32.cpp
             outputfile: benchmark.exe            
             os: windows-2019
           - compiler: cl
+            architecture: x64
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            sourcefile: uint64.cpp
+            outputfile: benchmark.exe            
+            os: windows-2019
+          - compiler: cl
+            architecture: x86
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            sourcefile: string.cpp
+            outputfile: benchmark.exe            
+            os: windows-2019
+          - compiler: cl
+            architecture: x86
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            sourcefile: string_view.cpp
+            outputfile: benchmark.exe            
+            os: windows-2019
+          - compiler: cl
+            architecture: x86
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            sourcefile: uint32.cpp
+            outputfile: benchmark.exe            
+            os: windows-2019
+          - compiler: cl
+            architecture: x86
             compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
             sourcefile: uint64.cpp
             outputfile: benchmark.exe            
@@ -176,7 +204,7 @@ jobs:
         shell: cmd
         run: |
           cd %GITHUB_WORKSPACE%
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{matrix.architecture}}
           set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\boost-root
           set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\abseil-root
           set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\fastrange-root
