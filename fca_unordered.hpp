@@ -245,13 +245,20 @@ struct prime_frng_size:prime_size
   }
 };
 
+template<int> struct fibonacci_constant_impl;
+template<> struct fibonacci_constant_impl<32>
+{static constexpr auto value=2654435769u;};
+template<> struct fibonacci_constant_impl<64>
+{static constexpr auto value=11400714819323198485ull;};
+
+static constexpr std::size_t fibonacci_constant=
+  fibonacci_constant_impl<sizeof(std::size_t)*8>::value;
+
 struct prime_frng_fib_size:prime_frng_size
 {      
   static inline std::size_t mix_hash(std::size_t hash)
   {
-    // https://en.wikipedia.org/wiki/Hash_function#Fibonacci_hashing
-    const std::size_t m=11400714819323198485ull;
-    return hash*m;
+    return hash*fibonacci_constant;
   } 
 
   static inline std::size_t position(std::size_t hash,std::size_t size_index)
@@ -284,9 +291,7 @@ struct pow2_fib_size:pow2_size
 {
   static inline std::size_t mix_hash(std::size_t hash)
   {
-    // https://en.wikipedia.org/wiki/Hash_function#Fibonacci_hashing
-    const std::size_t m=11400714819323198485ull;
-    return hash*m;
+    return hash*fibonacci_constant;
   } 
 
   static inline std::size_t position(std::size_t hash,std::size_t size_index)
