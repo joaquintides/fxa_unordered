@@ -16,165 +16,165 @@ jobs:
         include:
           - compiler: g++-11
             architecture: -m64
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: string.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11
           - compiler: g++-11
             architecture: -m64
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: string_view.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11
           - compiler: g++-11
             architecture: -m64
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: uint32.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11
           - compiler: g++-11
             architecture: -m64
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: uint64.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11
           - compiler: clang++-12
             architecture: -m64
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: string.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
           - compiler: clang++-12
             architecture: -m64
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: string_view.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
           - compiler: clang++-12
             architecture: -m64
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: uint32.cpp
-            outputfile: benchmark
-            os: ubuntu-20.04
-          - compiler: clang++-12
-            architecture: -m64
             compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
-            sourcefile: uint64.cpp
             outputfile: benchmark
             os: ubuntu-20.04
           - compiler: clang++-12
             architecture: -m64
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            sourcefile: uint64.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            outputfile: benchmark
+            os: ubuntu-20.04
+          - compiler: clang++-12
+            architecture: -m64
             sourcefile: string.cpp
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
             install: libc++-12-dev libc++abi-12-dev
           - compiler: clang++-12
             architecture: -m64
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             sourcefile: string_view.cpp
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
             install: libc++-12-dev libc++abi-12-dev
           - compiler: clang++-12
             architecture: -m64
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             sourcefile: uint32.cpp
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
             install: libc++-12-dev libc++abi-12-dev
           - compiler: clang++-12
             architecture: -m64
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             sourcefile: uint64.cpp
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
             install: libc++-12-dev libc++abi-12-dev
           - compiler: g++-11
             architecture: -m32
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: string.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11 gcc-11-multilib g++-11-multilib
           - compiler: g++-11
             architecture: -m32
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: string_view.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11 gcc-11-multilib g++-11-multilib
           - compiler: g++-11
             architecture: -m32
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: uint32.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11 gcc-11-multilib g++-11-multilib
           - compiler: g++-11
             architecture: -m32
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: uint64.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11 gcc-11-multilib g++-11-multilib
           - compiler: clang++-12
             architecture: -m32
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: string.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
             install: gcc-multilib g++-multilib
           - compiler: clang++-12
             architecture: -m32
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: string_view.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
             install: gcc-multilib g++-multilib
           - compiler: clang++-12
             architecture: -m32
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
             sourcefile: uint32.cpp
-            outputfile: benchmark
-            os: ubuntu-20.04
-            install: gcc-multilib g++-multilib
-          - compiler: clang++-12
-            architecture: -m32
             compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
-            sourcefile: uint64.cpp
             outputfile: benchmark
             os: ubuntu-20.04
             install: gcc-multilib g++-multilib
           - compiler: clang++-12
             architecture: -m32
+            sourcefile: uint64.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            outputfile: benchmark
+            os: ubuntu-20.04
+            install: gcc-multilib g++-multilib
+          - compiler: clang++-12
+            architecture: -m32
+            sourcefile: string.cpp
             compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
-            sourcefile: string.cpp
             outputfile: benchmark
             os: ubuntu-20.04
             install: libc++-12-dev libc++abi-12-dev gcc-multilib g++-multilib
           - compiler: clang++-12
             architecture: -m32
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             sourcefile: string_view.cpp
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
             install: libc++-12-dev libc++abi-12-dev gcc-multilib g++-multilib
           - compiler: clang++-12
             architecture: -m32
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             sourcefile: uint32.cpp
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
             install: libc++-12-dev libc++abi-12-dev gcc-multilib g++-multilib
           - compiler: clang++-12
             architecture: -m32
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             sourcefile: uint64.cpp
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
             install: libc++-12-dev libc++abi-12-dev gcc-multilib g++-multilib
@@ -224,41 +224,41 @@ jobs:
         include:
           - compiler: cl
             architecture: x64
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
             sourcefile: string.cpp
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe            
             os: windows-2019
           - compiler: cl
             architecture: x64
+            sourcefile: string_view.cpp
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            outputfile: benchmark.exe            
+            os: windows-2019
+          - compiler: cl
+            architecture: x64
+            sourcefile: uint32.cpp
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            outputfile: benchmark.exe            
+            os: windows-2019
+          - compiler: cl
+            architecture: x64
+            sourcefile: uint64.cpp
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            outputfile: benchmark.exe            
+            os: windows-2019
+          - compiler: cl
+            architecture: x86
+            sourcefile: string.cpp
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            outputfile: benchmark.exe            
+            os: windows-2019
+          - compiler: cl
+            architecture: x86
             compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
             sourcefile: string_view.cpp
             outputfile: benchmark.exe            
             os: windows-2019
           - compiler: cl
-            architecture: x64
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
-            sourcefile: uint32.cpp
-            outputfile: benchmark.exe            
-            os: windows-2019
-          - compiler: cl
-            architecture: x64
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
-            sourcefile: uint64.cpp
-            outputfile: benchmark.exe            
-            os: windows-2019
-          - compiler: cl
-            architecture: x86
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
-            sourcefile: string.cpp
-            outputfile: benchmark.exe            
-            os: windows-2019
-          - compiler: cl
-            architecture: x86
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
-            sourcefile: string_view.cpp
-            outputfile: benchmark.exe            
-            os: windows-2019
-          - compiler: cl
             architecture: x86
             compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
             sourcefile: uint32.cpp
@@ -266,8 +266,8 @@ jobs:
             os: windows-2019
           - compiler: cl
             architecture: x86
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
             sourcefile: uint64.cpp
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe            
             os: windows-2019
 
