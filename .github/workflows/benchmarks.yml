@@ -124,25 +124,52 @@ jobs:
   windows:
     strategy:
       fail-fast: false
-      architecture: [x64, x86]
       matrix:
         include:
           - compiler: cl
+            architecture: x64
             compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
             sourcefile: string.cpp
             outputfile: benchmark.exe            
             os: windows-2019
           - compiler: cl
+            architecture: x64
             compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
             sourcefile: string_view.cpp
             outputfile: benchmark.exe            
             os: windows-2019
           - compiler: cl
+            architecture: x64
             compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
             sourcefile: uint32.cpp
             outputfile: benchmark.exe            
             os: windows-2019
           - compiler: cl
+            architecture: x64
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            sourcefile: uint64.cpp
+            outputfile: benchmark.exe            
+            os: windows-2019
+          - compiler: cl
+            architecture: x86
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            sourcefile: string.cpp
+            outputfile: benchmark.exe            
+            os: windows-2019
+          - compiler: cl
+            architecture: x86
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            sourcefile: string_view.cpp
+            outputfile: benchmark.exe            
+            os: windows-2019
+          - compiler: cl
+            architecture: x86
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            sourcefile: uint32.cpp
+            outputfile: benchmark.exe            
+            os: windows-2019
+          - compiler: cl
+            architecture: x86
             compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
             sourcefile: uint64.cpp
             outputfile: benchmark.exe            
