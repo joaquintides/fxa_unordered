@@ -129,8 +129,6 @@ struct prime_fmod_size
     6442450939ull,12884901893ull,25769803751ull,51539607551ull,
     103079215111ull,206158430209ull,412316860441ull,824633720831ull,
     1649267441651ull};
-
-    constexpr static std::size_t sizes_under_32bit=27;
 #endif
 
 #if defined(FCA_FASTMOD_SUPPORT)
@@ -212,6 +210,8 @@ struct prime_fmod_size
   {
 #if defined(FCA_FASTMOD_SUPPORT)
 # if defined(FCA_HAS_64B_SIZE_T)
+    constexpr std::size_t sizes_under_32bit=
+      sizeof(inv_sizes32)/sizeof(inv_sizes32[0]);
     if(BOOST_LIKELY(size_index<sizes_under_32bit)){
       return fastmod_u32(
         uint32_t(hash)+uint32_t(hash>>32),
@@ -222,14 +222,20 @@ struct prime_fmod_size
     }
 # else
     return fastmod_u32(
-      uint32_t(hash)+uint32_t(hash>>32),
-      inv_sizes32[size_index],uint32_t(sizes[size_index]));
+      hash,inv_sizes32[size_index],uint32_t(sizes[size_index]));
 # endif /* defined(FCA_HAS_64B_SIZE_T) */
 #else
     return positions[size_index](hash);
 #endif /* defined(FCA_FASTMOD_SUPPORT) */
   }
 };
+
+#ifdef FCA_FASTMOD_SUPPORT
+#undef FCA_FASTMOD_SUPPORT
+#endif
+#ifdef FCA_HAS_64B_SIZE_T
+#undef FCA_HAS_64B_SIZE_T
+#endif
 
 struct prime_frng_size:prime_size
 {      
