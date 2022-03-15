@@ -156,7 +156,7 @@ jobs:
             compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
             outputfile: benchmark
             os: ubuntu-20.04
-            install: libc++-12-dev libc++abi-12-dev gcc-multilib g++-multilib
+            install: libc++-12-dev_12.0.0-3ubuntu1~20.04.5_i386.deb libc++abi-12-dev_12.0.0-3ubuntu1~20.04.5_i386.deb  gcc-multilib g++-multilib
           - compiler: clang++-12
             architecture: -m32
             sourcefile: string_view.cpp
