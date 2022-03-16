@@ -489,7 +489,7 @@ int main()
 {
     init_indices();
 
-#if defined(BOOST_GCC) && __SIZE_WIDTH__ == 32
+#if defined(BOOST_LIBSTDCXX_VERSION) && __SIZE_WIDTH__ == 32
     // Pathological behavior:
     // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104945
 #else
