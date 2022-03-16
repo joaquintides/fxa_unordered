@@ -489,7 +489,13 @@ int main()
 {
     init_indices();
 
+#if defined(BOOST_GCC) && __SIZE_WIDTH__ == 32
+    // Pathological behavior:
+    // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104945
+#else
     test<std_unordered_map>( "std::unordered_map" );
+#endif
+
     test<boost_unordered_map>( "boost::unordered_map" );
     test<multi_index_map>( "multi_index_map" );
 
