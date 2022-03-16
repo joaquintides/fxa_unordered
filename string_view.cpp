@@ -594,6 +594,10 @@ template<class K, class V> using absl_flat_hash_map_fnv1a =
 #endif
 //
 
+#if ((SIZE_MAX>>16)>>16)==0 
+#define IN_32BIT_ARCHITECTURE
+#endif
+
 int main()
 {
     init_indices();
@@ -612,7 +616,13 @@ int main()
 
 #ifdef BENCHMARK_EVERYTHING
     test<fca_frng_unordered_map_fnv1a>( "fca_frng_unordered_map, FNV-1a" );
+#endif
+
+#if defined(IN_32BIT_ARCHITECTURE)
     test<fca_frng_fib_unordered_map_fnv1a>( "fca_frng_fib_unordered_map, FNV-1a" );
+#endif
+
+#ifdef BENCHMARK_EVERYTHING
     test<fca_pow2_unordered_map_fnv1a>( "fca_pow2_unordered_map, FNV-1a" );
 #endif
     

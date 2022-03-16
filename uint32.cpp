@@ -484,6 +484,10 @@ using fca_fmod_bcached_unordered_embedded_bucket_map =
     fca_unordered_impl::bcached_simple_buckets,
     fca_unordered_impl::embedded_node_allocation>;
 
+#if ((SIZE_MAX>>16)>>16)==0 
+#define IN_32BIT_ARCHITECTURE
+#endif
+
 int main()
 {
     init_indices();
@@ -500,16 +504,16 @@ int main()
 
     test<fca_fmod_unordered_map>( "fca_fmod_unordered_map" );
 
-#ifdef BENCHMARK_EVERYTHING
     // frng is spectacularly slow for consecutive uint64 insertion
     // (as expected, boost::hash is the identity and position ignores low bits)
     // test<fca_frng_unordered_map>( "fca_frng_unordered_map" );
     
+#if defined(IN_32BIT_ARCHITECTURE)
     test<fca_frng_fib_unordered_map>( "fca_frng_fib_unordered_map" );
+#endif
 
     // same as frng
     // test<fca_pow2_unordered_map>( "fca_pow2_unordered_map" );
-#endif    
     
     test<fca_pow2_fib_unordered_map>( "fca_pow2_fib_unordered_map" );
     test<fca_fmod_unordered_bucket_map>( "fca_fmod_unordered_bucket_map" );
