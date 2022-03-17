@@ -23,7 +23,6 @@ jobs:
             os: [self-hosted, linux, x64]
             install: g++-11
             command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
-          # Add other self-hosted runner jobs:
           # - name: dedicated-server
           #   compiler: g++-11
           #   architecture: -m64
@@ -33,24 +32,24 @@ jobs:
           #   os: [self-hosted, linux, x64]
           #   install: g++-11
           #   command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
-          # - name: dedicated-server
-          #   compiler: g++-11
-          #   architecture: -m64
-          #   sourcefile: uint32.cpp
-          #   compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
-          #   outputfile: benchmark
-          #   os: [self-hosted, linux, x64]
-          #   install: g++-11
-          #   command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
-          # - name: dedicated-server
-          #   compiler: g++-11
-          #   architecture: -m64
-          #   sourcefile: uint64.cpp
-          #   compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
-          #   outputfile: benchmark
-          #   os: [self-hosted, linux, x64]
-          #   install: g++-11
-          #   command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
+          - name: dedicated-server
+            compiler: g++-11
+            architecture: -m64
+            sourcefile: uint32.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            outputfile: benchmark
+            os: [self-hosted, linux, x64]
+            install: g++-11
+            command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
+          - name: dedicated-server
+            compiler: g++-11
+            architecture: -m64
+            sourcefile: uint64.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            outputfile: benchmark
+            os: [self-hosted, linux, x64]
+            install: g++-11
+            command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
           - compiler: g++-11
             architecture: -m64
             sourcefile: string.cpp
@@ -228,17 +227,34 @@ jobs:
           if uname -p | grep -q 'x86_64'; then sudo dpkg --add-architecture i386 ; fi
           sudo apt-get update
           sudo apt-get install -y ${{matrix.install}}
-          
+
       - name: Install Boost
         run: |
-          cd $GITHUB_WORKSPACE
-          git clone https://github.com/boostorg/boost.git boost-root
-          cd boost-root
-          git checkout boost-1.78.0
-          git submodule update --init
-          ./bootstrap.sh
-          ./b2 -d0 headers
-          
+          if [ -n "${{matrix.command}}" ]; then
+            set -xe
+            export BOOST_BRANCH=boost-1.78.0
+            cd $HOME
+            if [ ! -d boost-root ]; then
+              git clone -b $BOOST_BRANCH https://github.com/boostorg/boost.git boost-root --depth 1
+              cd boost-root
+              git submodule update --init --depth 1
+              ./bootstrap.sh
+              ./b2 headers
+              cd ..
+            else
+              : # Manually reset the self-hosted runner if modifying BOOST_BRANCH.
+            fi
+            ln -s $HOME/boost-root $GITHUB_WORKSPACE/boost-root
+          else
+            cd $GITHUB_WORKSPACE
+            git clone https://github.com/boostorg/boost.git boost-root
+            cd boost-root
+            git checkout boost-1.78.0
+            git submodule update --init
+            ./bootstrap.sh
+            ./b2 -d0 headers
+          fi
+
       - name: Install Abseil
         run: |
           cd $GITHUB_WORKSPACE
