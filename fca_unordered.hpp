@@ -17,6 +17,7 @@
 #include <climits>
 #include <cstdint>
 #include <functional>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <type_traits>
@@ -1530,7 +1531,11 @@ struct coalesced_set_node_array
   Node* new_node(Node* p)
   {
     // no need to call mark_occupied, set_next will do it later
-    if(cellar<&v.back())return cellar++;
+    if(cellar<&v.back()){
+      auto ret=cellar++;
+      if(cellar==&v.back())std::cout<<"Cellar exhausted\n";
+      return ret;
+    }
     else return &v[prober.allocate(p-v.data())];
   }
   
