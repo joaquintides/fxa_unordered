@@ -1502,7 +1502,7 @@ template<typename Node,typename Allocator>
 struct coalesced_set_node_array
 {
   coalesced_set_node_array(std::size_t n,const Allocator& al):
-    main_size_{n},v{n+n/6+1,al},cellar{&v[n]},prober{v.size()-1,al}
+    main_size_{n},v{n+n/2+1,al},cellar{&v[n]},prober{v.size()-1,al}
   {
     v.back().set_next(&v.back());
   }
