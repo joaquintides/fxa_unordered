@@ -861,6 +861,11 @@ public:
     std::size_t nmod=n%N;
     bitmask.back()=~std::size_t(0)&reset_first_bits(nmod);  
   }
+    
+  void acquire(std::size_t n)
+  {
+    bitmask[n/N]|=set_bit(n%N);
+  }
 
   std::size_t allocate(std::size_t n)
   {
@@ -1465,9 +1470,311 @@ using fca_unordered_map=fca_unordered_set<
   Allocator,SizePolicy,BucketArrayPolicy,NodeAllocationPolicy
 >;
 
+template<typename T>
+struct coalesced_set_node
+{
+  static constexpr std::uintptr_t occupied=1;
+
+  bool is_occupied()const{return next_&occupied;}
+  bool is_free()const{return !is_occupied();}
+  void mark_occupied(){next_|=occupied;} 
+  void mark_free(){next_&=~occupied;} 
+
+  coalesced_set_node* next()
+  {
+    return reinterpret_cast<coalesced_set_node*>(next_&~occupied);
+  }
+
+  void set_next(coalesced_set_node* p) // marks occupied automatically
+  {
+    next_=reinterpret_cast<std::uintptr_t>(p)|occupied;
+  }
+
+  T* data(){return reinterpret_cast<T*>(&storage);}
+  T& value(){return *data();}
+  
+  std::uintptr_t next_=0;
+  std::aligned_storage_t<sizeof(T),alignof(T)> storage;
+};
+
+template<typename Node,typename Allocator>
+struct coalesced_set_node_array
+{
+  coalesced_set_node_array(std::size_t n,const Allocator& al):
+    main_size_{n},v{n+n/6+1,al},cellar{&v[n]},prober{v.size()-1,al}
+  {
+    v.back().set_next(&v.back());
+  }
+
+  coalesced_set_node_array(coalesced_set_node_array&&)=default;
+  coalesced_set_node_array& operator=(coalesced_set_node_array&&)=default;
+
+  auto begin()const{return const_cast<Node*>(&v.front());}
+  auto end()const{return const_cast<Node*>(&v.back());}
+  auto at(std::size_t n)const{return const_cast<Node*>(&v[n]);}
+  
+  auto main_size()const{return main_size_;}
+
+  void acquire_node(Node* p)
+  {
+    prober.acquire(p-v.data());
+    p->mark_occupied();
+  }
+      
+  void release_node(Node* p)
+  {
+    p->mark_free();
+    prober.deallocate(p-v.data());
+  }
+
+  Node* new_node(Node* p)
+  {
+    // no need to call mark_occupied, set_next will do it later
+    if(cellar<&v.back())return cellar++;
+    else return &v[prober.allocate(p-v.data())];
+  }
+  
+private:
+  using size_t_allocator_type=typename std::allocator_traits<Allocator>::
+    template rebind_alloc<std::size_t>;
+
+  std::size_t                                                 main_size_;
+  std::vector<Node,Allocator>                                 v;
+  Node*                                                       cellar;
+  quadratic_prober<
+    size_t_allocator_type,quadratic_prober_variant::standard> prober;  
+};
+
+template<
+  typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
+  typename Allocator=std::allocator<T>,
+  typename SizePolicy=prime_size
+>
+class fca_unordered_coalesced_set 
+{
+  using size_policy=SizePolicy;
+  using node_type=coalesced_set_node<T>;
+
+public:
+  using key_type=T;
+  using value_type=T;
+  using size_type=std::size_t;
+  class const_iterator:public boost::iterator_facade<
+    const_iterator,const value_type,boost::forward_traversal_tag>
+  {
+  public:
+    const_iterator()=default;
+        
+  private:
+    friend class fca_unordered_coalesced_set;
+    friend class boost::iterator_core_access;
+    
+    const_iterator(node_type* p):p{p}{}
+
+    const value_type& dereference()const noexcept{return p->value();}
+    bool equal(const const_iterator& x)const noexcept{return p==x.p;}
+    void increment()noexcept{while(!(++p)->is_occupied());}
+
+    node_type *p=nullptr; 
+  };
+  using iterator=const_iterator;
+
+  ~fca_unordered_coalesced_set()
+  {
+    for(auto first=begin(),last=end();first!=last;)erase(first++);
+  }
+  
+  const_iterator begin()const noexcept
+  {
+    // TODO change this lousy thing
+    const_iterator it=nodes.begin();
+    if(nodes.begin()->is_free())++it;
+    return it;
+  }
+  
+  const_iterator end()const noexcept{return nodes.end();}
+  size_type size()const noexcept{return size_;};
+
+  auto insert(const T& x){return insert_impl(x);}
+  auto insert(T&& x){return insert_impl(std::move(x));}
+
+  void erase(const_iterator pos)
+  {
+    auto [p]=pos;
+    delete_element(p);
+    --size_;
+  }
+
+  template<typename Key>
+  size_type erase(const Key& x)
+  {
+    auto it=find(x);
+    if(it==end()){
+      return 0;
+    }
+    else{
+      erase(it);
+      return 1;
+    }
+  }
+  
+  template<typename Key>
+  iterator find(const Key& x)const
+  {
+    auto p=nodes.at(size_policy::position(h(x),size_index));
+    do{
+      if(p->is_occupied()&&pred(x,p->value()))return p;
+      p=p->next();
+    }while(p);
+    return end();
+  }
+
+private:
+  using alloc_traits=std::allocator_traits<Allocator>;
+  using node_array_type=coalesced_set_node_array<
+    node_type,
+    typename alloc_traits::template rebind_alloc<node_type>>;
+
+  template<typename Value>
+  node_type* new_element(Value&& x,node_type* ph,node_type* p)
+  {
+    return new_element(nodes,std::forward<Value>(x),ph,p);
+  }
+
+  template<typename Value>
+  node_type* new_element(
+    node_array_type& nodes,Value&& x,node_type* ph,node_type* p)
+  {
+    try{
+      if(p){
+          nodes.acquire_node(p);
+          alloc_traits::construct(al,p->data(),std::forward<Value>(x));
+      }
+      else{
+        p=nodes.new_node(ph);
+        alloc_traits::construct(al,p->data(),std::forward<Value>(x));
+        p->set_next(ph->next());
+        ph->set_next(p);
+      }
+    }
+    catch(...){
+      nodes.release_node(p);
+    }
+    return p;
+  }
+  
+  void delete_element(node_type* p)
+  {
+    delete_element(nodes,p);
+  }
+
+  void delete_element(node_array_type& nodes,node_type* p)
+  {
+    alloc_traits::destroy(al,p->data());
+    nodes.release_node(p);
+  }
+
+  template<typename Value>
+  std::pair<iterator,bool> insert_impl(Value&& x)
+  {
+    auto hash=h(x);
+    auto ph=nodes.at(size_policy::position(hash,size_index));
+    auto p=find_match_or_free(x,ph);
+    if(p&&p->is_occupied())return {p,false};
+  
+    if(BOOST_UNLIKELY(size_+1>ml)){
+      rehash(size_+1);
+      ph=nodes.at(size_policy::position(hash,size_index));
+      p=ph->is_free()?ph:nullptr;
+    }
+    
+    p=new_element(std::forward<Value>(x),ph,p);
+    ++size_;
+    return {p,true};
+  }
+
+  void rehash(size_type n)
+  {
+    std::size_t nc =(std::numeric_limits<std::size_t>::max)();
+    float       fnc=1.0f+static_cast<float>(n)/mlf;
+    if(nc>fnc)nc=static_cast<std::size_t>(fnc);
+
+    std::size_t       new_size_index=size_policy::size_index(nc);
+    node_array_type   new_nodes{size_policy::size(new_size_index),al};
+    try{
+      for(auto& n:nodes){
+        if(n.is_occupied()){
+          auto ph=new_nodes.at(size_policy::position(h(n.value()),new_size_index)),
+               p=ph->is_free()?ph:nullptr;
+          new_element(new_nodes,std::move(n.value()),ph,p);
+          delete_element(&n);
+        }
+      }
+    }
+    catch(...){
+      for(auto& n:new_nodes){
+        if(n.is_occupied()){
+          delete_element(new_nodes,&n);
+          --size_;
+        }
+      }
+      throw;
+    }
+    size_index=new_size_index;
+    nodes=std::move(new_nodes);
+    ml=max_load();   
+  }
+  
+  template<typename Key>
+  node_type* find_match_or_free(const Key& x,node_type* p)const
+  {
+    node_type* pf=nullptr;
+    do{
+      if(p->is_free())
+      {
+        if(!pf)pf=p;
+      }
+      else if(pred(x,p->value()))return p;
+      p=p->next();
+    }while(p);
+    return pf;
+  }
+
+  size_type max_load()const
+  {
+    float fml=mlf*static_cast<float>(nodes.main_size());
+    auto res=(std::numeric_limits<size_type>::max)();
+    if(res>fml)res=static_cast<size_type>(fml);
+    return res;
+  }  
+
+  Hash                h;
+  Pred                pred;
+  Allocator           al;
+  float               mlf=1.0f;
+  std::size_t         size_=0;
+  std::size_t         size_index=size_policy::size_index(size_);
+  node_array_type     nodes{size_policy::size(size_index),al};
+  size_type           ml=max_load();
+};
+
+template<
+  typename Key,typename Value,
+  typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
+  typename Allocator=std::allocator<map_value_adaptor<Key,Value>>,
+  typename SizePolicy=prime_size
+>
+using fca_unordered_coalesced_map=fca_unordered_coalesced_set<
+  map_value_adaptor<Key,Value>,
+  map_hash_adaptor<Hash>,map_pred_adaptor<Pred>,
+  Allocator,SizePolicy
+>;
+
 } // namespace fca_unordered
 
 using fca_unordered_impl::fca_unordered_set;
 using fca_unordered_impl::fca_unordered_map;
+using fca_unordered_impl::fca_unordered_coalesced_set;
+using fca_unordered_impl::fca_unordered_coalesced_map;
 
 #endif
