@@ -1516,6 +1516,11 @@ struct coalesced_set_node_array
   
   auto address_size()const{return address_size_;}
 
+  bool in_cellar(Node* p)const
+  {
+    return std::size_t(p-&v.front())>=address_size_;
+  }
+
   void acquire_node(Node* p)
   {
     prober.acquire(p-v.data());
@@ -1678,8 +1683,8 @@ private:
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
     auto hash=h(x);
-    auto ph=nodes.at(size_policy::position(hash,size_index));
-    auto p=find_match_or_free(x,ph);
+    auto [ph,p]=find_match_or_free_VILCH(
+           x,nodes.at(size_policy::position(hash,size_index)));
     if(p&&p->is_occupied())return {p,false};
   
     if(BOOST_UNLIKELY(size_+1>ml)){
@@ -1738,6 +1743,23 @@ private:
       p=p->next();
     }while(p);
     return pf;
+  }
+
+  template<typename Key>
+  std::pair<node_type*,node_type*>
+  find_match_or_free_VILCH(const Key& x,node_type* p)const
+  {
+    node_type *ph=p,*pf=nullptr;
+    do{
+      if(nodes.in_cellar(p))ph=p;
+      if(p->is_free())
+      {
+        if(!pf)pf=p;
+      }
+      else if(pred(x,p->value()))return {ph,p};
+      p=p->next();
+    }while(p);
+    return {ph,pf};
   }
 
   size_type max_load()const
