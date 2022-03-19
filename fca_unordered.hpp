@@ -1683,7 +1683,7 @@ private:
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
     auto hash=h(x);
-    auto [ph,p]=find_match_or_free_VILCH(
+    auto [ph,p]=find_match_or_free_VICH(
            x,nodes.at(size_policy::position(hash,size_index)));
     if(p&&p->is_occupied())return {p,false};
   
@@ -1747,7 +1747,7 @@ private:
 
   template<typename Key>
   std::pair<node_type*,node_type*>
-  find_match_or_free_VILCH(const Key& x,node_type* p)const
+  find_match_or_free_VICH(const Key& x,node_type* p)const
   {
     node_type *ph=p,*pf=nullptr;
     do{
