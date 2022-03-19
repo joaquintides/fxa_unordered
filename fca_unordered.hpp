@@ -1541,7 +1541,8 @@ struct coalesced_set_node_array
   {
     assert(in_cellar(p));
     p->set_next(free);
-    free->set_next(p);
+    p->mark_deleted();
+    free=p;
     --count_;
   }
 
@@ -1641,9 +1642,10 @@ public:
       if(nodes.in_cellar(p)){
         assert(prev);
         prev->set_next(p->next());
-        delete_element(p);
         nodes.release_node(p);
       }
+      delete_element(p);
+      --size_;
       return 1;
     }
   }
