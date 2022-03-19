@@ -1641,6 +1641,7 @@ public:
       if(nodes.in_cellar(p)){
         assert(prev);
         prev->set_next(p->next());
+        delete_element(p);
         nodes.release_node(p);
       }
       return 1;
