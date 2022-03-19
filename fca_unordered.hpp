@@ -1788,7 +1788,7 @@ private:
 
   template<typename Key>
   std::pair<node_type*,node_type*>
-  find_match_and_prev(const Key& x)
+  find_match_and_prev(const Key& x)const
   {
     node_type *prev=nullptr,
               *p=nodes.at(size_policy::position(h(x),size_index));
