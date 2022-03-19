@@ -17,7 +17,6 @@
 #include <climits>
 #include <cstdint>
 #include <functional>
-#include <iostream>
 #include <limits>
 #include <memory>
 #include <type_traits>
@@ -1475,18 +1474,18 @@ template<typename T>
 struct coalesced_set_node
 {
   static constexpr std::uintptr_t occupied=1,
-                                  free_=~occupied;
+                                  free=~occupied;
 
   bool is_occupied()const{return next_&occupied;}
   bool is_deleted()const{return !is_occupied();}
-  bool is_free()const{return next_==free_;}
+  bool is_free()const{return next_==free;}
   void mark_occupied(){next_|=occupied;} 
   void mark_deleted(){next_&=~occupied;} 
 
   coalesced_set_node* next()
   {
     return
-      next_==free_?
+      next_==free?
         nullptr:
         reinterpret_cast<coalesced_set_node*>(next_&~occupied);
   }
@@ -1499,7 +1498,7 @@ struct coalesced_set_node
   T* data(){return reinterpret_cast<T*>(&storage);}
   T& value(){return *data();}
   
-  std::uintptr_t next_=free_;
+  std::uintptr_t next_=free;
   std::aligned_storage_t<sizeof(T),alignof(T)> storage;
 };
 
@@ -1507,7 +1506,7 @@ template<typename Node,typename Allocator>
 struct coalesced_set_node_array
 {
   // https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.119.6552&rep=rep1&type=pdf
-  static constexpr auto address_factor=0.5f;
+  static constexpr auto address_factor=0.86f;
 
   coalesced_set_node_array(std::size_t n,const Allocator& al):
     address_size_{n},v{std::size_t(n/address_factor)+1,al},
@@ -1533,15 +1532,29 @@ struct coalesced_set_node_array
 
   void acquire_node(Node* p)
   {
+    assert(!in_cellar(p));
     prober.acquire(p-v.data());
     ++count_;
+  }
+
+  void release_node(Node* p)
+  {
+    assert(in_cellar(p));
+    p->set_next(free);
+    free->set_next(p);
+    --count_;
   }
 
   Node* new_node(Node* p)
   {
     ++count_;
-    if(cellar<&v.back())return cellar++;
-    else return &v[prober.allocate(p-v.data())];
+    if(free){
+      auto res=free;
+      free=free->next();
+      return res;
+    }
+    else if(cellar<&v.back())return cellar++;
+    else                     return &v[prober.allocate(p-v.data())];
   }
   
 private:
@@ -1551,7 +1564,8 @@ private:
   std::size_t                                                 address_size_;
   std::size_t                                                 count_=0;
   std::vector<Node,Allocator>                                 v;
-  Node*                                                       cellar;
+  Node                                                        *cellar;
+  Node                                                        *free=nullptr; 
   quadratic_prober<
     size_t_allocator_type,quadratic_prober_variant::standard> prober;  
 };
@@ -1619,12 +1633,16 @@ public:
   template<typename Key>
   size_type erase(const Key& x)
   {
-    auto it=find(x);
-    if(it==end()){
+    auto [prev,p]=find_match_and_prev(x);
+    if(!p){
       return 0;
     }
     else{
-      erase(it);
+      if(nodes.in_cellar(p)){
+        assert(prev);
+        prev->set_next(p->next());
+        nodes.release_node(p);
+      }
       return 1;
     }
   }
@@ -1762,6 +1780,20 @@ private:
       p=p->next();
     }while(p);
     return {pi,pa};
+  }
+
+  template<typename Key>
+  std::pair<node_type*,node_type*>
+  find_match_and_prev(const Key& x)
+  {
+    node_type *prev=nullptr,
+              *p=nodes.at(size_policy::position(h(x),size_index));
+    do{
+      if(p->is_occupied()&&pred(x,p->value()))return {prev,p};
+      prev=p;
+      p=p->next();
+    }while(p);
+    return {nullptr,nullptr};
   }
 
   size_type max_load()const
