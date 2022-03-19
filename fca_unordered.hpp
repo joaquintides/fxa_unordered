@@ -1774,7 +1774,7 @@ private:
   {
     node_type *pi=p,*pa=nullptr;
     do{
-      // VILCH algorithm: insertion after last cellar node
+      // VICH algorithm: insertion after last cellar node
       if(nodes.in_cellar(p))pi=p;
         
       if(!p->is_occupied())
