@@ -1647,14 +1647,19 @@ private:
     typename alloc_traits::template rebind_alloc<node_type>>;
 
   template<typename Value>
-  node_type* new_element(Value&& x,node_type* ph,node_type* p)
+  node_type* new_element(
+   Value&& x,node_type* ph,node_type* pi,node_type* p)
+  // ph: first node of the subchain
+  // pi: point before insertion (if p is null)
+  // p:  available node (if found during lookup)
   {
-    return new_element(nodes,std::forward<Value>(x),ph,p);
+    return new_element(nodes,std::forward<Value>(x),ph,pi,p);
   }
 
   template<typename Value>
   node_type* new_element(
-    node_array_type& nodes,Value&& x,node_type* ph,node_type* p)
+    node_array_type& nodes,Value&& x,
+    node_type* ph,node_type* pi,node_type* p)
   {
     try{
       if(p){
@@ -1670,8 +1675,8 @@ private:
       else{
         p=nodes.new_node(ph);
         alloc_traits::construct(al,p->data(),std::forward<Value>(x));
-        p->set_next(ph->next());
-        ph->set_next(p);
+        p->set_next(pi->next());
+        pi->set_next(p);
       }
     }
     catch(...){
@@ -1690,17 +1695,18 @@ private:
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
     auto hash=h(x);
-    auto [ph,p]=find_match_or_available(
-           x,nodes.at(size_policy::position(hash,size_index)));
+    auto ph=nodes.at(size_policy::position(hash,size_index));
+    auto [pi,p]=find_match_or_available(x,ph);
     if(p&&p->is_occupied())return {p,false};
 
     if(BOOST_UNLIKELY(!p&&nodes.count()+1>ml)){
       rehash(nodes.count()+1);
       ph=nodes.at(size_policy::position(hash,size_index));
+      pi=ph;
       p=!ph->is_occupied()?ph:nullptr;
     }
 
-    p=new_element(std::forward<Value>(x),ph,p);
+    p=new_element(std::forward<Value>(x),ph,pi,p);
     ++size_;
     return {p,true};  
   }
@@ -1718,8 +1724,9 @@ private:
         if(n.is_occupied()){
           auto ph=new_nodes.at(
                  size_policy::position(h(n.value()),new_size_index)),
+               pi=ph,
                p=!ph->is_occupied()?ph:nullptr;
-          new_element(new_nodes,std::move(n.value()),ph,p);
+          new_element(new_nodes,std::move(n.value()),ph,pi,p);
           delete_element(&n);
         }
       }
@@ -1742,17 +1749,19 @@ private:
   std::pair<node_type*,node_type*>
   find_match_or_available(const Key& x,node_type* p)const
   {
-    node_type *ph=p,*pa=nullptr;
+    node_type *pi=p,*pa=nullptr;
     do{
-      if(nodes.in_cellar(p))ph=p;
+      // VILCH algorithm: insertion after last cellar node
+      if(nodes.in_cellar(p))pi=p;
+        
       if(!p->is_occupied())
       {
         if(!pa)pa=p;
       }
-      else if(pred(x,p->value()))return {ph,p};
+      else if(pred(x,p->value()))return {pi,p};
       p=p->next();
     }while(p);
-    return {ph,pa};
+    return {pi,pa};
   }
 
   size_type max_load()const
