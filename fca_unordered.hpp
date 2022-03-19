@@ -1502,7 +1502,7 @@ template<typename Node,typename Allocator>
 struct coalesced_set_node_array
 {
   coalesced_set_node_array(std::size_t n,const Allocator& al):
-    main_size_{n},v{n+n/2+1,al},cellar{&v[n]},prober{v.size()-1,al}
+    address_size_{n},v{n+n/2+1,al},top{&v.back()},prober{v.size()-1,al}
   {
     v.back().set_next(&v.back());
   }
@@ -1514,7 +1514,7 @@ struct coalesced_set_node_array
   auto end()const{return const_cast<Node*>(&v.back());}
   auto at(std::size_t n)const{return const_cast<Node*>(&v[n]);}
   
-  auto main_size()const{return main_size_;}
+  auto address_size()const{return address_size_;}
 
   void acquire_node(Node* p)
   {
@@ -1528,24 +1528,19 @@ struct coalesced_set_node_array
     prober.deallocate(p-v.data());
   }
 
-  Node* new_node(Node* p)
+  Node* new_node(Node* /*p*/)
   {
-    // no need to call mark_occupied, set_next will do it later
-    if(cellar<&v.back()){
-      auto ret=cellar++;
-      if(cellar==&v.back())std::cout<<"Cellar exhausted\n";
-      return ret;
-    }
-    else return &v[prober.allocate(p-v.data())];
+    while((++top)->is_occupied());
+    return top;
   }
   
 private:
   using size_t_allocator_type=typename std::allocator_traits<Allocator>::
     template rebind_alloc<std::size_t>;
 
-  std::size_t                                                 main_size_;
+  std::size_t                                                 address_size_;
   std::vector<Node,Allocator>                                 v;
-  Node*                                                       cellar;
+  Node*                                                       top;
   quadratic_prober<
     size_t_allocator_type,quadratic_prober_variant::standard> prober;  
 };
@@ -1747,7 +1742,7 @@ private:
 
   size_type max_load()const
   {
-    float fml=mlf*static_cast<float>(nodes.main_size());
+    float fml=mlf*static_cast<float>(nodes.address_size());
     auto res=(std::numeric_limits<size_type>::max)();
     if(res>fml)res=static_cast<size_type>(fml);
     return res;
