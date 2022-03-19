@@ -862,7 +862,7 @@ public:
     std::size_t nmod=n%N;
     bitmask.back()=~std::size_t(0)&reset_first_bits(nmod);  
   }
-    
+
   void acquire(std::size_t n)
   {
     bitmask[n/N]|=set_bit(n%N);
@@ -1474,16 +1474,21 @@ using fca_unordered_map=fca_unordered_set<
 template<typename T>
 struct coalesced_set_node
 {
-  static constexpr std::uintptr_t occupied=1;
+  static constexpr std::uintptr_t occupied=1,
+                                  free_=~occupied;
 
   bool is_occupied()const{return next_&occupied;}
-  bool is_free()const{return !is_occupied();}
+  bool is_deleted()const{return !is_occupied();}
+  bool is_free()const{return next_==free_;}
   void mark_occupied(){next_|=occupied;} 
-  void mark_free(){next_&=~occupied;} 
+  void mark_deleted(){next_&=~occupied;} 
 
   coalesced_set_node* next()
   {
-    return reinterpret_cast<coalesced_set_node*>(next_&~occupied);
+    return
+      next_==free_?
+        nullptr:
+        reinterpret_cast<coalesced_set_node*>(next_&~occupied);
   }
 
   void set_next(coalesced_set_node* p) // marks occupied automatically
@@ -1494,15 +1499,19 @@ struct coalesced_set_node
   T* data(){return reinterpret_cast<T*>(&storage);}
   T& value(){return *data();}
   
-  std::uintptr_t next_=0;
+  std::uintptr_t next_=free_;
   std::aligned_storage_t<sizeof(T),alignof(T)> storage;
 };
 
 template<typename Node,typename Allocator>
 struct coalesced_set_node_array
 {
+  // https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.119.6552&rep=rep1&type=pdf
+  static constexpr auto address_factor=0.86f;
+
   coalesced_set_node_array(std::size_t n,const Allocator& al):
-    address_size_{n},v{n+n/2+1,al},top{&v.back()},prober{v.size()-1,al}
+    address_size_{n},v{std::size_t(n/address_factor)+1,al},
+    cellar{&v[n]},prober{n,al}
   {
     v.back().set_next(&v.back());
   }
@@ -1515,6 +1524,7 @@ struct coalesced_set_node_array
   auto at(std::size_t n)const{return const_cast<Node*>(&v[n]);}
   
   auto address_size()const{return address_size_;}
+  auto count()const{return count_;}
 
   bool in_cellar(Node* p)const
   {
@@ -1524,19 +1534,14 @@ struct coalesced_set_node_array
   void acquire_node(Node* p)
   {
     prober.acquire(p-v.data());
-    p->mark_occupied();
-  }
-      
-  void release_node(Node* p)
-  {
-    p->mark_free();
-    prober.deallocate(p-v.data());
+    ++count_;
   }
 
-  Node* new_node(Node* /*p*/)
+  Node* new_node(Node* p)
   {
-    while((--top)->is_occupied());
-    return top;
+    ++count_;
+    if(cellar<&v.back())return cellar++;
+    else return &v[prober.allocate(p-v.data())];
   }
   
 private:
@@ -1544,8 +1549,9 @@ private:
     template rebind_alloc<std::size_t>;
 
   std::size_t                                                 address_size_;
+  std::size_t                                                 count_=0;
   std::vector<Node,Allocator>                                 v;
-  Node*                                                       top;
+  Node*                                                       cellar;
   quadratic_prober<
     size_t_allocator_type,quadratic_prober_variant::standard> prober;  
 };
@@ -1593,7 +1599,7 @@ public:
   {
     // TODO change this lousy thing
     const_iterator it=nodes.begin();
-    if(nodes.begin()->is_free())++it;
+    if(!nodes.begin()->is_occupied())++it;
     return it;
   }
   
@@ -1652,8 +1658,14 @@ private:
   {
     try{
       if(p){
-          nodes.acquire_node(p);
           alloc_traits::construct(al,p->data(),std::forward<Value>(x));
+          if(p->is_free()){
+            nodes.acquire_node(p);
+            p->set_next(nullptr);
+          }
+          else{
+            p->mark_occupied();
+          }
       }
       else{
         p=nodes.new_node(ph);
@@ -1663,39 +1675,34 @@ private:
       }
     }
     catch(...){
-      nodes.release_node(p);
+      p->mark_deleted(); // what if throw happens on the if branch?
     }
     return p;
   }
   
   void delete_element(node_type* p)
   {
-    delete_element(nodes,p);
-  }
-
-  void delete_element(node_array_type& nodes,node_type* p)
-  {
     alloc_traits::destroy(al,p->data());
-    nodes.release_node(p);
+    p->mark_deleted();
   }
 
   template<typename Value>
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
     auto hash=h(x);
-    auto [ph,p]=find_match_or_free_VICH(
+    auto [ph,p]=find_match_or_available(
            x,nodes.at(size_policy::position(hash,size_index)));
     if(p&&p->is_occupied())return {p,false};
-  
-    if(BOOST_UNLIKELY(size_+1>ml)){
-      rehash(size_+1);
+
+    if(BOOST_UNLIKELY(!p&&nodes.count()+1>ml)){
+      rehash(nodes.count()+1);
       ph=nodes.at(size_policy::position(hash,size_index));
-      p=ph->is_free()?ph:nullptr;
+      p=!ph->is_occupied()?ph:nullptr;
     }
-    
+
     p=new_element(std::forward<Value>(x),ph,p);
     ++size_;
-    return {p,true};
+    return {p,true};  
   }
 
   void rehash(size_type n)
@@ -1709,8 +1716,9 @@ private:
     try{
       for(auto& n:nodes){
         if(n.is_occupied()){
-          auto ph=new_nodes.at(size_policy::position(h(n.value()),new_size_index)),
-               p=ph->is_free()?ph:nullptr;
+          auto ph=new_nodes.at(
+                 size_policy::position(h(n.value()),new_size_index)),
+               p=!ph->is_occupied()?ph:nullptr;
           new_element(new_nodes,std::move(n.value()),ph,p);
           delete_element(&n);
         }
@@ -1719,7 +1727,7 @@ private:
     catch(...){
       for(auto& n:new_nodes){
         if(n.is_occupied()){
-          delete_element(new_nodes,&n);
+          delete_element(&n);
           --size_;
         }
       }
@@ -1731,35 +1739,20 @@ private:
   }
   
   template<typename Key>
-  node_type* find_match_or_free(const Key& x,node_type* p)const
-  {
-    node_type* pf=nullptr;
-    do{
-      if(p->is_free())
-      {
-        if(!pf)pf=p;
-      }
-      else if(pred(x,p->value()))return p;
-      p=p->next();
-    }while(p);
-    return pf;
-  }
-
-  template<typename Key>
   std::pair<node_type*,node_type*>
-  find_match_or_free_VICH(const Key& x,node_type* p)const
+  find_match_or_available(const Key& x,node_type* p)const
   {
-    node_type *ph=p,*pf=nullptr;
+    node_type *ph=p,*pa=nullptr;
     do{
       if(nodes.in_cellar(p))ph=p;
-      if(p->is_free())
+      if(!p->is_occupied())
       {
-        if(!pf)pf=p;
+        if(!pa)pa=p;
       }
       else if(pred(x,p->value()))return {ph,p};
       p=p->next();
     }while(p);
-    return {ph,pf};
+    return {ph,pa};
   }
 
   size_type max_load()const
