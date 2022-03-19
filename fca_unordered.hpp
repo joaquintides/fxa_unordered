@@ -1507,7 +1507,7 @@ template<typename Node,typename Allocator>
 struct coalesced_set_node_array
 {
   // https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.119.6552&rep=rep1&type=pdf
-  static constexpr auto address_factor=0.86f;
+  static constexpr auto address_factor=0.5f;
 
   coalesced_set_node_array(std::size_t n,const Allocator& al):
     address_size_{n},v{std::size_t(n/address_factor)+1,al},
