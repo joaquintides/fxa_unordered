@@ -1490,9 +1490,9 @@ struct coalesced_set_node
         reinterpret_cast<coalesced_set_node*>(next_&~occupied);
   }
 
-  void set_next(coalesced_set_node* p) // marks occupied automatically
+  void set_next(coalesced_set_node* p)
   {
-    next_=reinterpret_cast<std::uintptr_t>(p)|occupied;
+    next_=reinterpret_cast<std::uintptr_t>(p)|(next_&occupied);
   }
 
   T* data(){return reinterpret_cast<T*>(&storage);}
@@ -1512,7 +1512,7 @@ struct coalesced_set_node_array
     address_size_{n},v{std::size_t(n/address_factor)+1,al},
     cellar{&v[n]},prober{n,al}
   {
-    v.back().set_next(&v.back());
+    v.back().mark_occupied();
   }
 
   coalesced_set_node_array(coalesced_set_node_array&&)=default;
@@ -1541,7 +1541,6 @@ struct coalesced_set_node_array
   {
     assert(in_cellar(p));
     p->set_next(free);
-    p->mark_deleted();
     free=p;
     --count_;
   }
@@ -1642,9 +1641,12 @@ public:
       if(nodes.in_cellar(p)){
         assert(prev);
         prev->set_next(p->next());
+        delete_element(p);
         nodes.release_node(p);
       }
-      delete_element(p);
+      else{
+        delete_element(p);
+      }
       --size_;
       return 1;
     }
@@ -1689,13 +1691,12 @@ private:
             nodes.acquire_node(p);
             p->set_next(nullptr);
           }
-          else{
-            p->mark_occupied();
-          }
+          p->mark_occupied();
       }
       else{
         p=nodes.new_node(ph);
         alloc_traits::construct(al,p->data(),std::forward<Value>(x));
+        p->mark_occupied();
         p->set_next(pi->next());
         pi->set_next(p);
       }
