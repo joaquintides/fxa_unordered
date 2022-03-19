@@ -1530,7 +1530,7 @@ struct coalesced_set_node_array
 
   Node* new_node(Node* /*p*/)
   {
-    while((++top)->is_occupied());
+    while((--top)->is_occupied());
     return top;
   }
   
