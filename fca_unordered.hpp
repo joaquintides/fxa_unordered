@@ -1625,9 +1625,10 @@ public:
 
   void erase(const_iterator pos)
   {
-    auto [p]=pos;
-    delete_element(p);
-    --size_;
+    // auto [p]=pos;
+    // delete_element(p);
+    // --size_;
+    erase(*pos);
   }
 
   template<typename Key>
