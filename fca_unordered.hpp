@@ -1536,6 +1536,7 @@ struct coalesced_set_node_array
 
   void release_node(Node* p)
   {
+    assert(in_cellar(p));
     p->reset();
     p->set_next(free);
     free=p;
