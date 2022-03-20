@@ -862,11 +862,6 @@ public:
     bitmask.back()=~std::size_t(0)&reset_first_bits(nmod);  
   }
 
-  void acquire(std::size_t n)
-  {
-    bitmask[n/N]|=set_bit(n%N);
-  }
-
   std::size_t allocate(std::size_t n)
   {
     std::size_t ndiv=n/N,
@@ -1509,8 +1504,7 @@ struct coalesced_set_node_array
   static constexpr auto address_factor=0.86f;
 
   coalesced_set_node_array(std::size_t n,const Allocator& al):
-    address_size_{n},v{std::size_t(n/address_factor)+1,al},
-    cellar{&v[n]},prober{n,al}
+    address_size_{n},v{std::size_t(n/address_factor)+1,al},top{&v.back()}
   {
     v.back().mark_occupied();
   }
@@ -1533,7 +1527,6 @@ struct coalesced_set_node_array
   void acquire_node(Node* p)
   {
     assert(!in_cellar(p));
-    prober.acquire(p-v.data());
     ++count_;
   }
 
@@ -1545,7 +1538,7 @@ struct coalesced_set_node_array
     --count_;
   }
 
-  Node* new_node(Node* p)
+  Node* new_node()
   {
     ++count_;
     if(free){
@@ -1553,21 +1546,18 @@ struct coalesced_set_node_array
       free=free->next();
       return res;
     }
-    else if(cellar<&v.back())return cellar++;
-    else                     return &v[prober.allocate(p-v.data())];
+    else{
+      while(!(--top)->is_free());
+      return top;
+    }
   }
   
 private:
-  using size_t_allocator_type=typename std::allocator_traits<Allocator>::
-    template rebind_alloc<std::size_t>;
-
-  std::size_t                                                 address_size_;
-  std::size_t                                                 count_=0;
-  std::vector<Node,Allocator>                                 v;
-  Node                                                        *cellar;
-  Node                                                        *free=nullptr; 
-  quadratic_prober<
-    size_t_allocator_type,quadratic_prober_variant::standard> prober;  
+  std::size_t                 address_size_;
+  std::size_t                 count_=0;
+  std::vector<Node,Allocator> v;
+  Node                        *top;
+  Node                        *free=nullptr; 
 };
 
 template<
@@ -1671,19 +1661,16 @@ private:
     typename alloc_traits::template rebind_alloc<node_type>>;
 
   template<typename Value>
-  node_type* new_element(
-   Value&& x,node_type* ph,node_type* pi,node_type* p)
-  // ph: first node of the subchain
+  node_type* new_element(Value&& x,node_type* pi,node_type* p)
   // pi: point before insertion (if p is null)
   // p:  available node (if found during lookup)
   {
-    return new_element(nodes,std::forward<Value>(x),ph,pi,p);
+    return new_element(nodes,std::forward<Value>(x),pi,p);
   }
 
   template<typename Value>
   node_type* new_element(
-    node_array_type& nodes,Value&& x,
-    node_type* ph,node_type* pi,node_type* p)
+    node_array_type& nodes,Value&& x,node_type* pi,node_type* p)
   {
     try{
       if(p){
@@ -1695,7 +1682,7 @@ private:
           p->mark_occupied();
       }
       else{
-        p=nodes.new_node(ph);
+        p=nodes.new_node();
         alloc_traits::construct(al,p->data(),std::forward<Value>(x));
         p->mark_occupied();
         p->set_next(pi->next());
@@ -1725,12 +1712,11 @@ private:
 
     if(BOOST_UNLIKELY(!p&&nodes.count()+1>ml)){
       rehash(nodes.count()+1);
-      ph=nodes.at(size_policy::position(hash,size_index));
-      pi=ph;
-      p=!ph->is_occupied()?ph:nullptr;
+      pi=nodes.at(size_policy::position(hash,size_index));
+      p=!pi->is_occupied()?pi:nullptr;
     }
 
-    p=new_element(std::forward<Value>(x),ph,pi,p);
+    p=new_element(std::forward<Value>(x),pi,p);
     ++size_;
     return {p,true};  
   }
@@ -1746,11 +1732,10 @@ private:
     try{
       for(auto& n:nodes){
         if(n.is_occupied()){
-          auto ph=new_nodes.at(
+          auto pi=new_nodes.at(
                  size_policy::position(h(n.value()),new_size_index)),
-               pi=ph,
-               p=!ph->is_occupied()?ph:nullptr;
-          new_element(new_nodes,std::move(n.value()),ph,pi,p);
+               p=!pi->is_occupied()?pi:nullptr;
+          new_element(new_nodes,std::move(n.value()),pi,p);
           delete_element(&n);
         }
       }
