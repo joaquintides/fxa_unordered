@@ -497,11 +497,6 @@ using fca_fmod_unordered_coalesced_map =
 
 int main()
 {
-#ifdef HAVE_ABSEIL
-    std::cout<<"SSE2 support: "<<ABSL_INTERNAL_RAW_HASH_SET_HAVE_SSE2<<"\n";
-    std::cout<<"SSSE3 support: "<<ABSL_INTERNAL_RAW_HASH_SET_HAVE_SSSE3<<"\n";
-#endif
-
     init_indices();
 
     test<std_unordered_map>( "std::unordered_map" );

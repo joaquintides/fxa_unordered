@@ -1468,10 +1468,6 @@ using fca_unordered_map=fca_unordered_set<
 template<typename T>
 struct coalesced_set_node
 {
-  static constexpr std::uintptr_t occupied=1,
-                                  head=2,
-                                  free=~(occupied|head);
-
   bool is_occupied()const{return next_&occupied;}
   bool is_deleted()const{return !is_occupied();}
   bool is_head()const{return next_&head;}
@@ -1497,6 +1493,11 @@ struct coalesced_set_node
   T* data(){return reinterpret_cast<T*>(&storage);}
   T& value(){return *data();}
   
+private:
+  static constexpr std::uintptr_t occupied=1,
+                                  head=2,
+                                  free=~(occupied|head);
+
   std::uintptr_t next_=free;
   std::aligned_storage_t<sizeof(T),alignof(T)> storage;
 };
@@ -1504,7 +1505,6 @@ struct coalesced_set_node
 template<typename Node,typename Allocator>
 struct coalesced_set_node_array
 {
-  // https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.119.6552&rep=rep1&type=pdf
   static constexpr auto address_factor=0.86f;
 
   coalesced_set_node_array(std::size_t n,const Allocator& al):
@@ -1528,6 +1528,20 @@ struct coalesced_set_node_array
     return std::size_t(p-&v.front())>=address_size_;
   }
 
+  Node* new_node()
+  {
+    ++count_;
+    if(free){
+      auto res=free;
+      free=free->next();
+      return res;
+    }
+    else{
+      while(!(--top)->is_free());
+      return top;
+    }
+  }
+
   void acquire_node(Node* p)
   {
     assert(!in_cellar(p));
@@ -1541,20 +1555,6 @@ struct coalesced_set_node_array
     p->set_next(free);
     free=p;
     --count_;
-  }
-
-  Node* new_node()
-  {
-    ++count_;
-    if(free){
-      auto res=free;
-      free=free->next();
-      return res;
-    }
-    else{
-      while(!(--top)->is_free());
-      return top;
-    }
   }
   
 private:
@@ -1606,9 +1606,9 @@ public:
   
   const_iterator begin()const noexcept
   {
-    // TODO change this lousy thing
-    const_iterator it=nodes.begin();
-    if(!nodes.begin()->is_occupied())++it;
+    auto p=nodes.begin();
+    const_iterator it=p;
+    if(!p->is_occupied())++it;
     return it;
   }
   
@@ -1620,10 +1620,14 @@ public:
 
   void erase(const_iterator pos)
   {
-    // auto [p]=pos;
-    // delete_element(p);
-    // --size_;
+#if 1
+    // erasing by key may throw, but allows for node unlinking
     erase(*pos);
+#else
+     auto [p]=pos;
+     delete_element(p);
+     --size_;
+#endif
   }
 
   template<typename Key>
@@ -1678,26 +1682,20 @@ private:
   node_type* new_element(
     node_array_type& nodes,Value&& x,node_type* pi,node_type* p)
   {
-    try{
-      if(p){
-          alloc_traits::construct(al,p->data(),std::forward<Value>(x));
-          if(p->is_free()){
-            nodes.acquire_node(p);
-            p->set_next(nullptr);
-          }
-          p->mark_occupied();
-      }
-      else{
-        p=nodes.new_node();
+    if(p){
         alloc_traits::construct(al,p->data(),std::forward<Value>(x));
+        if(p->is_free()){
+          nodes.acquire_node(p);
+          p->set_next(nullptr);
+        }
         p->mark_occupied();
-        p->set_next(pi->next());
-        pi->set_next(p);
-      }
     }
-    catch(...){
-      p->mark_deleted(); // what if throw happens on the if branch?
-      throw;
+    else{
+      p=nodes.new_node();
+      alloc_traits::construct(al,p->data(),std::forward<Value>(x));
+      p->mark_occupied();
+      p->set_next(pi->next());
+      pi->set_next(p);
     }
     return p;
   }
@@ -1719,7 +1717,7 @@ private:
     if(BOOST_UNLIKELY(!p&&nodes.count()+1>ml)){
       rehash(nodes.count()+1);
       ph=nodes.at(size_policy::position(hash,size_index));
-      pi=ph;
+      pi=ph; // not VICH insertion point, but we won't look up again
       p=!pi->is_occupied()?pi:nullptr;
     }
 
@@ -1743,6 +1741,7 @@ private:
           auto ph=new_nodes.at(
                  size_policy::position(h(n.value()),new_size_index)),
                p=!ph->is_occupied()?ph:nullptr;
+          // not VICH insertion point, but we don't want to look up
           new_element(new_nodes,std::move(n.value()),ph,p);
           ph->mark_head();
           delete_element(&n);
@@ -1776,7 +1775,7 @@ private:
       {
         if(!pa)pa=p;
       }
-      else if(pred(x,p->value()))return {pi,p};
+      else if(pred(x,p->value()))return {nullptr,p};
       p=p->next();
     }while(p);
     return {pi,pa};
