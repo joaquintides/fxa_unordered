@@ -587,7 +587,7 @@ template<class K, class V> using fca_fmod_unordered_embedded_map_fnv1a =
 template<class K, class V> using fca_fmod_unordered_embedded_bucket_map_fnv1a =
   fca_fmod_unordered_embedded_bucket_map<K, V, fnv1a_hash>;
 
-template<class K, class V> using fca_fmod_bcached_unordered_embeddedd_bucket_map_fnv1a =
+template<class K, class V> using fca_fmod_bcached_unordered_embedded_bucket_map_fnv1a =
   fca_fmod_bcached_unordered_embedded_bucket_map<K, V, fnv1a_hash>;
 
 template<class K, class V> using fca_fmod_unordered_coalesced_map_fnv1a =
@@ -665,7 +665,7 @@ int main()
     test<fca_fmod_unordered_embedded_map_fnv1a>( "fca_fmod_unordered_embedded_map, FNV-1a" );
 #endif
     
-    test<fca_fmod_unordered_embedded_bucket_map_fnv1a>( "fca_fmod_unordered_embeddedd_bucket_map, FNV-1a" );
+    test<fca_fmod_unordered_embedded_bucket_map_fnv1a>( "fca_fmod_unordered_embedded_bucket_map, FNV-1a" );
 
 #ifdef BENCHMARK_EVERYTHING
     test<fca_fmod_bcached_unordered_embedded_bucket_map_fnv1a>( "fca_fmod_bcached_unordered_embedded_bucket_map_fnv1a, FNV-1a" );
