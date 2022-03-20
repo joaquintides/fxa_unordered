@@ -1479,7 +1479,7 @@ struct coalesced_set_node
   void mark_occupied(){next_|=occupied;} 
   void mark_deleted(){next_&=~occupied;} 
   void mark_head(){next_|=head;} 
-  void unmark_head(){next_&=~head;} 
+  void reset(){next_=free;} 
 
   coalesced_set_node* next()
   {
@@ -1536,7 +1536,7 @@ struct coalesced_set_node_array
 
   void release_node(Node* p)
   {
-    p->unmark_head();
+    p->reset();
     p->set_next(free);
     free=p;
     --count_;
@@ -1637,7 +1637,8 @@ public:
         assert(prev);
         prev->set_next(p->next());
         delete_element(p);
-        nodes.release_node(p);
+        if(nodes.in_cellar(p))nodes.release_node(p);
+        else                  p->reset();
       }
       else{
         delete_element(p);
