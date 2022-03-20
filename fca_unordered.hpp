@@ -1550,10 +1550,11 @@ struct coalesced_set_node_array
 
   void release_node(Node* p)
   {
-    assert(in_cellar(p));
     p->reset();
-    p->set_next(free);
-    free=p;
+    if(in_cellar(p)){
+      p->set_next(free);
+      free=p;
+    }
     --count_;
   }
   
@@ -1642,8 +1643,7 @@ public:
         assert(prev);
         prev->set_next(p->next());
         delete_element(p);
-        if(nodes.in_cellar(p))nodes.release_node(p);
-        else                  p->reset();
+        nodes.release_node(p);
       }
       else{
         delete_element(p);
