@@ -1606,7 +1606,7 @@ public:
 
   ~fca_unordered_coalesced_set()
   {
-    for(auto first=begin(),last=end();first!=last;)erase(first++);
+    for(auto& n:nodes)if(n.is_occupied())delete_element(&n);
   }
   
   const_iterator begin()const noexcept
