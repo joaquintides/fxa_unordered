@@ -1720,7 +1720,7 @@ private:
   {
     auto hash=h(x);
     auto ph=nodes.at(size_policy::position(hash,size_index));
-    auto [pi,p]=find_match_or_available(x,ph);
+    auto [pi,p]=find_match_or_insertion_point_or_available(x,ph);
     if(p&&p->is_occupied())return {p,false};
 
     if(BOOST_UNLIKELY(!p&&nodes.count()+1>ml)){
@@ -1771,7 +1771,7 @@ private:
   
   template<typename Key>
   std::pair<node_type*,node_type*>
-  find_match_or_available(const Key& x,node_type* p)const
+  find_match_or_insertion_point_or_available(const Key& x,node_type* p)const
   {
     node_type *pi=p,*pa=nullptr;
     do{
