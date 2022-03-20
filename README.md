@@ -145,7 +145,7 @@ capabilities.
 * `begin()` is not constant time (hopping to the first occupied bucket is required).
 * `erase(iterator)` is implemented as `erase(*iterator)`: this will throw if `Hash` or `Pred` do,
 but allows for node recycling.
-* Rehashing does not happen when the number of elements in the container hit the maximum load,
+* Rehashing does not happen when the number of elements in the container hits the maximum load,
 but when the number of *used* nodes do; for instance, erasing an element at the beginning of
 its chain won't get its node recycled, so in this case the number of used nodes does not
 decrease. This behavior makes it hard to predict exactly when rehashing will occur in the
