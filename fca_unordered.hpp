@@ -1810,14 +1810,14 @@ private:
     return res;
   }  
 
-  Hash                h;
-  Pred                pred;
-  Allocator           al;
-  float               mlf=1.0f;
-  std::size_t         size_=0;
-  std::size_t         size_index=size_policy::size_index(size_);
-  node_array_type     nodes{size_policy::size(size_index),al};
-  size_type           ml=max_load();
+  Hash            h;
+  Pred            pred;
+  Allocator       al;
+  float           mlf=1.0f;
+  std::size_t     size_=0;
+  std::size_t     size_index=size_policy::size_index(size_);
+  node_array_type nodes{size_policy::size(size_index),al};
+  size_type       ml=max_load();
 };
 
 template<
