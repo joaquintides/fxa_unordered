@@ -1704,6 +1704,7 @@ private:
     }
     catch(...){
       p->mark_deleted(); // what if throw happens on the if branch?
+      throw;
     }
     return p;
   }
