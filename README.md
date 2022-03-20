@@ -138,8 +138,7 @@ requirements for unordered associative containers:
 * The elements of the container must be movable.
 * It is not possible to provide [node extraction](https://en.cppreference.com/w/cpp/container/node_handle)
 capabilities.
-* Iterator increment is not constant but gets slower as the number of empty buckets grow;
-  see [N2023](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2023.pdf) for details.
+* Iterator increment is not constant but gets slower as the number of non-occupied nodes grow.
 * Because of the former, `erase(iterator)` returns `void` instead of an iterator to the next
   element.
 * `begin()` is not constant time (hopping to the first occupied node is required).
