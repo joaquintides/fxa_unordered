@@ -1469,25 +1469,29 @@ template<typename T>
 struct coalesced_set_node
 {
   static constexpr std::uintptr_t occupied=1,
-                                  free=~occupied;
+                                  head=2,
+                                  free=~(occupied|head);
 
   bool is_occupied()const{return next_&occupied;}
   bool is_deleted()const{return !is_occupied();}
+  bool is_head()const{return next_&head;}
   bool is_free()const{return next_==free;}
   void mark_occupied(){next_|=occupied;} 
   void mark_deleted(){next_&=~occupied;} 
+  void mark_head(){next_|=head;} 
+  void unmark_head(){next_&=~head;} 
 
   coalesced_set_node* next()
   {
     return
       next_==free?
         nullptr:
-        reinterpret_cast<coalesced_set_node*>(next_&~occupied);
+        reinterpret_cast<coalesced_set_node*>(next_&~(occupied|head));
   }
 
   void set_next(coalesced_set_node* p)
   {
-    next_=reinterpret_cast<std::uintptr_t>(p)|(next_&occupied);
+    next_=reinterpret_cast<std::uintptr_t>(p)|(next_&(occupied|head));
   }
 
   T* data(){return reinterpret_cast<T*>(&storage);}
@@ -1532,7 +1536,7 @@ struct coalesced_set_node_array
 
   void release_node(Node* p)
   {
-    assert(in_cellar(p));
+    p->unmark_head();
     p->set_next(free);
     free=p;
     --count_;
@@ -1629,7 +1633,7 @@ public:
       return 0;
     }
     else{
-      if(nodes.in_cellar(p)){
+      if(!p->is_head()){
         assert(prev);
         prev->set_next(p->next());
         delete_element(p);
@@ -1712,11 +1716,13 @@ private:
 
     if(BOOST_UNLIKELY(!p&&nodes.count()+1>ml)){
       rehash(nodes.count()+1);
-      pi=nodes.at(size_policy::position(hash,size_index));
+      ph=nodes.at(size_policy::position(hash,size_index));
+      pi=ph;
       p=!pi->is_occupied()?pi:nullptr;
     }
 
     p=new_element(std::forward<Value>(x),pi,p);
+    ph->mark_head();
     ++size_;
     return {p,true};  
   }
@@ -1732,10 +1738,11 @@ private:
     try{
       for(auto& n:nodes){
         if(n.is_occupied()){
-          auto pi=new_nodes.at(
+          auto ph=new_nodes.at(
                  size_policy::position(h(n.value()),new_size_index)),
-               p=!pi->is_occupied()?pi:nullptr;
-          new_element(new_nodes,std::move(n.value()),pi,p);
+               p=!ph->is_occupied()?ph:nullptr;
+          new_element(new_nodes,std::move(n.value()),ph,p);
+          ph->mark_head();
           delete_element(&n);
         }
       }
