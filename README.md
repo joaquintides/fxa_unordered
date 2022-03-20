@@ -142,7 +142,7 @@ capabilities.
   see [N2023](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2023.pdf) for details.
 * Because of the former, `erase(iterator)` returns `void` instead of an iterator to the next
   element.
-* `begin()` is not constant time (hopping to the first occupied bucket is required).
+* `begin()` is not constant time (hopping to the first occupied node is required).
 * `erase(iterator)` is implemented as `erase(*iterator)`: this will throw if `Hash` or `Pred` do,
 but allows for node recycling.
 * Rehashing does not happen when the number of elements in the container hits the maximum load,
