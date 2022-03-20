@@ -1,7 +1,12 @@
 # fca_unordered
 Proof of concept of closed-addressing unordered associative containers.
 * [Development Plan for Boost.Unordered](https://pdimov.github.io/articles/unordered_dev_plan.html)
+* [`fca_unordered_set`, `fca_unordered_map`](#fca_unordered_*)
+* [`fca_unordered_coalesced_set`, `fca_unordered_coalesced_map`](#fca_unordered_coalesced)
+* [`fca_simple_unordered_set`, `fca_simple_unordered_map`](#fca_simple_unordered)
 * [Benchmark results](https://github.com/joaquintides/fca_unordered/actions) for this PoC
+
+<a name="fca_unordered_*"></a>
 
 ```cpp
 template<
@@ -95,6 +100,62 @@ C++ standard as `hybrid_node_allocation`.
 * `embedded_node_allocation`: Nodes are embedded into the buckets like in
 `hybrid_node_allocation`, but no dynamic allocation happens ever: selection is done
 through quadratic probing using the same technique as `linear_node_allocation`.
+
+<a name="fca_unordered_coalesced"></a>
+
+```cpp
+template<
+  typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
+  typename Allocator=std::allocator<T>,
+  typename SizePolicy=prime_size
+>
+class fca_unordered_coalesced_set;
+
+template<
+  typename Key,typename Value,
+  typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
+  typename Allocator=std::allocator</* equivalent to std::pair<const Key,Value> */>,
+  typename SizePolicy=prime_size
+>
+class fca_unordered_coalesced_map;
+```
+
+Containers based on [coalesced hashing](https://en.wikipedia.org/wiki/Coalesced_hashing)
+The implementation follows [Vitter's original formulation](https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.119.6552&rep=rep1&type=pdf)'s
+with some innovations in the area of node recycling:
+* A *cellar* (extra node reservoir) is provided with an address factor
+(nodes reachable by hash divided by total number of nodes allocated) *β* = 0.86.
+* Insertion into a chain happens after the initial element or, if cellar nodes are traversed,
+after the last cellar node in the chain (Vitter's VICH Varied-Insertion Coalesced Hashing
+algorithm).
+* Nodes of erased elements are unlinked and recycled if they are not at the beginning
+of a (sub)chain. In particular, erased cellar nodes are always recycled.
+
+The resulting container deviates in a number of important aspects from the C++ standard
+requirements for unordered associative containers:
+
+* Pointer stability is not mantained on rehashing.
+* The elements of the container must be movable.
+* It is not possible to provide [node extraction](https://en.cppreference.com/w/cpp/container/node_handle)
+capabilities.
+* Iterator increment is not constant but gets slower as the number of empty buckets grow;
+  see [N2023](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2023.pdf) for details.
+* Because of the former, `erase(iterator)` returns `void` instead of an iterator to the next
+  element.
+* `begin()` is not constant time (hopping to the first occupied bucket is required).
+* `erase(iterator)` is implemented as `erase(*iterator)`: this will throw if `Hash` or `Pred` do,
+but allows for node recycling.
+* Rehashing does not happen when the number of elements in the container hit the maximum load,
+but when the number of *used* nodes do; for instance, erasing an element at the beginning of
+its chain won't get its node recycled, so in this case the number of used nodes does not
+decrease. This behavior makes it hard to predict exactly when rehashing will occur in the
+presence of erasures.
+  
+**`SizePolicy`**
+
+As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered_*).
+
+<a name="fca_simple_unordered"></a>
 
 ```cpp
 template<
