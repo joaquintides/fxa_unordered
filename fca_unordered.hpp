@@ -1531,13 +1531,15 @@ struct coalesced_set_node_array
   Node* new_node()
   {
     ++count_;
-    while(free){
+    if(free){
       auto res=free;
       free=free->next();
-      if(!res->is_occupied())return res;
+      return res;
     }
-    while(!(--top)->is_free());
-    return top;
+    else{
+      while(!(--top)->is_free());
+      return top;
+    }
   }
 
   void acquire_node(Node* p)
@@ -1549,8 +1551,10 @@ struct coalesced_set_node_array
   void release_node(Node* p)
   {
     p->reset();
-    p->set_next(free);
-    free=p;
+    if(in_cellar(p)){
+      p->set_next(free);
+      free=p;
+    }
     --count_;
   }
   
