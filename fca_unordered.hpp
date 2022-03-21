@@ -1469,20 +1469,16 @@ template<typename T>
 struct coalesced_set_node
 {
   bool is_occupied()const{return next_&occupied;}
-  bool is_deleted()const{return !is_occupied();}
   bool is_head()const{return next_&head;}
-  bool is_free()const{return next_==free;}
+  bool is_free()const{return ~(next_&(occupied|head));}
   void mark_occupied(){next_|=occupied;} 
   void mark_deleted(){next_&=~occupied;} 
   void mark_head(){next_|=head;} 
-  void reset(){next_=free;} 
+  void reset(){next_=0;} 
 
   coalesced_set_node* next()
   {
-    return
-      next_==free?
-        nullptr:
-        reinterpret_cast<coalesced_set_node*>(next_&~(occupied|head));
+    return reinterpret_cast<coalesced_set_node*>(next_&~(occupied|head));
   }
 
   void set_next(coalesced_set_node* p)
@@ -1495,10 +1491,9 @@ struct coalesced_set_node
   
 private:
   static constexpr std::uintptr_t occupied=1,
-                                  head=2,
-                                  free=~(occupied|head);
+                                  head=2;
 
-  std::uintptr_t next_=free;
+  std::uintptr_t next_=0;
   std::aligned_storage_t<sizeof(T),alignof(T)> storage;
 };
 
@@ -1531,30 +1526,31 @@ struct coalesced_set_node_array
   Node* new_node()
   {
     ++count_;
-    if(free){
-      auto res=free;
+    while(free){
+      auto p=free;
       free=free->next();
-      return res;
-    }
-    else{
-      while(!(--top)->is_free());
-      return top;
-    }
+      if(p->is_free()){
+        p->mark_occupied();
+        return p;
+      }
+    };
+    while(!(--top)->is_free());
+    top->mark_occupied();
+    return top;
   }
 
   void acquire_node(Node* p)
   {
     assert(!in_cellar(p));
+    p->mark_occupied();
     ++count_;
   }
 
   void release_node(Node* p)
   {
     p->reset();
-    if(in_cellar(p)){
-      p->set_next(free);
-      free=p;
-    }
+    p->set_next(free);
+    free=p;
     --count_;
   }
   
@@ -1621,14 +1617,11 @@ public:
 
   void erase(const_iterator pos)
   {
-#if 1
-    // erasing by key may throw, but allows for node unlinking
+    // Erasing by key may throw, but allows for node unlinking.
+    // Caveat: erasing by pointer with delete_element(p) would leave
+    // linked non-head nodes as deleted+non-head, and they could be
+    // wronlgy picked up by the node_array new_node function.
     erase(*pos);
-#else
-     auto [p]=pos;
-     delete_element(p);
-     --size_;
-#endif
   }
 
   template<typename Key>
@@ -1639,8 +1632,7 @@ public:
       return 0;
     }
     else{
-      if(!p->is_head()){
-        assert(prev);
+      if(!p->is_head()||(prev&&!p->next())){
         prev->set_next(p->next());
         delete_element(p);
         nodes.release_node(p);
@@ -1688,12 +1680,15 @@ private:
           nodes.acquire_node(p);
           p->set_next(nullptr);
         }
-        p->mark_occupied();
     }
     else{
       p=nodes.new_node();
-      alloc_traits::construct(al,p->data(),std::forward<Value>(x));
-      p->mark_occupied();
+      try{
+        alloc_traits::construct(al,p->data(),std::forward<Value>(x));
+      }
+      catch(...){
+        nodes.release_node(p); 
+      }
       p->set_next(pi->next());
       pi->set_next(p);
     }
