@@ -1470,7 +1470,7 @@ struct coalesced_set_node
 {
   bool is_occupied()const{return next_&occupied;}
   bool is_head()const{return next_&head;}
-  bool is_free()const{return ~(next_&(occupied|head));}
+  bool is_free()const{return !(next_&(occupied|head));}
   void mark_occupied(){next_|=occupied;} 
   void mark_deleted(){next_&=~occupied;} 
   void mark_head(){next_|=head;} 
