@@ -1778,10 +1778,7 @@ private:
       // VICH algorithm: insertion after last cellar node
       if(nodes.in_cellar(p))pi=p;
         
-      if(!p->is_occupied())
-      {
-        if(!pa)pa=p;
-      }
+      if(!p->is_occupied())pa=p;
       else if(pred(x,p->value()))return {nullptr,p};
       p=p->next();
     }while(p);
