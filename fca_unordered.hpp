@@ -1534,6 +1534,15 @@ struct coalesced_set_node_array
         return p;
       }
     };
+    while(top>v.data()){
+      if((--top)->is_free()){
+        top->mark_occupied();
+        return top;
+      }
+    }
+
+    // address nodes released past decreasing top
+    top=&v[address_size_];
     while(!(--top)->is_free());
     top->mark_occupied();
     return top;
@@ -1549,8 +1558,10 @@ struct coalesced_set_node_array
   void release_node(Node* p)
   {
     p->reset();
-    p->set_next(free);
-    free=p;
+    if(in_cellar(p)){
+      p->set_next(free);
+      free=p;
+    }
     --count_;
   }
   
