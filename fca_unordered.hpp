@@ -1680,6 +1680,7 @@ private:
           nodes.acquire_node(p);
           p->set_next(nullptr);
         }
+        else p->mark_occupied();
     }
     else{
       p=nodes.new_node();
