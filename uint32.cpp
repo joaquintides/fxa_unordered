@@ -306,6 +306,16 @@ template<class K, class V> using std_unordered_map =
 template<class K, class V> using boost_unordered_map =
     boost::unordered_map<K, V, boost::hash<K>, std::equal_to<K>, allocator_for<K, V>>;
 
+template<class K, class V> using fca_simple_unordered_map_ =
+  fca_simple_unordered_map<
+    K, V, boost::hash<K>, std::equal_to<K>,
+    ::allocator<fca_simple_unordered_impl::map_value_adaptor<K, V>>>;
+
+template<class K, class V> using fca_unordered_map_ =
+  fca_unordered_map<
+    K, V, boost::hash<K>, std::equal_to<K>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>>;
+
 #ifdef HAVE_ABSEIL
 
 template<class K, class V> using absl_node_hash_map =
@@ -504,8 +514,8 @@ int main()
     test<multi_index_map>( "multi_index_map" );
 
 #ifdef BENCHMARK_EVERYTHING
-    test<fca_simple_unordered_map>( "fca_simple_unordered_map" );
-    test<fca_unordered_map>( "fca_unordered_map" );
+    test<fca_simple_unordered_map_>( "fca_simple_unordered_map" );
+    test<fca_unordered_map_>( "fca_unordered_map" );
     test<fca_switch_unordered_map>( "fca_switch_unordered_map" );
 #endif
 
