@@ -1534,7 +1534,7 @@ struct coalesced_set_node_array
     while(free){
       auto res=free;
       free=free->next();
-      if(res->is_free())return res;
+      if(!res->is_occupied())return res;
     }
     while(!(--top)->is_free());
     return top;
