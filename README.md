@@ -121,7 +121,7 @@ class fca_unordered_coalesced_map;
 ```
 
 Containers based on [coalesced hashing](https://en.wikipedia.org/wiki/Coalesced_hashing)
-The implementation follows [Vitter's original formulation](https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.119.6552&rep=rep1&type=pdf)'s
+The implementation follows [Vitter's original formulation](https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.119.6552&rep=rep1&type=pdf)
 with some innovations in the area of node recycling:
 * A *cellar* (extra node reservoir) is provided with an address factor
 (nodes reachable by hash divided by total number of nodes allocated) *β* = 0.86.
