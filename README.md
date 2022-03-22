@@ -107,7 +107,7 @@ through quadratic probing using the same technique as `linear_node_allocation`.
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
-  typename SizePolicy=prime_size
+  typename SizePolicy=prime_size,typename NodePolicy=simple_coalesced_set_nodes
 >
 class fca_unordered_coalesced_set;
 
@@ -115,7 +115,7 @@ template<
   typename Key,typename Value,
   typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
   typename Allocator=std::allocator</* equivalent to std::pair<const Key,Value> */>,
-  typename SizePolicy=prime_size
+  typename SizePolicy=prime_size,typename NodePolicy=simple_coalesced_set_nodes
 >
 class fca_unordered_coalesced_map;
 ```
@@ -153,6 +153,12 @@ presence of erasures.
 **`SizePolicy`**
 
 As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered_*).
+
+**`NodePolicy`**
+* `simple_coalesced_set_nodes`: Regular nodes are used with storage for the value and a `next` pointer.
+* `hcached_coalesced_set_nodes`: Nodes are extended to keep the hash value of the element; hash
+comparison is used to rule out non-matches on lookup without invoking the equality predicate,
+which can potentially speed up the process.
 
 <a name="fca_simple_unordered"></a>
 
