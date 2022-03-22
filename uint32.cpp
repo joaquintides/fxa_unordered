@@ -501,6 +501,14 @@ using fca_fmod_unordered_coalesced_map =
     ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::prime_fmod_size>;
 
+template<class K, class V, class H=boost::hash<K>>
+using fca_fmod_hcached_unordered_coalesced_map =
+  fca_unordered_coalesced_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::prime_fmod_size,
+    fca_unordered_impl::hcached_coalesced_set_nodes>;
+
 #if ((SIZE_MAX>>16)>>16)==0 
 #define IN_32BIT_ARCHITECTURE
 #endif
@@ -568,6 +576,7 @@ int main()
 #endif
 
     test<fca_fmod_unordered_coalesced_map>( "fca_fmod_unordered_coalesced_map" );
+    test<fca_fmod_hcached_unordered_coalesced_map>( "fca_fmod_hcached_unordered_coalesced_map" );
 
 #ifdef HAVE_ABSEIL
     test<absl_node_hash_map>( "absl::node_hash_map" );
