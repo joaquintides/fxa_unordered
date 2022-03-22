@@ -1466,7 +1466,7 @@ using fca_unordered_map=fca_unordered_set<
 >;
 
 template<typename T>
-struct coalesced_set_node
+struct simple_coalesced_set_node
 {
   bool is_occupied()const{return next_&occupied;}
   bool is_head()const{return next_&head;}
@@ -1476,12 +1476,12 @@ struct coalesced_set_node
   void mark_head(){next_|=head;} 
   void reset(){next_=0;} 
 
-  coalesced_set_node* next()
+  simple_coalesced_set_node* next()
   {
-    return reinterpret_cast<coalesced_set_node*>(next_&~(occupied|head));
+    return reinterpret_cast<simple_coalesced_set_node*>(next_&~(occupied|head));
   }
 
-  void set_next(coalesced_set_node* p)
+  void set_next(simple_coalesced_set_node* p)
   {
     next_=reinterpret_cast<std::uintptr_t>(p)|(next_&(occupied|head));
   }
@@ -1495,6 +1495,58 @@ private:
 
   std::uintptr_t next_=0;
   std::aligned_storage_t<sizeof(T),alignof(T)> storage;
+};
+
+struct simple_coalesced_set_nodes
+{
+ template<typename T>
+ using node_type=simple_coalesced_set_node<T>;
+
+ template<typename Node>
+ static void set_hash(Node*,std::size_t){}
+ template<typename Node>
+ static std::size_t hash(Node*){return 0;}
+
+ template<typename T,typename Node,typename Pred>
+ static bool eq(const T& x,Node* p,std::size_t /*hash*/,Pred pred)
+ {
+    return pred(x,p->value());
+ }
+};
+
+template<typename T>
+struct hcached_coalesced_set_node:simple_coalesced_set_node<T>
+{
+
+  hcached_coalesced_set_node* next()
+  {
+    return static_cast<hcached_coalesced_set_node*>(super::next());
+  }
+
+  void set_hash(std::size_t hash){hash_=hash;}
+  std::size_t hash()const{return hash_;}
+
+private:
+  using super=simple_coalesced_set_node<T>;
+
+  std::size_t hash_;
+};
+
+struct hcached_coalesced_set_nodes
+{
+ template<typename T>
+ using node_type=hcached_coalesced_set_node<T>;
+
+ template<typename Node>
+ static void set_hash(Node* p,std::size_t hash){p->set_hash(hash);}
+ template<typename Node>
+ static std::size_t hash(Node* p){return p->hash();}
+
+template<typename T,typename Node,typename Pred>
+ static bool eq(const T& x,Node* p,std::size_t hash,Pred pred)
+ {
+    return hash==p->hash()&&pred(x,p->value());
+ }
 };
 
 template<typename Node,typename Allocator>
@@ -1576,12 +1628,13 @@ private:
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
-  typename SizePolicy=prime_size
+  typename SizePolicy=prime_size,typename NodePolicy=simple_coalesced_set_nodes
 >
 class fca_unordered_coalesced_set 
 {
   using size_policy=SizePolicy;
-  using node_type=coalesced_set_node<T>;
+  using node_policy=NodePolicy;
+  using node_type=typename node_policy::template node_type<T>;
 
 public:
   using key_type=T;
@@ -1659,9 +1712,10 @@ public:
   template<typename Key>
   iterator find(const Key& x)const
   {
-    auto p=nodes.at(size_policy::position(h(x),size_index));
+    auto hash=h(x);
+    auto p=nodes.at(size_policy::position(hash,size_index));
     do{
-      if(p->is_occupied()&&pred(x,p->value()))return p;
+      if(p->is_occupied()&&node_policy::eq(x,p,hash,pred))return p;
       p=p->next();
     }while(p);
     return end();
@@ -1674,19 +1728,21 @@ private:
     typename alloc_traits::template rebind_alloc<node_type>>;
 
   template<typename Value>
-  node_type* new_element(Value&& x,node_type* pi,node_type* p)
+  node_type* new_element(Value&& x,std::size_t hash,node_type* pi,node_type* p)
   // pi: point before insertion (if p is null)
   // p:  available node (if found during lookup)
   {
-    return new_element(nodes,std::forward<Value>(x),pi,p);
+    return new_element(nodes,std::forward<Value>(x),hash,pi,p);
   }
 
   template<typename Value>
   node_type* new_element(
-    node_array_type& nodes,Value&& x,node_type* pi,node_type* p)
+    node_array_type& nodes,Value&& x,std::size_t hash,
+    node_type* pi,node_type* p)
   {
     if(p){
         alloc_traits::construct(al,p->data(),std::forward<Value>(x));
+        node_policy::set_hash(p,hash);
         if(p->is_free()){
           nodes.acquire_node(p);
           p->set_next(nullptr);
@@ -1697,6 +1753,7 @@ private:
       p=nodes.new_node();
       try{
         alloc_traits::construct(al,p->data(),std::forward<Value>(x));
+        node_policy::set_hash(p,hash);
       }
       catch(...){
         nodes.release_node(p); 
@@ -1718,7 +1775,7 @@ private:
   {
     auto hash=h(x);
     auto ph=nodes.at(size_policy::position(hash,size_index));
-    auto [pi,p]=find_match_or_insertion_point_or_available(x,ph);
+    auto [pi,p]=find_match_or_insertion_point_or_available(x,ph,hash);
     if(p&&p->is_occupied())return {p,false};
 
     if(BOOST_UNLIKELY(!p&&nodes.count()+1>ml)){
@@ -1728,7 +1785,7 @@ private:
       p=!pi->is_occupied()?pi:nullptr;
     }
 
-    p=new_element(std::forward<Value>(x),pi,p);
+    p=new_element(std::forward<Value>(x),hash,pi,p);
     ph->mark_head();
     ++size_;
     return {p,true};  
@@ -1749,7 +1806,8 @@ private:
                  size_policy::position(h(n.value()),new_size_index)),
                p=!ph->is_occupied()?ph:nullptr;
           // not VICH insertion point, but we don't want to look up
-          new_element(new_nodes,std::move(n.value()),ph,p);
+          new_element(
+            new_nodes,std::move(n.value()),node_policy::hash(&n),ph,p);
           ph->mark_head();
           delete_element(&n);
         }
@@ -1771,7 +1829,8 @@ private:
   
   template<typename Key>
   std::pair<node_type*,node_type*>
-  find_match_or_insertion_point_or_available(const Key& x,node_type* p)const
+  find_match_or_insertion_point_or_available(
+    const Key& x,node_type* p,std::size_t hash)const
   {
     node_type *pi=p,*pa=nullptr;
     do{
@@ -1779,7 +1838,7 @@ private:
       if(nodes.in_cellar(p))pi=p;
         
       if(!p->is_occupied())pa=p;
-      else if(pred(x,p->value()))return {nullptr,p};
+      else if(node_policy::eq(x,p,hash,pred))return {nullptr,p};
       p=p->next();
     }while(p);
     return {pi,pa};
@@ -1789,10 +1848,11 @@ private:
   std::pair<node_type*,node_type*>
   find_match_and_prev(const Key& x)const
   {
+    auto      hash=h(x);
     node_type *prev=nullptr,
-              *p=nodes.at(size_policy::position(h(x),size_index));
+              *p=nodes.at(size_policy::position(hash,size_index));
     do{
-      if(p->is_occupied()&&pred(x,p->value()))return {prev,p};
+      if(p->is_occupied()&&node_policy::eq(x,p,hash,pred))return {prev,p};
       prev=p;
       p=p->next();
     }while(p);
@@ -1821,12 +1881,12 @@ template<
   typename Key,typename Value,
   typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
   typename Allocator=std::allocator<map_value_adaptor<Key,Value>>,
-  typename SizePolicy=prime_size
+  typename SizePolicy=prime_size,typename NodePolicy=simple_coalesced_set_nodes
 >
 using fca_unordered_coalesced_map=fca_unordered_coalesced_set<
   map_value_adaptor<Key,Value>,
   map_hash_adaptor<Hash>,map_pred_adaptor<Pred>,
-  Allocator,SizePolicy
+  Allocator,SizePolicy,NodePolicy
 >;
 
 } // namespace fca_unordered

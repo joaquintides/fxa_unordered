@@ -458,6 +458,14 @@ using fca_fmod_unordered_coalesced_map =
     ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
     fca_unordered_impl::prime_fmod_size>;
 
+template<class K, class V, class H=boost::hash<K>>
+using fca_fmod_hcached_unordered_coalesced_map =
+  fca_unordered_coalesced_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
+    fca_unordered_impl::prime_fmod_size,
+    fca_unordered_impl::hcached_coalesced_set_nodes>;
+
 // fnv1a_hash
 
 template<int Bits> struct fnv1a_hash_impl;
@@ -593,6 +601,9 @@ template<class K, class V> using fca_fmod_bcached_unordered_embedded_bucket_map_
 template<class K, class V> using fca_fmod_unordered_coalesced_map_fnv1a =
   fca_fmod_unordered_coalesced_map<K, V, fnv1a_hash>;
 
+template<class K, class V> using fca_fmod_hcached_unordered_coalesced_map_fnv1a =
+  fca_fmod_hcached_unordered_coalesced_map<K, V, fnv1a_hash>;
+
 #ifdef HAVE_ABSEIL
 
 template<class K, class V> using absl_node_hash_map_fnv1a =
@@ -672,6 +683,7 @@ int main()
 #endif
 
     test<fca_fmod_unordered_coalesced_map_fnv1a>( "fca_fmod_unordered_coalesced_map, FNV-1a" );
+    test<fca_fmod_hcached_unordered_coalesced_map_fnv1a>( "fca_fmod_hcached_unordered_coalesced_map, FNV-1a" );
 
 #ifdef HAVE_ABSEIL
     test<absl_node_hash_map_fnv1a>( "absl::node_hash_map, FNV-1a" );
