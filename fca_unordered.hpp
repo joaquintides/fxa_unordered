@@ -1555,6 +1555,9 @@ private:
   std::size_t                                  hash_=0;
 };
 
+#if 1
+using hcached_coalesced_set_nodes=simple_coalesced_set_nodes;
+#else
 struct hcached_coalesced_set_nodes
 {
  template<typename T>
@@ -1577,6 +1580,7 @@ template<typename T,typename Node,typename Pred>
     return eq(x,p,hash,pred);
  }
 };
+#endif
 
 template<typename Node,typename Allocator>
 struct coalesced_set_node_array
