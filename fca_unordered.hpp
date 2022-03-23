@@ -1529,16 +1529,21 @@ struct hcached_coalesced_set_node
   void mark_occupied(){hash_|=occupied;} 
   void mark_deleted(){hash_&=~occupied;} 
   void mark_head(){hash_|=head;} 
-  void reset(){hash_&=~(occupied|head);} 
+  void reset(){hash_=0;} 
 
   hcached_coalesced_set_node* next(){return next_;}
   void set_next(hcached_coalesced_set_node* p){next_=p;}
 
   std::size_t hash()const{return hash_&~(occupied|head);}
 
+  void set_hash(std::size_t hash)
+  {
+    hash_=(hash&~(occupied|head))|(hash_&(occupied|head));
+  }
+
   bool eq_hash(std::size_t hash)const
   {
-    return (hash&~(occupied|head))==this->hash();
+    return (hash|occupied|head)==(hash_|occupied|head);
   }
 
   bool occupied_and_eq_hash(std::size_t hash)const
@@ -1546,7 +1551,6 @@ struct hcached_coalesced_set_node
     return (hash|occupied|head)==(hash_|head);
   }
 
-  void set_hash(std::size_t hash){hash_=hash|(hash_&(occupied|head));}
 
   T* data(){return reinterpret_cast<T*>(&storage);}
   T& value(){return *data();}
