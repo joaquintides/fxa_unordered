@@ -1536,9 +1536,14 @@ struct hcached_coalesced_set_node
 
   std::size_t hash()const{return hash_&~(occupied|head);}
 
-  std::size_t eq_hash(std::size_t hash)const
+  bool eq_hash(std::size_t hash)const
   {
     return (hash&~(occupied|head))==this->hash();
+  }
+
+  bool occupied_and_eq_hash(std::size_t hash)const
+  {
+    return (hash|occupied|head)==(hash_|head);
   }
 
   void set_hash(std::size_t hash){hash_=hash|(hash_&(occupied|head));}
@@ -1551,13 +1556,10 @@ private:
                                head=2;
 
   hcached_coalesced_set_node                   *next_;
-  std::aligned_storage_t<sizeof(T),alignof(T)> storage;
   std::size_t                                  hash_=0;
+  std::aligned_storage_t<sizeof(T),alignof(T)> storage;
 };
 
-#if 1
-using hcached_coalesced_set_nodes=simple_coalesced_set_nodes;
-#else
 struct hcached_coalesced_set_nodes
 {
  template<typename T>
@@ -1577,10 +1579,9 @@ template<typename T,typename Node,typename Pred>
  template<typename T,typename Node,typename Pred>
  static bool occupied_and_eq(const T& x,Node* p,std::size_t hash,Pred pred)
  {
-    return eq(x,p,hash,pred);
+    return p->occupied_and_eq_hash(hash)&&pred(x,p->value());
  }
 };
-#endif
 
 template<typename Node,typename Allocator>
 struct coalesced_set_node_array
