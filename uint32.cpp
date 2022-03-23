@@ -8,6 +8,7 @@
 
 #define _SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING
 
+#include <boost/algorithm/minmax_element.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/hashed_index.hpp>
@@ -592,6 +593,13 @@ int main()
     {
         std::cout << std::setw( label_witdh ) << ( x.label_ + ": " ) << std::setw( 5 ) << x.time_ << " ms, " << std::setw( 9 ) << x.bytes_ << " bytes in " << x.count_ << " allocations\n";
     }
+
+    auto [pmin, pmax] = boost::minmax_element(
+        times.begin(), times.end(), [](const record& x, const record& y){ return x.time_< y.time_; });
+
+    auto precision = std::cout.precision();
+    std::cout << "\nTime(worst)/time(best): " << std::setprecision(2) << (float)(pmax->time_) / pmin->time_ 
+              << std::setprecision(precision) << "\n";
 }
 
 #ifdef HAVE_ABSEIL
