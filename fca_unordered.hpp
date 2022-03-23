@@ -1493,7 +1493,7 @@ private:
   static constexpr std::uintptr_t occupied=1,
                                   head=2;
 
-  std::uintptr_t next_=0;
+  std::uintptr_t                               next_=0;
   std::aligned_storage_t<sizeof(T),alignof(T)> storage;
 };
 
@@ -1503,33 +1503,56 @@ struct simple_coalesced_set_nodes
  using node_type=simple_coalesced_set_node<T>;
 
  template<typename Node>
- static void set_hash(Node*,std::size_t){}
- template<typename Node>
  static std::size_t hash(Node*){return 0;}
+ template<typename Node>
+ static void set_hash(Node*,std::size_t){}
 
  template<typename T,typename Node,typename Pred>
  static bool eq(const T& x,Node* p,std::size_t /*hash*/,Pred pred)
  {
     return pred(x,p->value());
  }
+
+ template<typename T,typename Node,typename Pred>
+ static bool occupied_and_eq(const T& x,Node* p,std::size_t /*hash*/,Pred pred)
+ {
+    return p->is_occupied()&&pred(x,p->value());
+ }
 };
 
 template<typename T>
-struct hcached_coalesced_set_node:simple_coalesced_set_node<T>
+struct hcached_coalesced_set_node
 {
+  bool is_occupied()const{return hash_&occupied;}
+  bool is_head()const{return hash_&head;}
+  bool is_free()const{return !(hash_&(occupied|head));}
+  void mark_occupied(){hash_|=occupied;} 
+  void mark_deleted(){hash_&=~occupied;} 
+  void mark_head(){hash_|=head;} 
+  void reset(){hash_&=~(occupied|head);} 
 
-  hcached_coalesced_set_node* next()
+  hcached_coalesced_set_node* next(){return next_;}
+  void set_next(hcached_coalesced_set_node* p){next_=p;}
+
+  std::size_t hash()const{return hash_&~(occupied|head);}
+
+  std::size_t eq_hash(std::size_t hash)const
   {
-    return static_cast<hcached_coalesced_set_node*>(super::next());
+    return (hash&~(occupied|head))==this->hash();
   }
 
-  void set_hash(std::size_t hash){hash_=hash;}
-  std::size_t hash()const{return hash_;}
+  void set_hash(std::size_t hash){hash_=hash|(hash_&(occupied|head));}
 
+  T* data(){return reinterpret_cast<T*>(&storage);}
+  T& value(){return *data();}
+  
 private:
-  using super=simple_coalesced_set_node<T>;
+  static constexpr std::size_t occupied=1,
+                               head=2;
 
-  std::size_t hash_;
+  hcached_coalesced_set_node                   *next_;
+  std::aligned_storage_t<sizeof(T),alignof(T)> storage;
+  std::size_t                                  hash_=0;
 };
 
 struct hcached_coalesced_set_nodes
@@ -1538,14 +1561,20 @@ struct hcached_coalesced_set_nodes
  using node_type=hcached_coalesced_set_node<T>;
 
  template<typename Node>
- static void set_hash(Node* p,std::size_t hash){p->set_hash(hash);}
- template<typename Node>
  static std::size_t hash(Node* p){return p->hash();}
+ template<typename Node>
+ static void set_hash(Node* p,std::size_t hash){p->set_hash(hash);}
 
 template<typename T,typename Node,typename Pred>
  static bool eq(const T& x,Node* p,std::size_t hash,Pred pred)
  {
-    return hash==p->hash()&&pred(x,p->value());
+    return p->eq_hash(hash)&&pred(x,p->value());
+ }
+
+ template<typename T,typename Node,typename Pred>
+ static bool occupied_and_eq(const T& x,Node* p,std::size_t hash,Pred pred)
+ {
+    return eq(x,p,hash,pred);
  }
 };
 
@@ -1715,7 +1744,7 @@ public:
     auto hash=h(x);
     auto p=nodes.at(size_policy::position(hash,size_index));
     do{
-      if(p->is_occupied()&&node_policy::eq(x,p,hash,pred))return p;
+      if(node_policy::occupied_and_eq(x,p,hash,pred))return p;
       p=p->next();
     }while(p);
     return end();
@@ -1852,7 +1881,7 @@ private:
     node_type *prev=nullptr,
               *p=nodes.at(size_policy::position(hash,size_index));
     do{
-      if(p->is_occupied()&&node_policy::eq(x,p,hash,pred))return {prev,p};
+      if(node_policy::occupied_and_eq(x,p,hash,pred))return {prev,p};
       prev=p;
       p=p->next();
     }while(p);
