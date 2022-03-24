@@ -600,12 +600,18 @@ int main()
         std::cout << std::setw( label_witdh ) << ( x.label_ + ": " ) << std::setw( 5 ) << x.time_ << " ms, " << std::setw( 9 ) << x.bytes_ << " bytes in " << x.count_ << " allocations\n";
     }
 
-    auto [pmin, pmax] = boost::minmax_element(
-        times.begin(), times.end(), [](const record& x, const record& y){ return x.time_< y.time_; });
-
     auto precision = std::cout.precision();
-    std::cout << "\nTime(worst)/time(best): " << std::setprecision(2) << (float)(pmax->time_) / pmin->time_ 
-              << std::setprecision(precision) << "\n";
+    std::cout << std::fixed <<std::setprecision(2);
+
+    auto [pmint, pmaxt] = boost::minmax_element(
+        times.begin(), times.end(), [](const record& x, const record& y){ return x.time_< y.time_; });
+    auto [pminb, pmaxb] = boost::minmax_element(
+        times.begin(), times.end(), [](const record& x, const record& y){ return x.bytes_< y.bytes_; });
+
+    std::cout << "\n" << std::setw( 28 ) << "Time(worst)/time(best): " << (float)(pmaxt->time_) / pmint->time_ << "\n"; 
+    std::cout << "Memory(worst)/memory(best): " << (float)(pmaxb->bytes_) / pminb->bytes_ << "\n"; 
+
+    std::cout << std::setprecision(precision) << std::defaultfloat<< "\n";
 }
 
 #ifdef HAVE_ABSEIL
