@@ -1,7 +1,7 @@
 // Copyright 2021 Peter Dimov.
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
-// Modified by Joaquin M Lopez Munoz: added fca[_*]_unordered[_*]_map
+// Modified by Joaquin M Lopez Munoz: extended for fxa_unordered
 // Copyright 2022 Joaquin M Lopez Munoz.
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
@@ -17,6 +17,7 @@
 #include <boost/config.hpp>
 #include "fca_simple_unordered.hpp"
 #include "fca_unordered.hpp"
+#include "foa_unordered_coalesced.hpp"
 #ifdef HAVE_ABSEIL
 # include "absl/container/node_hash_map.h"
 # include "absl/container/flat_hash_map.h"
@@ -316,7 +317,7 @@ template<class K, class V> using fca_simple_unordered_map_ =
 template<class K, class V> using fca_unordered_map_ =
   fca_unordered_map<
     K, V, boost::hash<K>, std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>>;
 
 #ifdef HAVE_ABSEIL
 
@@ -334,182 +335,182 @@ template<class K, class V, class H=boost::hash<K>>
 using fca_switch_unordered_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_switch_size>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_switch_size>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_fmod_size>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_frng_unordered_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_frng_size>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_frng_size>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_frng_fib_unordered_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_frng_fib_size>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_frng_fib_size>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_pow2_unordered_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::pow2_size>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::pow2_size>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_pow2_fib_unordered_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::pow2_fib_size>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::pow2_fib_size>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_bucket_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_fmod_size,
-    fca_unordered_impl::simple_buckets>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size,
+    fxa_unordered::simple_buckets>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_bcached_unordered_bucket_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_fmod_size,
-    fca_unordered_impl::bcached_simple_buckets>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size,
+    fxa_unordered::bcached_simple_buckets>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_hybrid_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_fmod_size,
-    fca_unordered_impl::grouped_buckets,
-    fca_unordered_impl::hybrid_node_allocation>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size,
+    fxa_unordered::grouped_buckets,
+    fxa_unordered::hybrid_node_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_hybrid_bucket_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_fmod_size,
-    fca_unordered_impl::simple_buckets,
-    fca_unordered_impl::hybrid_node_allocation>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size,
+    fxa_unordered::simple_buckets,
+    fxa_unordered::hybrid_node_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_bcached_unordered_hybrid_bucket_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_fmod_size,
-    fca_unordered_impl::bcached_simple_buckets,
-    fca_unordered_impl::hybrid_node_allocation>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size,
+    fxa_unordered::bcached_simple_buckets,
+    fxa_unordered::hybrid_node_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_linear_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_fmod_size,
-    fca_unordered_impl::grouped_buckets,
-    fca_unordered_impl::linear_node_allocation>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size,
+    fxa_unordered::grouped_buckets,
+    fxa_unordered::linear_node_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_linear_bucket_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_fmod_size,
-    fca_unordered_impl::simple_buckets,
-    fca_unordered_impl::linear_node_allocation>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size,
+    fxa_unordered::simple_buckets,
+    fxa_unordered::linear_node_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_bcached_unordered_linear_bucket_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_fmod_size,
-    fca_unordered_impl::bcached_simple_buckets,
-    fca_unordered_impl::linear_node_allocation>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size,
+    fxa_unordered::bcached_simple_buckets,
+    fxa_unordered::linear_node_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_pool_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_fmod_size,
-    fca_unordered_impl::grouped_buckets,
-    fca_unordered_impl::pool_node_allocation>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size,
+    fxa_unordered::grouped_buckets,
+    fxa_unordered::pool_node_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_pool_bucket_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_fmod_size,
-    fca_unordered_impl::simple_buckets,
-    fca_unordered_impl::pool_node_allocation>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size,
+    fxa_unordered::simple_buckets,
+    fxa_unordered::pool_node_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_bcached_unordered_pool_bucket_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_fmod_size,
-    fca_unordered_impl::bcached_simple_buckets,
-    fca_unordered_impl::pool_node_allocation>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size,
+    fxa_unordered::bcached_simple_buckets,
+    fxa_unordered::pool_node_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_embedded_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_fmod_size,
-    fca_unordered_impl::grouped_buckets,
-    fca_unordered_impl::embedded_node_allocation>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size,
+    fxa_unordered::grouped_buckets,
+    fxa_unordered::embedded_node_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_unordered_embedded_bucket_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_fmod_size,
-    fca_unordered_impl::simple_buckets,
-    fca_unordered_impl::embedded_node_allocation>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size,
+    fxa_unordered::simple_buckets,
+    fxa_unordered::embedded_node_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_fmod_bcached_unordered_embedded_bucket_map =
   fca_unordered_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_fmod_size,
-    fca_unordered_impl::bcached_simple_buckets,
-    fca_unordered_impl::embedded_node_allocation>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size,
+    fxa_unordered::bcached_simple_buckets,
+    fxa_unordered::embedded_node_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
-using fca_fmod_unordered_coalesced_map =
-  fca_unordered_coalesced_map<
+using foa_fmod_unordered_coalesced_map =
+  foa_unordered_coalesced_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_fmod_size>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size>;
 
 template<class K, class V, class H=boost::hash<K>>
-using fca_fmod_hcached_unordered_coalesced_map =
-  fca_unordered_coalesced_map<
+using foa_fmod_hcached_unordered_coalesced_map =
+  foa_unordered_coalesced_map<
     K, V, H,std::equal_to<K>,
-    ::allocator<fca_unordered_impl::map_value_adaptor<K, V>>,
-    fca_unordered_impl::prime_fmod_size,
-    fca_unordered_impl::hcached_coalesced_set_nodes>;
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size,
+    fxa_unordered::hcached_coalesced_set_nodes>;
 
 #if ((SIZE_MAX>>16)>>16)==0 
 #define IN_32BIT_ARCHITECTURE
@@ -582,8 +583,8 @@ int main()
     test<fca_fmod_bcached_unordered_embedded_bucket_map>( "fca_fmod_bcached_unordered_embedded_bucket_map" );
 #endif
 
-    test<fca_fmod_unordered_coalesced_map>( "fca_fmod_unordered_coalesced_map" );
-    test<fca_fmod_hcached_unordered_coalesced_map>( "fca_fmod_hcached_unordered_coalesced_map" );
+    test<foa_fmod_unordered_coalesced_map>( "foa_fmod_unordered_coalesced_map" );
+    test<foa_fmod_hcached_unordered_coalesced_map>( "foa_fmod_hcached_unordered_coalesced_map" );
 
 #ifdef HAVE_ABSEIL
     test<absl_node_hash_map>( "absl::node_hash_map" );
