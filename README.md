@@ -1,11 +1,14 @@
-# fca_unordered
-Proof of concept of closed-addressing unordered associative containers.
+# fxa_unordered
+Proof of concept of closed- and open-addressing unordered associative containers.
 * [Development Plan for Boost.Unordered](https://pdimov.github.io/articles/unordered_dev_plan.html)
-* [`fca_unordered_set`, `fca_unordered_map`](#fca_unordered_*)
-* [`fca_unordered_coalesced_set`, `fca_unordered_coalesced_map`](#fca_unordered_coalesced)
-* [`fca_simple_unordered_set`, `fca_simple_unordered_map`](#fca_simple_unordered)
+* [Closed addressing](#closed-addressing)
+  * [`fca_unordered_set`, `fca_unordered_map`](#fca_unordered_*)
+  * [`fca_simple_unordered_set`, `fca_simple_unordered_map`](#fca_simple_unordered)
+* [Open addressing](#open-addressing)
+  * [`foa_unordered_coalesced_set`, `foa_unordered_coalesced_map`](#foa_unordered_coalesced)
 * [Benchmark results](https://github.com/joaquintides/fca_unordered/actions) for this PoC
 
+## Closed addressing
 <a name="fca_unordered_*"></a>
 
 ```cpp
@@ -101,7 +104,28 @@ C++ standard as `hybrid_node_allocation`.
 `hybrid_node_allocation`, but no dynamic allocation happens ever: selection is done
 through quadratic probing using the same technique as `linear_node_allocation`.
 
-<a name="fca_unordered_coalesced"></a>
+<a name="fca_simple_unordered"></a>
+
+```cpp
+template<
+  typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
+  typename Allocator=std::allocator<T>
+>
+class fca_simple_unordered_set;
+
+template<
+  typename Key,typename Value,
+  typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
+  typename Allocator=std::allocator</* equivalent to std::pair<const Key,Value> */>
+>
+class fca_simple_unordered_map;
+```
+
+Abandoned experiment where individual occupied buckets where linked in a bidirectional
+list. Outperformed by `fca_unordered_[set|map]` with `grouped_buckets`.
+
+## Open addressing
+<a name="foa_unordered_coalesced"></a>
 
 ```cpp
 template<
@@ -109,7 +133,7 @@ template<
   typename Allocator=std::allocator<T>,
   typename SizePolicy=prime_size,typename NodePolicy=simple_coalesced_set_nodes
 >
-class fca_unordered_coalesced_set;
+class foa_unordered_coalesced_set;
 
 template<
   typename Key,typename Value,
@@ -117,7 +141,7 @@ template<
   typename Allocator=std::allocator</* equivalent to std::pair<const Key,Value> */>,
   typename SizePolicy=prime_size,typename NodePolicy=simple_coalesced_set_nodes
 >
-class fca_unordered_coalesced_map;
+class foa_unordered_coalesced_map;
 ```
 
 Containers based on [coalesced hashing](https://en.wikipedia.org/wiki/Coalesced_hashing)
@@ -159,23 +183,3 @@ As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered_*).
 * `hcached_coalesced_set_nodes`: Nodes are extended to keep the hash value of the element; hash
 comparison is used to rule out non-matches on lookup without invoking the equality predicate,
 which can potentially speed up the process.
-
-<a name="fca_simple_unordered"></a>
-
-```cpp
-template<
-  typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
-  typename Allocator=std::allocator<T>
->
-class fca_simple_unordered_set;
-
-template<
-  typename Key,typename Value,
-  typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
-  typename Allocator=std::allocator</* equivalent to std::pair<const Key,Value> */>
->
-class fca_simple_unordered_map;
-```
-
-Abandoned experiment where individual occupied buckets where linked in a bidirectional
-list. Outperformed by `fca_unordered_[set|map]` with `grouped_buckets`.
