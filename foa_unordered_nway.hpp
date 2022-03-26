@@ -166,6 +166,9 @@ public:
   auto begin()const{return at(0);}
   auto end()const{return at(v.size()-1);}
   auto at(std::size_t n)const{return const_cast<bunch*>(&v[n]);}
+
+  // only in moved-from state when rehashing
+  bool empty()const{return v.empty();}
    
 private:
   std::vector<bunch,Allocator> v;
@@ -221,6 +224,7 @@ public:
         else{
           ++pb;
           n=0;
+          px=nullptr;
         }
 
       in_bunch:
@@ -241,14 +245,16 @@ public:
 
   ~foa_unordered_nway_set()
   {
-    // TODO
+    if(!bunches.empty()){
+     for(auto first=begin(),last=end();first!=last;)erase(first++);
+    }
   }
   
   const_iterator begin()const noexcept
   {
-    auto p=bunches.begin();
-    const_iterator it=p;
-    if(!(p->match_non_empty()&0x1u))++it;
+    auto pb=bunches.begin();
+    const_iterator it=pb;
+    if(!(pb->match_non_empty()&0x1u))++it;
     return it;
   }
   
@@ -265,12 +271,30 @@ public:
 
   void erase(const_iterator pos)
   {
+    auto [pb,n,px]=pos;
+    if(px){
+      auto** ppx=&pb->extra();
+      while(*ppx!=px)ppx=&((*ppx)->next);
+      (*ppx)->next=px->next;
+      delete_node(px);
+    }
+    else{
+      destroy_element(pb->at(n).data());
+      pb->reset(n);
+    }
+    --size_;
   }
 
   template<typename Key>
   size_type erase(const Key& x)
   {
-    return 0;
+    // TODO: optimize
+    auto it=find(x);
+    if(it!=end()){
+      erase(it);
+      return 1;
+    }
+    else return 0;
   }
   
   template<typename Key>
@@ -352,6 +376,7 @@ private:
     if(nc>fnc)nc=static_cast<std::size_t>(fnc);
 
     foa_unordered_nway_set new_container{nc,al};
+    std::size_t            num_tx=0;
     try{
       for(auto& b:bunches){
         auto mask=b.match_non_empty();
@@ -360,21 +385,23 @@ private:
           auto& x=b.at(n).value();
           new_container.unchecked_insert(std::move(x));
           destroy_element(&x);
+          b.reset(n);
+          ++num_tx;
           n=std::size_t(boost::core::countr_zero(mask&reset_first_bits(n+1)));
         }
-        auto& px=b.extra();
-        int i=0;
-        while(px&&++i<1000){
+        auto px=b.extra();
+        while(px){
           auto& x=px->value();
           new_container.unchecked_insert(std::move(x));
-          auto prev_px=px;
-          px=px->next;
-          delete_node(prev_px);            
+          b.extra()=px->next;
+          delete_node(px);
+          px=b.extra();
+          ++num_tx;
         }
       }
     }
     catch(...){
-      // TODO
+      size_-=num_tx;
       throw;
     }
     size_index=new_container.size_index;
@@ -421,7 +448,7 @@ private:
       if(BOOST_LIKELY(pred(x,pb->at(n).value()))){
         return {pb,n};
       }
-      n=std::size_t(boost::core::countr_zero(mask)&reset_first_bits(n+1));
+      n=std::size_t(boost::core::countr_zero(mask&reset_first_bits(n+1)));
     }
     for(auto px=pb->extra();px;px=px->next){
       if(BOOST_LIKELY(pred(x,px->value()))){
