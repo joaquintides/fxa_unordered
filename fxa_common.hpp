@@ -352,6 +352,17 @@ struct map_pred_adaptor
   Pred pred;
 };
 
+inline std::size_t set_bit(std::size_t n){return std::size_t(1)<<n;}
+inline std::size_t reset_bit(std::size_t n){return ~set_bit(n);}
+inline std::size_t set_first_bits(std::size_t n) // n>0
+{
+  return ~(std::size_t(0))>>(sizeof(std::size_t)*8-n);
+}
+inline std::size_t reset_first_bits(std::size_t n) // n>0
+{
+  return ~set_first_bits(n);
+}
+
 } // namespace fxa_unordered
 
 #endif

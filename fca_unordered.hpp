@@ -40,17 +40,6 @@ struct bucket_group
   bucket_group *next=nullptr,*prev=nullptr;
 };
 
-inline std::size_t set_bit(std::size_t n){return std::size_t(1)<<n;}
-inline std::size_t reset_bit(std::size_t n){return ~set_bit(n);}
-inline std::size_t set_first_bits(std::size_t n) // n>0
-{
-  return ~(std::size_t(0))>>(sizeof(std::size_t)*8-n);
-}
-inline std::size_t reset_first_bits(std::size_t n) // n>0
-{
-  return ~set_first_bits(n);
-}
-
 template<typename Bucket>
 struct grouped_bucket_iterator:public boost::iterator_facade<
   grouped_bucket_iterator<Bucket>,Bucket,boost::forward_traversal_tag>
