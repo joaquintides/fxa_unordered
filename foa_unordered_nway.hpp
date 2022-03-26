@@ -78,7 +78,7 @@ static constexpr uint64_t mmasks[]=
   mmask(12),mmask(13),mmask(14),mmask(15),
 };
 
-unsigned match(uint64_t x,unsigned n)
+uint16_t match(uint64_t x,unsigned n)
 {
   assert(n<16);
   
