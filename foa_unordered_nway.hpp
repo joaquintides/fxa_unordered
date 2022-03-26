@@ -216,22 +216,20 @@ public:
 
     void increment()noexcept
     {
-      if(px)px=px->next;
-      else goto in_bunch;
-        
-      for(;;){
-        if(px)return;
-        else{
-          ++pb;
-          n=0;
-          px=nullptr;
-        }
-
-      in_bunch:
-        n=std::size_t(boost::core::countr_zero(
-            pb->match_non_empty()&reset_first_bits(n+1)));
-        if(n<N)return;
-        px=pb->extra();
+      if(!px){
+        if((n=std::size_t(boost::core::countr_zero(
+            pb->match_non_empty()&reset_first_bits(n+1))))<N)return;
+        else while(
+          !(px=pb->extra())&&
+          !((n=std::size_t(
+            boost::core::countr_zero((++pb)->match_non_empty())))<N));
+      }
+      else{
+        if((px=px->next))return;
+        else while(
+          !((n=std::size_t(
+              boost::core::countr_zero((++pb)->match_non_empty())))<N)&&
+          !(px=pb->extra()));
       }
     }
 
