@@ -275,7 +275,7 @@ public:
     if(px){
       auto** ppx=&pb->extra();
       while(*ppx!=px)ppx=&((*ppx)->next);
-      (*ppx)->next=px->next;
+      *ppx=px->next;
       delete_node(px);
     }
     else{
