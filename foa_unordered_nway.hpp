@@ -114,7 +114,7 @@ struct element_bunch
   };
 
 #if __SSE2__
-  void set(std::size_t pos,std::size_t /*n*/,std::size_t hash)
+  void set(std::size_t pos,std::size_t hash)
   {
     reinterpret_cast<unsigned char*>(&mask)[pos]=0x80u|(hash&0x7Fu);
   }
@@ -125,11 +125,10 @@ struct element_bunch
     reinterpret_cast<unsigned char*>(&mask)[pos]=0;
   }
 
-  std::size_t match(std::size_t /*n*/,std::size_t hash)const
+  std::size_t match(std::size_t hash)const
   {
     auto m=_mm_set1_epi8(0x80u|(hash&0x7Fu));
-    return _mm_movemask_epi8(
-      _mm_cmpeq_epi8(mask,m));
+    return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
   }
 
   std::size_t match_non_empty()const
@@ -145,17 +144,11 @@ struct element_bunch
 
 #else
 
-  void set(std::size_t pos,std::size_t n,std::size_t hash)
+  void set(std::size_t pos,std::size_t hash)
   {
     assert(pos<N&&n<N);
-#if 1
-    (void)n;
     uint64_ops::set(lowmask,pos,hash&0xFu);
     uint64_ops::set(himask,pos,0x8u | ((hash&0x70u)>>8));
-#else
-    uint64_ops::set(lowmask,pos,n);
-    uint64_ops::set(himask,pos,0x8u | (hash&0x7u));
-#endif
   }
 
   void reset(std::size_t pos)
@@ -164,17 +157,11 @@ struct element_bunch
     uint64_ops::set(himask,pos,0);
   }
 
-  std::size_t match(std::size_t n,std::size_t hash)const
+  std::size_t match(std::size_t hash)const
   {
     assert(n<N);
-#if 1
-    (void)n;
     return uint64_ops::match(lowmask,hash&0xFu)&
            uint64_ops::match(himask,0x8u | ((hash&0x70u)>>8));
-#else
-    return uint64_ops::match(lowmask,n)&
-           uint64_ops::match(himask,0x8u | (hash&0x7u));
-#endif
   }
 
   std::size_t match_non_empty()const
@@ -184,7 +171,6 @@ struct element_bunch
 
   std::size_t match_empty()const{return ~match_non_empty();}
 #endif /* __SSE2__ */
-
 
   element& at(std::size_t n){return storage[n];}
   node*& extra(){return extra_;}
@@ -210,9 +196,8 @@ public:
   bunch_array(std::size_t n,const Allocator& al):
     v{(n+N-1)/N+1,al}
   {
-    static typename bunch::node node_;
     // we're wasting a whole extra bunch for end signalling :-/
-    v.back().extra()=&node_;
+    v.back().set(0,0);
   }
 
   bunch_array(bunch_array&&)=default;
@@ -311,12 +296,7 @@ public:
     return it;
   }
   
-  const_iterator end()const noexcept
-  {
-    const_iterator it=bunches.end();
-    return ++it;
-  }
-
+  const_iterator end()const noexcept{return bunches.end();}
   size_type size()const noexcept{return size_;};
 
   auto insert(const T& x){return insert_impl(x);}
@@ -354,9 +334,8 @@ public:
   iterator find(const Key& x)const
   {
     auto hash=h(x);
-    auto pos=size_policy::position(hash,size_index);
-    auto pb=bunches.at(pos/N);
-    return find(x,pb,pos,hash);
+    auto pb=bunches.at(size_policy::position(hash,size_index)/N);
+    return find(x,pb,hash);
   }
 
 private:
@@ -408,18 +387,16 @@ private:
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
     auto hash=h(x);
-    auto pos=size_policy::position(hash,size_index);
-    auto pb=bunches.at(pos/N);
-    auto it=find(x,pb,pos,hash);
+    auto pb=bunches.at(size_policy::position(hash,size_index)/N);
+    auto it=find(x,pb,hash);
     if(it!=end())return {it,false};
         
     if(BOOST_UNLIKELY(size_+1>ml)){
       rehash(size_+1);
-      pos=size_policy::position(hash,size_index);
-      pb=bunches.at(pos/N);
+      pb=bunches.at(size_policy::position(hash,size_index)/N);
     }
 
-    return {unchecked_insert(std::forward<Value>(x),pb,pos,hash),true};
+    return {unchecked_insert(std::forward<Value>(x),pb,hash),true};
   }
 
   void rehash(size_type new_size)
@@ -466,19 +443,17 @@ private:
   iterator unchecked_insert(Value&& x)
   {
     auto  hash=h(x);
-    auto  pos=size_policy::position(hash,size_index);
-    auto  pb=bunches.at(pos/N);
-    return unchecked_insert(std::move(x),pb,pos,hash);
+    auto  pb=bunches.at(size_policy::position(hash,size_index)/N);
+    return unchecked_insert(std::move(x),pb,hash);
   }
 
   template<typename Value>
-  iterator unchecked_insert(
-    Value&& x,bunch* pb,std::size_t pos,std::size_t hash)
+  iterator unchecked_insert(Value&& x,bunch* pb,std::size_t hash)
   {
     auto n=std::size_t(boost::core::countr_zero(pb->match_empty()));
     if(n<N){
       construct_element(std::forward<Value>(x),pb->at(n).data());
-      pb->set(n,pos%N,hash);
+      pb->set(n,hash);
       ++size_;
       return {pb,n};
     }
@@ -492,9 +467,9 @@ private:
   }
 
   template<typename Key>
-  iterator find(const Key& x,bunch* pb,std::size_t pos,std::size_t hash)const
+  iterator find(const Key& x,bunch* pb,std::size_t hash)const
   {
-    auto mask=pb->match(pos%N,hash),
+    auto mask=pb->match(hash),
          n=std::size_t(boost::core::countr_zero(mask));
 
     while(n<N){
