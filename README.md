@@ -192,7 +192,7 @@ which can potentially speed up the process.
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
-  typename SizePolicy=prime_size,typename NodePolicy=simple_coalesced_set_nodes
+  typename SizePolicy=prime_size
 >
 class foa_unordered_nway_set;
 
@@ -200,8 +200,7 @@ template<
   typename Key,typename Value,
   typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
   typename Allocator=std::allocator</* equivalent to std::pair<const Key,Value> */>,
-  typename SizePolicy=prime_size,typename NodePolicy=simple_coalesced_set_nodes
->
+  typename SizePolicy=prime_size
 class foa_unordered_nway_map;
 ```
 
