@@ -108,9 +108,9 @@ struct element_bunch
   private:
     std::aligned_storage_t<sizeof(T),alignof(T)> storage;
   };
-  struct node:element
+  struct node_type:element
   {
-    node *next=nullptr;
+    node_type *next=nullptr;
   };
 
 #if __SSE2__
@@ -173,17 +173,17 @@ struct element_bunch
 #endif /* __SSE2__ */
 
   element& at(std::size_t n){return storage[n];}
-  node*& extra(){return extra_;}
+  node_type*& extra(){return extra_;}
 
 private:
 #if __SSE2__
-  __m128i  mask=_mm_set1_epi8(0);
+  __m128i   mask=_mm_set1_epi8(0);
 #else
-  uint64_t lowmask=0,himask=0;
+  uint64_t  lowmask=0,himask=0;
 #endif
 
-  element  storage[N];
-  node     *extra_=nullptr;
+  element   storage[N];
+  node_type *extra_=nullptr;
 };
 
 template<typename T,typename Allocator>
@@ -223,7 +223,7 @@ class foa_unordered_nway_set
 {
   using size_policy=SizePolicy;
   using bunch=element_bunch<T>;
-  using node=typename bunch::node;
+  using node_type=typename bunch::node_type;
   static constexpr auto N=bunch::N;
 
 public:
@@ -240,7 +240,7 @@ public:
     friend class foa_unordered_nway_set;
     friend class boost::iterator_core_access;
 
-    const_iterator(bunch* pb,std::size_t n=0,node* px=nullptr):
+    const_iterator(bunch* pb,std::size_t n=0,node_type* px=nullptr):
       pb{pb},n{n},px{px}{}
 
     const value_type& dereference()const noexcept
@@ -275,7 +275,7 @@ public:
 
     bunch       *pb=nullptr;
     std::size_t n=0;
-    node        *px=nullptr;
+    node_type   *px=nullptr;
   };
   using iterator=const_iterator;
 
@@ -341,7 +341,7 @@ public:
 private:
   using alloc_traits=std::allocator_traits<Allocator>;
   using node_allocator_type=typename alloc_traits::
-    template rebind_alloc<node>;
+    template rebind_alloc<node_type>;
   using node_alloc_traits=std::allocator_traits<node_allocator_type>;
   using bunch_array_type=bunch_array<
     T,
@@ -352,9 +352,9 @@ private:
     al{al},size_{n}{}
 
   template<typename Value>
-  node* new_node(Value&& x)
+  node_type* new_node(Value&& x)
   {
-    node* p=&*node_alloc_traits::allocate(al,1);
+    node_type* p=&*node_alloc_traits::allocate(al,1);
     node_alloc_traits::construct(al,p);
     try{
       construct_element(std::forward<Value>(x),p->data());
@@ -372,7 +372,7 @@ private:
     node_alloc_traits::construct(al,p,std::forward<Value>(x));
   }
 
-  void delete_node(node* p)
+  void delete_node(node_type* p)
   {
     destroy_element(p->data());
     node_alloc_traits::deallocate(al,p,1);
