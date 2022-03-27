@@ -497,7 +497,7 @@ private:
   Hash                h;
   Pred                pred;
   node_allocator_type al;
-  float               mlf=0.875f;
+  float               mlf=0.3f;
   std::size_t         size_=0;
   std::size_t         size_index=size_policy::size_index(size_);
   bunch_array_type    bunches{size_policy::size(size_index),al};
