@@ -114,6 +114,7 @@ struct element_bunch
   };
 
 #if __SSE2__
+
   void set(std::size_t pos,std::size_t hash)
   {
     reinterpret_cast<unsigned char*>(&mask)[pos]=0x80u|(hash&0x7Fu);
@@ -170,6 +171,7 @@ struct element_bunch
   }
 
   std::size_t match_empty()const{return ~match_non_empty();}
+  
 #endif /* __SSE2__ */
 
   element& at(std::size_t n){return storage[n];}
