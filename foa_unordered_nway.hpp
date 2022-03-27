@@ -24,6 +24,10 @@
 #include <vector>
 #include "fxa_common.hpp"
 
+#if __SSE2__
+#include <immintrin.h>
+#endif
+
 namespace fxa_unordered{
 
 namespace uint64_ops{
@@ -109,6 +113,38 @@ struct element_bunch
     node *next=nullptr;
   };
 
+#if __SSE2__
+  void set(std::size_t pos,std::size_t /*n*/,std::size_t hash)
+  {
+    reinterpret_cast<unsigned char*>(&mask)[pos]=0x80u|(hash&0x7Fu);
+  }
+
+  void reset(std::size_t pos)
+  {
+    assert(pos<N);
+    reinterpret_cast<unsigned char*>(&mask)[pos]=0;
+  }
+
+  std::size_t match(std::size_t /*n*/,std::size_t hash)const
+  {
+    auto m=_mm_set1_epi8(0x80u|(hash&0x7Fu));
+    return _mm_movemask_epi8(
+      _mm_cmpeq_epi8(mask,m));
+  }
+
+  std::size_t match_non_empty()const
+  {
+    return ~match_empty();
+  }
+
+  std::size_t match_empty()const
+  {
+    auto m=_mm_set1_epi8(0);
+    return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));      
+  }
+
+#else
+
   void set(std::size_t pos,std::size_t n,std::size_t hash)
   {
     assert(pos<N&&n<N);
@@ -147,14 +183,21 @@ struct element_bunch
   }
 
   std::size_t match_empty()const{return ~match_non_empty();}
+#endif /* __SSE2__ */
+
 
   element& at(std::size_t n){return storage[n];}
   node*& extra(){return extra_;}
 
 private:
-  uint64_t  lowmask=0,himask=0;
-  element   storage[N];
-  node      *extra_=nullptr;
+#if __SSE2__
+  __m128i  mask=_mm_set1_epi8(0);
+#else
+  uint64_t lowmask=0,himask=0;
+#endif
+
+  element  storage[N];
+  node     *extra_=nullptr;
 };
 
 template<typename T,typename Allocator>
@@ -231,17 +274,17 @@ public:
       if(!px){
         if((n=std::size_t(boost::core::countr_zero(
             pb->match_non_empty()&reset_first_bits(n+1))))<N)return;
-        else while(
-          !(px=pb->extra())&&
-          !((n=std::size_t(
-            boost::core::countr_zero((++pb)->match_non_empty())))<N));
       }
       else{
         if((px=px->next))return;
-        else while(
-          !((n=std::size_t(
-              boost::core::countr_zero((++pb)->match_non_empty())))<N)&&
-          !(px=pb->extra()));
+        else goto check_bunch;
+      }
+        
+      for(;;){
+        if((px=pb->extra()))return;
+      check_bunch:
+        if((n=std::size_t(
+            boost::core::countr_zero((++pb)->match_non_empty())))<N)return;
       }
     }
 
