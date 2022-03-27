@@ -458,7 +458,8 @@ private:
       if(BOOST_LIKELY(pred(x,pb->at(n).value()))){
         return {pb,n};
       }
-      n=std::size_t(boost::core::countr_zero(mask&reset_first_bits(n+1)));
+      mask&=(mask-1);
+      n=std::size_t(boost::core::countr_zero(mask));
     }
     for(auto px=pb->extra();px;px=px->next){
       if(BOOST_LIKELY(pred(x,px->value()))){
