@@ -131,8 +131,14 @@ struct element_bunch
   std::size_t match(std::size_t n,std::size_t hash)const
   {
     assert(n<N);
+#if 1
+    (void)n;
+    return uint64_ops::match(lowmask,hash&0xFu)&
+           uint64_ops::match(himask,0x8u | ((hash&0x70u)>>8));
+#else
     return uint64_ops::match(lowmask,n)&
            uint64_ops::match(himask,0x8u | (hash&0x7u));
+#endif
   }
 
   std::size_t match_non_empty()const
