@@ -417,15 +417,14 @@ private:
           destroy_element(&x);
           b.reset(n);
           ++num_tx;
-          n=boost::core::countr_zero((unsigned int)(mask&reset_first_bits(n+1)));
+          mask&=mask-1;
+          n=boost::core::countr_zero((unsigned int)mask);
         }
-        auto px=b.extra();
-        while(px){
+        while(auto px=b.extra()){
           auto& x=px->value();
           new_container.unchecked_insert(std::move(x));
           b.extra()=px->next;
           delete_node(px);
-          px=b.extra();
           ++num_tx;
         }
       }
@@ -476,7 +475,7 @@ private:
       if(BOOST_LIKELY(pred(x,pb->at(n).value()))){
         return {pb,n};
       }
-      mask&=(mask-1);
+      mask&=mask-1;
       n=boost::core::countr_zero((unsigned int)mask);
     }
     for(auto px=pb->extra();px;px=px->next){
