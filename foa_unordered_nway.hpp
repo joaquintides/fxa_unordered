@@ -112,8 +112,14 @@ struct element_bunch
   void set(std::size_t pos,std::size_t n,std::size_t hash)
   {
     assert(pos<N&&n<N);
+#if 1
+    (void)n;
+    uint64_ops::set(lowmask,pos,hash&0xFu);
+    uint64_ops::set(himask,pos,0x8u | ((hash&0x70u)>>8));
+#else
     uint64_ops::set(lowmask,pos,n);
     uint64_ops::set(himask,pos,0x8u | (hash&0x7u));
+#endif
   }
 
   void reset(std::size_t pos)
