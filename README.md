@@ -6,6 +6,7 @@ Proof of concept of closed- and open-addressing unordered associative containers
   * [`fca_simple_unordered_set`, `fca_simple_unordered_map`](#fca_simple_unordered)
 * [Open addressing](#open-addressing)
   * [`foa_unordered_coalesced_set`, `foa_unordered_coalesced_map`](#foa_unordered_coalesced)
+  * [`foa_unordered_nway_set`, `foa_unordered_nway_map`](#foa_unordered_nway)
 * [Benchmark results](https://github.com/joaquintides/fca_unordered/actions) for this PoC
 
 ## Closed addressing
@@ -125,8 +126,18 @@ Abandoned experiment where individual occupied buckets where linked in a bidirec
 list. Outperformed by `fca_unordered_[set|map]` with `grouped_buckets`.
 
 ## Open addressing
-<a name="foa_unordered_coalesced"></a>
+These containers, in general, deviate in a number of important aspects from the C++ standard
+requirements for unordered associative containers:
+* Pointer stability is not mantained on rehashing.
+* The elements of the container must be movable.
+* It is not possible to provide [node extraction](https://en.cppreference.com/w/cpp/container/node_handle)
+capabilities.
+* Iterator increment is not constant but gets slower as the number of non-occupied nodes grow.
+* Because of the former, `erase(iterator)` returns `void` instead of an iterator to the next
+  element.
+* `begin()` is not constant time (hopping to the first occupied node is required).
 
+<a name="foa_unordered_coalesced"></a>
 ```cpp
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
@@ -155,17 +166,9 @@ algorithm).
 * Nodes of erased elements are unlinked and recycled if they are not at the beginning
 of a (sub)chain. In particular, erased cellar nodes are always recycled.
 
-The resulting container deviates in a number of important aspects from the C++ standard
-requirements for unordered associative containers:
-
-* Pointer stability is not mantained on rehashing.
-* The elements of the container must be movable.
-* It is not possible to provide [node extraction](https://en.cppreference.com/w/cpp/container/node_handle)
-capabilities.
-* Iterator increment is not constant but gets slower as the number of non-occupied nodes grow.
-* Because of the former, `erase(iterator)` returns `void` instead of an iterator to the next
-  element.
-* `begin()` is not constant time (hopping to the first occupied node is required).
+In addition to the general deviations from the standard incurred by open-addressing
+containers in this PoC, `foa_unordered_coalesced_map`/`foa_unordered_coalesced_map`
+have the following:
 * `erase(iterator)` is implemented as `erase(*iterator)`: this will throw if `Hash` or `Pred` do,
 but allows for node recycling.
 * Rehashing does not happen when the number of elements in the container hits the maximum load,
@@ -183,3 +186,31 @@ As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered_*).
 * `hcached_coalesced_set_nodes`: Nodes are extended to keep the hash value of the element; hash
 comparison is used to rule out non-matches on lookup without invoking the equality predicate,
 which can potentially speed up the process.
+
+<a name="foa_unordered_nway"></a>
+```cpp
+template<
+  typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
+  typename Allocator=std::allocator<T>,
+  typename SizePolicy=prime_size,typename NodePolicy=simple_coalesced_set_nodes
+>
+class foa_unordered_nway_set;
+
+template<
+  typename Key,typename Value,
+  typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
+  typename Allocator=std::allocator</* equivalent to std::pair<const Key,Value> */>,
+  typename SizePolicy=prime_size,typename NodePolicy=simple_coalesced_set_nodes
+>
+class foa_unordered_nway_map;
+```
+
+Nodes are logically divided in grous of size 16. Slots are probed *only* within
+the target group looking for a reduced 7-bit hash value with vectorized
+byte operations (using [SSE2](https://en.wikipedia.org/wiki/SSE2) when available):
+if the group is full, extra nodes are allocated and kept in a singly linked list,
+where each group has its own list.
+
+**`SizePolicy`**
+
+As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered_*).
