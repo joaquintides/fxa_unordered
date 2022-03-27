@@ -205,7 +205,7 @@ template<
 class foa_unordered_nway_map;
 ```
 
-Nodes are logically divided in grous of size 16. Slots are probed *only* within
+Nodes are logically divided in groups of size 16. Slots are probed *only* within
 the target group looking for a reduced 7-bit hash value with vectorized
 byte operations (using [SSE2](https://en.wikipedia.org/wiki/SSE2) when available):
 if the group is full, extra nodes are allocated and kept in a singly linked list,
