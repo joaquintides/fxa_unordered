@@ -82,7 +82,7 @@ static constexpr uint64_t mmasks[]=
   mmask(12),mmask(13),mmask(14),mmask(15),
 };
 
-uint16_t match(uint64_t x,unsigned n)
+int match(uint64_t x,int n)
 {
   assert(n<16);
   
@@ -99,7 +99,7 @@ uint16_t match(uint64_t x,unsigned n)
 template<typename T>
 struct element_bunch
 {
-  static constexpr std::size_t N=16;
+  static constexpr int N=16;
   struct element
   {
     T* data(){return reinterpret_cast<T*>(&storage);}
@@ -125,18 +125,18 @@ struct element_bunch
     reinterpret_cast<unsigned char*>(&mask)[pos]=0;
   }
 
-  std::size_t match(std::size_t hash)const
+  int match(std::size_t hash)const
   {
     auto m=_mm_set1_epi8(0x80u|(hash&0x7Fu));
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
   }
 
-  std::size_t match_non_empty()const
+  int match_non_empty()const
   {
     return ~match_empty();
   }
 
-  std::size_t match_empty()const
+  int match_empty()const
   {
     auto m=_mm_set1_epi8(0);
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));      
@@ -157,14 +157,14 @@ struct element_bunch
     uint64_ops::set(himask,pos,0);
   }
 
-  std::size_t match(std::size_t hash)const
+  int match(std::size_t hash)const
   {
     assert(n<N);
     return uint64_ops::match(lowmask,hash&0xFu)&
            uint64_ops::match(himask,0x8u | ((hash&0x70u)>>8));
   }
 
-  std::size_t match_non_empty()const
+  int match_non_empty()const
   {
     return himask>>48;  
   }
@@ -240,7 +240,7 @@ public:
     friend class foa_unordered_nway_set;
     friend class boost::iterator_core_access;
 
-    const_iterator(bunch* pb,std::size_t n=0,node_type* px=nullptr):
+    const_iterator(bunch* pb,int n=0,node_type* px=nullptr):
       pb{pb},n{n},px{px}{}
 
     const value_type& dereference()const noexcept
@@ -257,8 +257,8 @@ public:
     void increment()noexcept
     {
       if(!px){
-        if((n=std::size_t(boost::core::countr_zero(
-            pb->match_non_empty()&reset_first_bits(n+1))))<N)return;
+        if((n=boost::core::countr_zero((unsigned int)(
+          pb->match_non_empty()&reset_first_bits(n+1))))<N)return;
       }
       else{
         if((px=px->next))return;
@@ -268,14 +268,14 @@ public:
       for(;;){
         if((px=pb->extra()))return;
       check_bunch:
-        if((n=std::size_t(
-            boost::core::countr_zero((++pb)->match_non_empty())))<N)return;
+        if((n=boost::core::countr_zero((unsigned int)(
+          (++pb)->match_non_empty())))<N)return;
       }
     }
 
-    bunch       *pb=nullptr;
-    std::size_t n=0;
-    node_type   *px=nullptr;
+    bunch     *pb=nullptr;
+    int       n=0;
+    node_type *px=nullptr;
   };
   using iterator=const_iterator;
 
@@ -410,14 +410,14 @@ private:
     try{
       for(auto& b:bunches){
         auto mask=b.match_non_empty();
-        auto n=std::size_t(boost::core::countr_zero(mask));
+        auto n=std::size_t(boost::core::countr_zero((unsigned int)mask));
         while(n<N){
           auto& x=b.at(n).value();
           new_container.unchecked_insert(std::move(x));
           destroy_element(&x);
           b.reset(n);
           ++num_tx;
-          n=std::size_t(boost::core::countr_zero(mask&reset_first_bits(n+1)));
+          n=boost::core::countr_zero((unsigned int)(mask&reset_first_bits(n+1)));
         }
         auto px=b.extra();
         while(px){
@@ -450,7 +450,7 @@ private:
   template<typename Value>
   iterator unchecked_insert(Value&& x,bunch* pb,std::size_t hash)
   {
-    auto n=std::size_t(boost::core::countr_zero(pb->match_empty()));
+    auto n=boost::core::countr_zero((unsigned int)(pb->match_empty()));
     if(n<N){
       construct_element(std::forward<Value>(x),pb->at(n).data());
       pb->set(n,hash);
@@ -470,14 +470,14 @@ private:
   iterator find(const Key& x,bunch* pb,std::size_t hash)const
   {
     auto mask=pb->match(hash),
-         n=std::size_t(boost::core::countr_zero(mask));
+         n=boost::core::countr_zero((unsigned int)mask);
 
     while(n<N){
       if(BOOST_LIKELY(pred(x,pb->at(n).value()))){
         return {pb,n};
       }
       mask&=(mask-1);
-      n=std::size_t(boost::core::countr_zero(mask));
+      n=boost::core::countr_zero((unsigned int)mask);
     }
     for(auto px=pb->extra();px;px=px->next){
       if(BOOST_LIKELY(pred(x,px->value()))){
