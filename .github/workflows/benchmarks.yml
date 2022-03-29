@@ -51,6 +51,74 @@ jobs:
             os: [self-hosted, linux, x64]
             install: g++-11
             command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
+          - name: dedicated-server
+            compiler: clang++-12
+            architecture: -m64
+            sourcefile: string.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            outputfile: benchmark
+            os: [self-hosted, linux, x64]
+            command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
+          - name: dedicated-server
+            compiler: clang++-12
+            architecture: -m64
+            sourcefile: string_view.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            outputfile: benchmark
+            os: [self-hosted, linux, x64]
+            command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
+          - name: dedicated-server
+            compiler: clang++-12
+            architecture: -m64
+            sourcefile: uint32.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            outputfile: benchmark
+            os: [self-hosted, linux, x64]
+            command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
+          - name: dedicated-server
+            compiler: clang++-12
+            architecture: -m64
+            sourcefile: uint64.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            outputfile: benchmark
+            os: [self-hosted, linux, x64]
+            command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
+          - name: dedicated-server
+            compiler: clang++-12
+            architecture: -m32
+            sourcefile: string.cpp
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            outputfile: benchmark
+            os: [self-hosted, linux, x64, 32-bit]
+            install: libc++-12-dev:i386 libc++abi-12-dev:i386 gcc-multilib g++-multilib
+            command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
+          - name: dedicated-server
+            compiler: clang++-12
+            architecture: -m32
+            sourcefile: string_view.cpp
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            outputfile: benchmark
+            os: [self-hosted, linux, x64, 32-bit]
+            install: libc++-12-dev:i386 libc++abi-12-dev:i386 gcc-multilib g++-multilib
+            command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
+          - name: dedicated-server
+            compiler: clang++-12
+            architecture: -m32
+            sourcefile: uint32.cpp
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            outputfile: benchmark
+            os: [self-hosted, linux, x64, 32-bit]
+            install: libc++-12-dev:i386 libc++abi-12-dev:i386 gcc-multilib g++-multilib
+            command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
+          - name: dedicated-server
+            compiler: clang++-12
+            architecture: -m32
+            sourcefile: uint64.cpp
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            outputfile: benchmark
+            os: [self-hosted, linux, x64, 32-bit]
+            install: libc++-12-dev:i386 libc++abi-12-dev:i386 gcc-multilib g++-multilib
+            command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
           - compiler: g++-11
             architecture: -m64
             sourcefile: string.cpp
