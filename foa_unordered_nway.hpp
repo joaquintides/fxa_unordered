@@ -97,7 +97,7 @@ int match(uint64_t x,int n)
 } // namespace uint64_ops
 
 template<typename T>
-struct element_bunch
+struct nway_group
 {
   static constexpr int N=16;
   struct element
@@ -189,31 +189,31 @@ private:
 };
 
 template<typename T,typename Allocator>
-class bunch_array
+class nway_group_array
 {
-  using bunch=element_bunch<T>;
-  static constexpr auto N=bunch::N;
+  using group=nway_group<T>;
+  static constexpr auto N=group::N;
 
 public:
-  bunch_array(std::size_t n,const Allocator& al):
+  nway_group_array(std::size_t n,const Allocator& al):
     v{(n+N-1)/N+1,al}
   {
-    // we're wasting a whole extra bunch for end signalling :-/
+    // we're wasting a whole extra group for end signalling :-/
     v.back().set(0,0);
   }
 
-  bunch_array(bunch_array&&)=default;
-  bunch_array& operator=(bunch_array&&)=default;
+  nway_group_array(nway_group_array&&)=default;
+  nway_group_array& operator=(nway_group_array&&)=default;
 
   auto begin()const{return at(0);}
   auto end()const{return at(v.size()-1);}
-  auto at(std::size_t n)const{return const_cast<bunch*>(&v[n]);}
+  auto at(std::size_t n)const{return const_cast<group*>(&v[n]);}
 
   // only in moved-from state when rehashing
   bool empty()const{return v.empty();}
    
 private:
-  std::vector<bunch,Allocator> v;
+  std::vector<group,Allocator> v;
 };
 
 template<
@@ -224,9 +224,9 @@ template<
 class foa_unordered_nway_set 
 {
   using size_policy=SizePolicy;
-  using bunch=element_bunch<T>;
-  using node_type=typename bunch::node_type;
-  static constexpr auto N=bunch::N;
+  using group=nway_group<T>;
+  using node_type=typename group::node_type;
+  static constexpr auto N=group::N;
 
 public:
   using key_type=T;
@@ -242,7 +242,7 @@ public:
     friend class foa_unordered_nway_set;
     friend class boost::iterator_core_access;
 
-    const_iterator(bunch* pb,int n=0,node_type* px=nullptr):
+    const_iterator(group* pb,int n=0,node_type* px=nullptr):
       pb{pb},n{n},px{px}{}
 
     const value_type& dereference()const noexcept
@@ -264,18 +264,18 @@ public:
       }
       else{
         if((px=px->next))return;
-        else goto check_bunch;
+        else goto check_group;
       }
         
       for(;;){
         if((px=pb->extra()))return;
-      check_bunch:
+      check_group:
         if((n=boost::core::countr_zero((unsigned int)(
           (++pb)->match_non_empty())))<N)return;
       }
     }
 
-    bunch     *pb=nullptr;
+    group     *pb=nullptr;
     int       n=0;
     node_type *px=nullptr;
   };
@@ -285,20 +285,20 @@ public:
 
   ~foa_unordered_nway_set()
   {
-    if(!bunches.empty()){
+    if(!groups.empty()){
      for(auto first=begin(),last=end();first!=last;)erase(first++);
     }
   }
   
   const_iterator begin()const noexcept
   {
-    auto pb=bunches.begin();
+    auto pb=groups.begin();
     const_iterator it=pb;
     if(!(pb->match_non_empty()&0x1u))++it;
     return it;
   }
   
-  const_iterator end()const noexcept{return bunches.end();}
+  const_iterator end()const noexcept{return groups.end();}
   size_type size()const noexcept{return size_;};
 
   auto insert(const T& x){return insert_impl(x);}
@@ -336,7 +336,7 @@ public:
   iterator find(const Key& x)const
   {
     auto hash=h(x);
-    auto pb=bunches.at(size_policy::position(hash,size_index)/N);
+    auto pb=groups.at(size_policy::position(hash,size_index)/N);
     return find(x,pb,hash);
   }
 
@@ -345,9 +345,9 @@ private:
   using node_allocator_type=typename alloc_traits::
     template rebind_alloc<node_type>;
   using node_alloc_traits=std::allocator_traits<node_allocator_type>;
-  using bunch_array_type=bunch_array<
+  using group_array_type=nway_group_array<
     T,
-    typename alloc_traits::template rebind_alloc<bunch>>;
+    typename alloc_traits::template rebind_alloc<group>>;
 
   // used only on rehash
   foa_unordered_nway_set(std::size_t n,node_allocator_type al):
@@ -389,13 +389,13 @@ private:
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
     auto hash=h(x);
-    auto pb=bunches.at(size_policy::position(hash,size_index)/N);
+    auto pb=groups.at(size_policy::position(hash,size_index)/N);
     auto it=find(x,pb,hash);
     if(it!=end())return {it,false};
         
     if(BOOST_UNLIKELY(size_+1>ml)){
       rehash(size_+1);
-      pb=bunches.at(size_policy::position(hash,size_index)/N);
+      pb=groups.at(size_policy::position(hash,size_index)/N);
     }
 
     return {unchecked_insert(std::forward<Value>(x),pb,hash),true};
@@ -410,7 +410,7 @@ private:
     foa_unordered_nway_set new_container{nc,al};
     std::size_t            num_tx=0;
     try{
-      for(auto& b:bunches){
+      for(auto& b:groups){
         auto mask=b.match_non_empty();
         auto n=std::size_t(boost::core::countr_zero((unsigned int)mask));
         while(n<N){
@@ -436,7 +436,7 @@ private:
       throw;
     }
     size_index=new_container.size_index;
-    bunches=std::move(new_container.bunches);
+    groups=std::move(new_container.groups);
     ml=max_load();   
   }
 
@@ -444,12 +444,12 @@ private:
   iterator unchecked_insert(Value&& x)
   {
     auto  hash=h(x);
-    auto  pb=bunches.at(size_policy::position(hash,size_index)/N);
+    auto  pb=groups.at(size_policy::position(hash,size_index)/N);
     return unchecked_insert(std::move(x),pb,hash);
   }
 
   template<typename Value>
-  iterator unchecked_insert(Value&& x,bunch* pb,std::size_t hash)
+  iterator unchecked_insert(Value&& x,group* pb,std::size_t hash)
   {
     auto n=boost::core::countr_zero((unsigned int)(pb->match_empty()));
     if(n<N){
@@ -468,7 +468,7 @@ private:
   }
 
   template<typename Key>
-  iterator find(const Key& x,bunch* pb,std::size_t hash)const
+  iterator find(const Key& x,group* pb,std::size_t hash)const
   {
     auto mask=pb->match(hash),
          n=boost::core::countr_zero((unsigned int)mask);
@@ -502,7 +502,7 @@ private:
   float               mlf=0.875f;
   std::size_t         size_=0;
   std::size_t         size_index=size_policy::size_index(size_);
-  bunch_array_type    bunches{size_policy::size(size_index),al};
+  group_array_type    groups{size_policy::size(size_index),al};
   size_type           ml=max_load();
 };
 
