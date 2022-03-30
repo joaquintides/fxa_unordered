@@ -292,6 +292,7 @@ int main()
     test<foa_fmod_unordered_coalesced_map>( "foa_fmod_unordered_coalesced_map" );
     test<foa_fmod_hcached_unordered_coalesced_map>( "foa_fmod_hcached_unordered_coalesced_map" );
     test<foa_fmod_unordered_nway_map>( "foa_fmod_unordered_nway_map" );
+    test<foa_fmod_unordered_nwayplus_map>( "foa_fmod_unordered_nwayplus_map" );
 
 #ifdef HAVE_ABSEIL
     test<absl_node_hash_map>( "absl::node_hash_map" );

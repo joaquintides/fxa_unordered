@@ -518,9 +518,505 @@ using foa_unordered_nway_map=foa_unordered_nway_set<
   Allocator,SizePolicy
 >;
 
+template<typename T>
+struct nwayplus_group
+{
+  static constexpr int N=16;
+  struct element
+  {
+    T* data(){return reinterpret_cast<T*>(&storage);}
+    T& value(){return *data();}
+
+  private:
+    std::aligned_storage_t<sizeof(T),alignof(T)> storage;
+  };
+
+#if __SSE2__
+
+  void set(std::size_t pos,std::size_t hash)
+  {
+    reinterpret_cast<unsigned char*>(&mask)[pos]=hash&0x7Fu;
+  }
+
+  void set_sentinel()
+  {
+    reinterpret_cast<unsigned char*>(&mask)[N-1]=sentinel_;
+  }
+
+  void reset(std::size_t pos)
+  {
+    assert(pos<N);
+    reinterpret_cast<unsigned char*>(&mask)[pos]=deleted_;
+  }
+
+  int match(std::size_t hash)const
+  {
+    auto m=_mm_set1_epi8(hash&0x7Fu);
+    return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
+  }
+
+  int match_empty()const
+  {
+    auto m=_mm_set1_epi8(empty_);
+    return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
+  }
+
+  int match_empty_or_deleted()const
+  {
+    auto m=_mm_set1_epi8(-1);
+    return _mm_movemask_epi8(_mm_cmpgt_epi8_fixed(m,mask));    
+  }
+
+  int match_occupied()const
+  {
+    return ~match_empty_or_deleted();
+  }
+
+  int match_really_occupied()const // exclusing sentinel
+  {
+    return ~_mm_movemask_epi8(mask);
+  }
+
+#else
+
+#error non-SSE2 code not written yet
+
+#endif /* __SSE2__ */
+
+  element& at(std::size_t n){return storage[n];}
+  nwayplus_group*& next(){return next_;}
+
+private:
+#if __SSE2__
+  // exact values as per Abseil rationale
+  static constexpr int8_t empty_=-128,
+                          deleted_=-2,
+                          sentinel_=-1;
+
+  //ripped from Abseil raw_hash_set.h
+  static __m128i _mm_cmpgt_epi8_fixed(__m128i a, __m128i b) {
+#if defined(__GNUC__) && !defined(__clang__)
+    if (std::is_unsigned<char>::value) {
+      const __m128i mask = _mm_set1_epi8(0x80);
+      const __m128i diff = _mm_subs_epi8(b, a);
+      return _mm_cmpeq_epi8(_mm_and_si128(diff, mask), mask);
+    }
+#endif
+    return _mm_cmpgt_epi8(a, b);
+  }
+
+
+  __m128i   mask=_mm_set1_epi8(empty_);
+#else
+  uint64_t  lowmask=0,himask=0;
+#endif /* __SSE2__ */
+
+  element        storage[N];
+  nwayplus_group *next_=nullptr;
+};
+
+template<typename T,typename Allocator>
+class nwayplus_group_array
+{
+  using group=nwayplus_group<T>;
+  static constexpr auto N=group::N;
+
+public:
+  static constexpr auto address_factor=0.86f;
+  static constexpr int  max_saturation=(int)(1+N*(1-address_factor));
+
+  nwayplus_group_array(std::size_t n,const Allocator& al):
+    address_size_{n/N+1},v{std::size_t(address_size_/address_factor),al}
+  {
+    v.back().set_sentinel();
+  }
+
+  nwayplus_group_array(nwayplus_group_array&&)=default;
+  nwayplus_group_array& operator=(nwayplus_group_array&&)=default;
+
+  auto begin()const{return const_cast<group*>(v.data());}
+  auto end()const{return const_cast<group*>(v.data()+v.size());}
+  auto at(std::size_t n)const{return const_cast<group*>(&v[n]);}
+
+  auto& back()const{return const_cast<group&>(v.back());}
+
+  // only in moved-from state when rehashing
+  bool empty()const{return v.empty();}
+
+  auto address_size()const{return address_size_;}
+
+  bool in_cellar(group* p)const
+  {
+    return std::size_t(p-&v.front())>=address_size_;
+  }
+
+  group* new_group_after(group* p)
+  {
+    if(boost::core::popcount((unsigned int)p->match_occupied())<max_saturation){
+      return p->next()=top;    
+    }
+    else{
+      if(top>=v.data()+address_size_)return p->next()=--top;
+    }
+
+    // probe after cellar exhaustion
+    // TODO: maybe better to start probing at start of chain
+    auto pr=make_prober(p);
+    while(!pr.get()->match_empty_or_deleted())pr.next();
+    return pr.get();
+  }
+
+  struct prober
+  {        
+    group* get()const noexcept{return data+n;}
+
+    void next()noexcept
+    {
+      for(;;){
+        n=(n+i)&pow2mask;
+        i+=1;
+        if(n<size)break;
+      }
+    }
+
+  private:
+    friend class nwayplus_group_array;
+
+    prober(group* data,std::size_t size,group* p):
+      data{data},size{size},n{(std::size_t)(p-data)}
+      {next();}
+
+    group       *data;
+    std::size_t size,
+                n,
+                i=1,
+                pow2mask=boost::core::bit_ceil(size)-1;
+  };
+
+  prober make_prober(group* p)const
+  {
+    return {const_cast<group*>(v.data()),v.size(),p};
+  }
+  
+private:
+  using group_allocator_type=std::allocator_traits<Allocator>::
+    template rebind_alloc<group>;
+
+  std::size_t                   address_size_;
+  std::vector<
+    group,group_allocator_type> v;
+  group                         *top=&v.back();
+};
+
+template<
+  typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
+  typename Allocator=std::allocator<T>,
+  typename SizePolicy=prime_size
+>
+class foa_unordered_nwayplus_set 
+{
+  using size_policy=SizePolicy;
+  using group=nwayplus_group<T>;
+  static constexpr auto N=group::N;
+
+public:
+  using key_type=T;
+  using value_type=T;
+  using size_type=std::size_t;
+  class const_iterator:public boost::iterator_facade<
+    const_iterator,const value_type,boost::forward_traversal_tag>
+  {
+  public:
+    const_iterator()=default;
+        
+  private:
+    friend class foa_unordered_nwayplus_set;
+    friend class boost::iterator_core_access;
+
+    const_iterator(group* p,int n=0):
+      p{p},n{n}{}
+
+    const value_type& dereference()const noexcept
+    {
+      return p->at(n).value();
+    }
+
+    bool equal(const const_iterator& x)const noexcept
+    {
+      return p==x.p&&n==x.n;
+    }
+
+    void increment()noexcept
+    {
+      if((n=boost::core::countr_zero((unsigned int)(
+          p->match_occupied()&reset_first_bits(n+1))))<N)return;
+      while((n=boost::core::countr_zero((unsigned int)(
+             (++p)->match_occupied())))>=N);
+    }
+
+    group     *p=nullptr;
+    int       n=0;
+  };
+  using iterator=const_iterator;
+
+  foa_unordered_nwayplus_set()=default;
+
+  ~foa_unordered_nwayplus_set()
+  {
+    if(!groups.empty()){
+     for(auto first=begin(),last=end();first!=last;)erase(first++);
+    }
+  }
+  
+  const_iterator begin()const noexcept
+  {
+    auto p=groups.begin();
+    const_iterator it=p;
+    if(!(p->match_occupied())&0x1u)++it;
+    return it;
+  }
+  
+  const_iterator end()const noexcept{return {&groups.back(),N-1};}
+  size_type size()const noexcept{return size_;};
+
+  auto insert(const T& x){return insert_impl(x);}
+  auto insert(T&& x){return insert_impl(std::move(x));}
+
+  void erase(const_iterator pos)
+  {
+    auto [p,n]=pos;
+    p->reset(n);
+  }
+
+  template<typename Key>
+  size_type erase(const Key& x)
+  {
+    auto it=find(x);
+    if(it!=end()){
+      erase(it);
+      return 1;
+    }
+    else return 0;
+  }
+  
+  template<typename Key>
+  iterator find(const Key& x)const
+  {
+    auto hash=h(x);
+    auto p=groups.at(size_policy::position(hash,size_index)/N);
+    auto cp=p;
+    do{
+      auto mask=cp->match(hash),
+           n=boost::core::countr_zero((unsigned int)mask);
+      while(n<N){
+        if(BOOST_LIKELY(pred(x,cp->at(n).value())))return {cp,n};
+        mask&=mask-1;
+        n=boost::core::countr_zero((unsigned int)mask);
+      }
+
+      if(cp->match_empty())return end();
+    }while((cp=cp->next()));
+
+    // chain traversed, go probing
+    auto pr=groups.make_prober(p);
+    for(;;){
+      auto cp=pr.get();
+      auto mask=cp->match(hash),
+           n=boost::core::countr_zero((unsigned int)mask);
+      while(n<N){
+        if(BOOST_LIKELY(pred(x,cp->at(n).value())))return {cp,n};
+        mask&=mask-1;
+        n=boost::core::countr_zero((unsigned int)mask);
+      }
+      if(cp->match_empty())return end();
+      pr.next();
+    }
+  }
+
+private:
+  using alloc_traits=std::allocator_traits<Allocator>;
+  using group_array_type=nwayplus_group_array<
+    T,
+    typename alloc_traits::template rebind_alloc<group>>;
+
+  // used only on rehash
+  foa_unordered_nwayplus_set(std::size_t n,Allocator al):
+    al{al},size_{n}{}
+
+  template<typename Value>
+  void construct_element(Value&& x,value_type* p)
+  {
+    alloc_traits::construct(al,p,std::forward<Value>(x));
+  }
+
+  void destroy_element(value_type* p)
+  {
+    alloc_traits::destroy(al,p);
+  }
+
+  template<typename Value>
+  std::pair<iterator,bool> insert_impl(Value&& x)
+  {
+    auto hash=h(x);
+    auto p=groups.at(size_policy::position(hash,size_index)/N);
+    auto [ita,it]=find_match_or_available(x,p,hash);
+    if(it!=end())return {it,false};
+
+    if(BOOST_UNLIKELY(size_+1>ml)){
+      rehash(size_+1);
+      p=groups.at(size_policy::position(hash,size_index)/N);
+      ita={};
+    }
+
+    auto [pa,na]=ita;
+    if(pa){
+      construct_element(std::forward<Value>(x),pa->at(na).data());  
+      pa->set(na,hash);
+      ++size_;
+      return {ita,true};
+    }
+    else return {unchecked_insert(std::forward<Value>(x),p,hash),true};
+  }
+
+  void rehash(size_type new_size)
+  {
+    std::size_t nc =(std::numeric_limits<std::size_t>::max)();
+    float       fnc=1.0f+static_cast<float>(new_size)/mlf;
+    if(nc>fnc)nc=static_cast<std::size_t>(fnc);
+
+    foa_unordered_nwayplus_set new_container{nc,al};
+    std::size_t                num_tx=0;
+    try{
+      for(auto& b:groups){
+        auto mask=b.match_really_occupied();
+        auto n=std::size_t(boost::core::countr_zero((unsigned int)mask));
+        while(n<N){
+          auto& x=b.at(n).value();
+          new_container.unchecked_insert(std::move(x));
+          destroy_element(&x);
+          b.reset(n);
+          ++num_tx;
+          mask&=mask-1;
+          n=boost::core::countr_zero((unsigned int)mask);
+        }
+      }
+    }
+    catch(...){
+      size_-=num_tx;
+      throw;
+    }
+    size_index=new_container.size_index;
+    groups=std::move(new_container.groups);
+    ml=max_load();   
+  }
+
+  template<typename Value>
+  iterator unchecked_insert(Value&& x)
+  {
+    auto hash=h(x);
+    auto p=groups.at(size_policy::position(hash,size_index)/N);
+    return unchecked_insert(std::move(x),p,hash);
+  }
+
+  template<typename Value>
+  iterator unchecked_insert(Value&& x,group* p,std::size_t hash)
+  {
+    int mask;
+    while(!(mask=p->match_empty_or_deleted())){
+      if(!(p=p->next())){
+        p=groups.new_group_after(p);
+      }
+    }
+      
+    auto n=boost::core::countr_zero((unsigned int)mask);
+    construct_element(std::forward<Value>(x),p->at(n).data());
+    p->set(n,hash);
+    ++size_;
+    return {p,n};
+  }
+
+  template<typename Key>
+  std::pair<iterator,iterator> find_match_or_available(
+    const Key& x,group* p,std::size_t hash)const
+  {
+    group* pa=nullptr;
+    int    na=0;
+    auto   cp=p;
+    do{
+      if(!pa){
+        if(auto mask=cp->match_empty_or_deleted()){
+          pa=cp;
+          na=boost::core::countr_zero((unsigned int)mask);
+        }
+      }
+      auto mask=cp->match(hash),
+           n=boost::core::countr_zero((unsigned int)mask);
+      while(n<N){
+        if(BOOST_LIKELY(pred(x,cp->at(n).value())))return {{pa,na},{cp,n}};
+        mask&=mask-1;
+        n=boost::core::countr_zero((unsigned int)mask);
+      }
+
+      if(cp->match_empty())return {{pa,na},end()};
+    }while((cp=cp->next()));
+
+    // chain traversed, go probing
+    auto pr=groups.make_prober(p);
+    for(;;){
+      auto cp=pr.get();
+      if(!pa){
+        if(auto mask=cp->match_empty_or_deleted()){
+          pa=cp;
+          na=boost::core::countr_zero((unsigned int)mask);
+        }
+      }        
+      auto mask=cp->match(hash),
+           n=boost::core::countr_zero((unsigned int)mask);
+      while(n<N){
+        if(BOOST_LIKELY(pred(x,cp->at(n).value())))return {{pa,na},{cp,n}};
+        mask&=mask-1;
+        n=boost::core::countr_zero((unsigned int)mask);
+      }
+      if(cp->match_empty())return {{pa,na},end()};
+      pr.next();
+    }
+  }
+
+  size_type max_load()const
+  {
+    float fml=mlf*static_cast<float>(size_policy::size(size_index));
+    auto res=(std::numeric_limits<size_type>::max)();
+    if(res>fml)res=static_cast<size_type>(fml);
+    return res;
+  }  
+
+  Hash             h;
+  Pred             pred;
+  Allocator        al;
+  float            mlf=0.875f;
+  std::size_t      size_=0;
+  std::size_t      size_index=size_policy::size_index(size_);
+  group_array_type groups{size_policy::size(size_index),al};
+  size_type        ml=max_load();
+};
+
+template<
+  typename Key,typename Value,
+  typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
+  typename Allocator=std::allocator<map_value_adaptor<Key,Value>>,
+  typename SizePolicy=prime_size
+>
+using foa_unordered_nwayplus_map=foa_unordered_nwayplus_set<
+  map_value_adaptor<Key,Value>,
+  map_hash_adaptor<Hash>,map_pred_adaptor<Pred>,
+  Allocator,SizePolicy
+>;
+
 } // namespace fxa_unordered
 
 using fxa_unordered::foa_unordered_nway_set;
 using fxa_unordered::foa_unordered_nway_map;
+using fxa_unordered::foa_unordered_nwayplus_set;
+using fxa_unordered::foa_unordered_nwayplus_map;
 
 #endif
