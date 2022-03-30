@@ -699,7 +699,7 @@ public:
   }
   
 private:
-  using group_allocator_type=std::allocator_traits<Allocator>::
+  using group_allocator_type=typename std::allocator_traits<Allocator>::
     template rebind_alloc<group>;
 
   std::size_t                   address_size_;
