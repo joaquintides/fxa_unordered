@@ -483,6 +483,9 @@ template<class K, class V> using foa_fmod_unordered_coalesced_map_fnv1a =
 template<class K, class V> using foa_fmod_hcached_unordered_coalesced_map_fnv1a =
   foa_fmod_hcached_unordered_coalesced_map<K, V, fnv1a_hash>;
 
+template<class K, class V> using foa_fmod_unordered_nway_map_fnv1a =
+  foa_fmod_unordered_nway_map<K, V, fnv1a_hash>;
+
 template<class K, class V> using foa_fmod_unordered_nwayplus_map_fnv1a =
   foa_fmod_unordered_nwayplus_map<K, V, fnv1a_hash>;
 
