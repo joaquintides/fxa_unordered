@@ -134,7 +134,7 @@ struct nway_group
 
   int match_non_empty()const
   {
-    return ~match_empty();
+    return (~match_empty())&0xFFFFFFul;
   }
 
   int match_empty()const
