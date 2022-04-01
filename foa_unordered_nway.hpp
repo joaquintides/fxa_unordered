@@ -134,7 +134,7 @@ struct nway_group
 
   int match_non_empty()const
   {
-    return ~match_empty();
+    return (~match_empty())&0xFFFFul;
   }
 
   int match_empty()const
@@ -170,7 +170,7 @@ struct nway_group
     return himask>>48;  
   }
 
-  std::size_t match_empty()const{return ~match_non_empty();}
+  std::size_t match_empty()const{return (~match_non_empty())&0xFFFFul;}
   
 #endif /* __SSE2__ */
 
@@ -563,18 +563,18 @@ struct nwayplus_group
 
   int match_empty_or_deleted()const
   {
-    auto m=_mm_set1_epi8(-1);
+    auto m=_mm_set1_epi8(deleted_);
     return _mm_movemask_epi8(_mm_cmpgt_epi8_fixed(m,mask));    
   }
 
   int match_occupied()const
   {
-    return ~match_empty_or_deleted();
+    return (~match_empty_or_deleted())&0xFFFFul;
   }
 
-  int match_really_occupied()const // exclusing sentinel
+  int match_really_occupied()const // excluding sentinel
   {
-    return ~_mm_movemask_epi8(mask);
+    return (~_mm_movemask_epi8(mask))&0xFFFFul;
   }
 
 #else
@@ -623,7 +623,7 @@ class nwayplus_group_array
 
 public:
   static constexpr auto address_factor=0.86f;
-  static constexpr int  max_saturation=(int)(1+N*(1-address_factor));
+  static constexpr int  max_saturation=4; //(int)(1+N*(1-address_factor));
 
   nwayplus_group_array(std::size_t n,const Allocator& al):
     address_size_{n/N+1},v{std::size_t(address_size_/address_factor),al}
@@ -650,18 +650,20 @@ public:
     return std::size_t(p-&v.front())>=address_size_;
   }
 
-  group* new_group_after(group* p)
+  group* new_group_after(group* first,group* p)
   {
-    if(boost::core::popcount((unsigned int)p->match_occupied())<max_saturation){
-      return p->next()=top;    
-    }
-    else{
-      if(top>=v.data()+address_size_)return p->next()=--top;
+    if(p->next()!=p){ // open-ended chain, try cellar
+      assert(!p->next());
+      if(boost::core::popcount((unsigned int)
+        top->match_occupied())<max_saturation){
+        return p->next()=top;    
+      }
+      else if(top>v.data()+address_size_)return p->next()=--top;
+      else p->next()=p; // close chain 
     }
 
     // probe after cellar exhaustion
-    // TODO: maybe better to start probing at start of chain
-    auto pr=make_prober(p);
+    auto pr=make_prober(first);
     while(!pr.get()->match_empty_or_deleted())pr.next();
     return pr.get();
   }
@@ -695,9 +697,54 @@ public:
 
   prober make_prober(group* p)const
   {
+    assert(!theres_remaining_cellar());
     return {const_cast<group*>(v.data()),v.size(),p};
   }
-  
+
+  bool theres_remaining_cellar()const
+  {
+    return top>v.data()+address_size_;
+  }
+
+#ifdef NWAYPLUS_STATUS
+  void status()
+  {
+    int occupied_groups=0,
+        occupied_address_groups=0,
+        free_groups=0;
+    long long int occupancy_used_cellar=0,
+                  occupancy_used_address=0;
+
+    for(auto &g:*this){
+      if(g.match_occupied()){
+        ++occupied_groups;
+        if(&g<v.data()+address_size_)++occupied_address_groups;
+      }
+      else ++free_groups;
+    }
+    for(auto p=top;p<v.data()+v.size();++p){
+      assert(boost::core::popcount((unsigned int)p->match_occupied())<=N);
+      occupancy_used_cellar+=boost::core::popcount((unsigned int)
+        p->match_occupied());
+    }
+    for(auto p=v.data();p<v.data()+address_size_;++p){
+      assert(boost::core::popcount((unsigned int)p->match_occupied())<=N);
+      occupancy_used_address+=boost::core::popcount((unsigned int)
+        p->match_occupied());
+    }      
+    std::cout<<"\n"
+      <<"size: "<<v.size()<<"\n"
+      <<"address size: "<<address_size_<<"\n"
+      <<"occupied groups: "<<occupied_groups<<"\n"
+      <<"occupied address groups: "<<occupied_address_groups<<"\n"
+      <<"free groups: "<<free_groups<<"\n"
+      <<"cellar remaining: "<<100.0*(top-(v.data()+address_size_))/(v.size()-address_size_)<<"%\n"
+      <<"occup. used cellar: "<<(double)occupancy_used_cellar/(v.data()+v.size()-top)<<"\n"
+      <<"occup. used address: "<<(double)occupancy_used_address/occupied_address_groups<<"\n"
+      ;
+  }
+#endif /* NWAYPLUS_STATUS */
+
 private:
   using group_allocator_type=typename std::allocator_traits<Allocator>::
     template rebind_alloc<group>;
@@ -728,13 +775,15 @@ public:
   {
   public:
     const_iterator()=default;
-        
+
+    explicit operator bool()const noexcept{return p;}
+    bool operator!()const noexcept{return !p;}
+
   private:
     friend class foa_unordered_nwayplus_set;
     friend class boost::iterator_core_access;
 
-    const_iterator(group* p,int n=0):
-      p{p},n{n}{}
+    const_iterator(group* p,int n=0):p{p},n{n}{}
 
     const value_type& dereference()const noexcept
     {
@@ -785,7 +834,9 @@ public:
   void erase(const_iterator pos)
   {
     auto [p,n]=pos;
+    destroy_element(p->at(n).data());
     p->reset(n);
+    --size_;
   }
 
   template<typename Key>
@@ -803,35 +854,26 @@ public:
   iterator find(const Key& x)const
   {
     auto hash=h(x);
-    auto p=groups.at(size_policy::position(hash,size_index)/N);
-    auto cp=p;
-    do{
-      auto mask=cp->match(hash),
-           n=boost::core::countr_zero((unsigned int)mask);
-      while(n<N){
-        if(BOOST_LIKELY(pred(x,cp->at(n).value())))return {cp,n};
-        mask&=mask-1;
-        n=boost::core::countr_zero((unsigned int)mask);
-      }
+    auto first=groups.at(size_policy::position(hash,size_index)/N);
+    for(auto p=first;;){
+      if(auto n=find(x,p,hash);n<N)return {p,n};
+        
+      auto next=p->next();
+      if(!next)       return end();
+      else if(next==p)break; // chain closed, go probing
+      else            p=next;
+    };
 
-      if(cp->match_empty())return end();
-    }while((cp=cp->next()));
-
-    // chain traversed, go probing
-    auto pr=groups.make_prober(p);
-    for(;;){
-      auto cp=pr.get();
-      auto mask=cp->match(hash),
-           n=boost::core::countr_zero((unsigned int)mask);
-      while(n<N){
-        if(BOOST_LIKELY(pred(x,cp->at(n).value())))return {cp,n};
-        mask&=mask-1;
-        n=boost::core::countr_zero((unsigned int)mask);
-      }
-      if(cp->match_empty())return end();
-      pr.next();
+    for(auto pr=groups.make_prober(first);;pr.next()){
+      auto p=pr.get();
+      if(auto n=find(x,p,hash);n<N)return {p,n};
+      if(p->match_empty())return end();
     }
   }
+
+#ifdef NWAYPLUS_STATUS
+  void status(){groups.status();}
+#endif
 
 private:
   using alloc_traits=std::allocator_traits<Allocator>;
@@ -854,28 +896,41 @@ private:
     alloc_traits::destroy(al,p);
   }
 
+  template<typename Key>
+  int find(const Key& x,group* p,std::size_t hash)const
+  {
+    auto mask=p->match(hash);
+    while(mask){
+      auto n=boost::core::countr_zero((unsigned int)mask);
+      if(BOOST_LIKELY(pred(x,p->at(n).value())))return n;
+      mask&=mask-1;
+    }
+    return N;
+  }
+
   template<typename Value>
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
     auto hash=h(x);
-    auto p=groups.at(size_policy::position(hash,size_index)/N);
-    auto [ita,it]=find_match_or_available(x,p,hash);
+    auto first=groups.at(size_policy::position(hash,size_index)/N);
+    auto [it,ita,last]=find_match_available_last(x,first,hash);
     if(it!=end())return {it,false};
 
     if(BOOST_UNLIKELY(size_+1>ml)){
       rehash(size_+1);
-      p=groups.at(size_policy::position(hash,size_index)/N);
-      ita={};
+      return {unchecked_insert(std::forward<Value>(x),hash),true};
     }
 
-    auto [pa,na]=ita;
-    if(pa){
-      construct_element(std::forward<Value>(x),pa->at(na).data());  
-      pa->set(na,hash);
-      ++size_;
-      return {ita,true};
+    auto& [pa,na]=ita;
+    if(!ita){
+      assert(last);
+      pa=groups.new_group_after(first,last);
+      na=boost::core::countr_zero((unsigned int)pa->match_empty_or_deleted());        
     }
-    else return {unchecked_insert(std::forward<Value>(x),p,hash),true};
+    construct_element(std::forward<Value>(x),pa->at(na).data());  
+    pa->set(na,hash);
+    ++size_;
+    return {ita,true};
   }
 
   void rehash(size_type new_size)
@@ -887,14 +942,14 @@ private:
     foa_unordered_nwayplus_set new_container{nc,al};
     std::size_t                num_tx=0;
     try{
-      for(auto& b:groups){
-        auto mask=b.match_really_occupied();
+      for(auto& g:groups){
+        auto mask=g.match_really_occupied();
         auto n=std::size_t(boost::core::countr_zero((unsigned int)mask));
         while(n<N){
-          auto& x=b.at(n).value();
+          auto& x=g.at(n).value();
           new_container.unchecked_insert(std::move(x));
           destroy_element(&x);
-          b.reset(n);
+          g.reset(n);
           ++num_tx;
           mask&=mask-1;
           n=boost::core::countr_zero((unsigned int)mask);
@@ -913,20 +968,25 @@ private:
   template<typename Value>
   iterator unchecked_insert(Value&& x)
   {
-    auto hash=h(x);
-    auto p=groups.at(size_policy::position(hash,size_index)/N);
-    return unchecked_insert(std::move(x),p,hash);
+    return unchecked_insert(std::forward<Value>(x),h(x));
   }
 
   template<typename Value>
-  iterator unchecked_insert(Value&& x,group* p,std::size_t hash)
+  iterator unchecked_insert(Value&& x,std::size_t hash)
   {
-    int mask;
-    while(!(mask=p->match_empty_or_deleted())){
-      if(!(p=p->next())){
-        p=groups.new_group_after(p);
-      }
-    }
+    auto first=groups.at(size_policy::position(hash,size_index)/N),
+         p=first;
+
+    // unchecked_insert only called just after rehashing, so
+    // there are no deleted elements and we can go till end of chain
+    while(p->next()&&p->next()!=p)p=p->next();
+
+    // if chain's not closed see occupancy, otherwise go probing
+    int mask=!p->next()?p->match_empty_or_deleted():0;
+    if(!mask){
+        p=groups.new_group_after(first,p);
+        mask=p->match_empty_or_deleted();
+    }  
       
     auto n=boost::core::countr_zero((unsigned int)mask);
     construct_element(std::forward<Value>(x),p->at(n).data());
@@ -935,50 +995,41 @@ private:
     return {p,n};
   }
 
-  template<typename Key>
-  std::pair<iterator,iterator> find_match_or_available(
-    const Key& x,group* p,std::size_t hash)const
+  struct find_match_available_last_return_type
   {
-    group* pa=nullptr;
-    int    na=0;
-    auto   cp=p;
-    do{
-      if(!pa){
-        if(auto mask=cp->match_empty_or_deleted()){
-          pa=cp;
-          na=boost::core::countr_zero((unsigned int)mask);
-        }
-      }
-      auto mask=cp->match(hash),
-           n=boost::core::countr_zero((unsigned int)mask);
-      while(n<N){
-        if(BOOST_LIKELY(pred(x,cp->at(n).value())))return {{pa,na},{cp,n}};
-        mask&=mask-1;
-        n=boost::core::countr_zero((unsigned int)mask);
-      }
+    iterator it,ita={};
+    group    *last=nullptr;
+  };
 
-      if(cp->match_empty())return {{pa,na},end()};
-    }while((cp=cp->next()));
-
-    // chain traversed, go probing
-    auto pr=groups.make_prober(p);
-    for(;;){
-      auto cp=pr.get();
-      if(!pa){
-        if(auto mask=cp->match_empty_or_deleted()){
-          pa=cp;
-          na=boost::core::countr_zero((unsigned int)mask);
+  template<typename Key>
+  find_match_available_last_return_type
+  find_match_available_last(const Key& x,group* first,std::size_t hash)const
+  {
+    iterator ita;
+    auto     update_ita=[&](group* p)
+    {
+      if(!ita){
+        if(auto mask=p->match_empty_or_deleted()){
+          ita={p,boost::core::countr_zero((unsigned int)mask)};
         }
       }        
-      auto mask=cp->match(hash),
-           n=boost::core::countr_zero((unsigned int)mask);
-      while(n<N){
-        if(BOOST_LIKELY(pred(x,cp->at(n).value())))return {{pa,na},{cp,n}};
-        mask&=mask-1;
-        n=boost::core::countr_zero((unsigned int)mask);
-      }
-      if(cp->match_empty())return {{pa,na},end()};
-      pr.next();
+    };
+      
+    for(auto p=first;;){
+      if(auto n=find(x,p,hash);n<N)return {{p,n}};
+      update_ita(p); 
+        
+      auto next=p->next();
+      if(!next)       return {end(),ita,p};
+      else if(next==p)break; // chain closed, go probing
+      else            p=next;
+    }
+
+    for(auto pr=groups.make_prober(first);;pr.next()){
+      auto p=pr.get();
+      if(auto n=find(x,p,hash);n<N)return {{p,n}};
+      update_ita(p); 
+      if(p->match_empty())return {end(),ita}; // ita must be non-null
     }
   }
 
@@ -993,7 +1044,7 @@ private:
   Hash             h;
   Pred             pred;
   Allocator        al;
-  float            mlf=0.875f;
+  float            mlf=1.0f;
   std::size_t      size_=0;
   std::size_t      size_index=size_policy::size_index(size_);
   group_array_type groups{size_policy::size(size_index),al};
