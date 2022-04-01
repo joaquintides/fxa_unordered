@@ -285,7 +285,7 @@ using foa_pow2_fib_unordered_nwayplus_map =
   foa_unordered_nwayplus_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
-    fxa_unordered::prime_fmod_size>;
+    fxa_unordered::pow2_fib_size>;
     
 // fnv1a_hash
 
