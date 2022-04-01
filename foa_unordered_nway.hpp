@@ -20,6 +20,7 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <tuple>
 #include <type_traits>
 #include <vector>
 #include "fxa_common.hpp"
@@ -655,21 +656,22 @@ public:
     return std::size_t(p-&v.front())>=address_size_;
   }
 
-  group* new_group_after(group* first,group* p)
+  std::pair<group*,int> new_group_after(group* first,group* p)
   {
     assert(!p->next()&&!p->match_empty_or_deleted());
-    if(boost::core::popcount((unsigned int)
-      top->match_occupied())<max_saturation){
-      return p->next()=top;    
+    if(auto n=boost::core::countr_zero((unsigned int)
+         top->match_empty_or_deleted());n<max_saturation){
+      return {p->next()=top,n};
     }
-    else if(top>v.data()+address_size_)return p->next()=--top;
+    else if(top>v.data()+address_size_)return {p->next()=--top,0};
     
     p->next()=p; // close chain 
   
     // probe after cellar exhaustion
     auto pr=make_prober(first);
-    while(!pr.get()->match_empty_or_deleted())pr.next();
-    return pr.get();
+    int  mask;
+    while(!(mask=pr.get()->match_empty_or_deleted()))pr.next();
+    return {pr.get(),boost::core::countr_zero((unsigned int)mask)};
   }
 
   struct prober
@@ -928,7 +930,7 @@ private:
     auto& [pa,na]=ita;
     if(!ita){
       assert(last);
-      pa=groups.new_group_after(first,last);
+      std::tie(pa,na)=groups.new_group_after(first,last);
       na=boost::core::countr_zero((unsigned int)pa->match_empty_or_deleted());        
     }
     construct_element(std::forward<Value>(x),pa->at(na).data());  
@@ -986,13 +988,14 @@ private:
     while(p->next()&&p->next()!=p)p=p->next();
 
     // if chain's not closed see occupancy, otherwise go probing
-    int mask=!p->next()?p->match_empty_or_deleted():0;
-    if(!mask){
-        p=groups.new_group_after(first,p);
-        mask=p->match_empty_or_deleted();
+    int mask,n;
+    if(!p->next()&&(mask=p->match_empty_or_deleted())){
+      n=boost::core::countr_zero((unsigned int)mask);
+    }
+    else{
+      std::tie(p,n)=groups.new_group_after(first,p);
     }  
       
-    auto n=boost::core::countr_zero((unsigned int)mask);
     construct_element(std::forward<Value>(x),p->at(n).data());
     p->set(n,hash);
     ++size_;
