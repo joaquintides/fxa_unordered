@@ -170,7 +170,7 @@ struct nway_group
     return himask>>48;  
   }
 
-  std::size_t match_empty()const{return ~match_non_empty();}
+  std::size_t match_empty()const{return (~match_non_empty())&0xFFFFFFul;}
   
 #endif /* __SSE2__ */
 
