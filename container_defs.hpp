@@ -274,11 +274,11 @@ using foa_fmod_hcached_unordered_coalesced_map =
     fxa_unordered::hcached_coalesced_set_nodes>;
 
 template<class K, class V, class H=boost::hash<K>>
-using foa_fmod_unordered_nway_map =
+using foa_pow2_fib_unordered_nway_map =
   foa_unordered_nway_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
-    fxa_unordered::prime_fmod_size>;
+    fxa_unordered::pow2_fib_size>;
 
 // fnv1a_hash
 
@@ -476,8 +476,8 @@ template<class K, class V> using foa_fmod_unordered_coalesced_map_fnv1a =
 template<class K, class V> using foa_fmod_hcached_unordered_coalesced_map_fnv1a =
   foa_fmod_hcached_unordered_coalesced_map<K, V, fnv1a_hash>;
 
-template<class K, class V> using foa_fmod_unordered_nway_map_fnv1a =
-  foa_fmod_unordered_nway_map<K, V, fnv1a_hash>;
+template<class K, class V> using foa_pow2_fib_unordered_nway_map_fnv1a =
+  foa_pow2_fib_unordered_nway_map<K, V, fnv1a_hash>;
 
 #ifdef HAVE_ABSEIL
 
