@@ -657,16 +657,15 @@ public:
 
   group* new_group_after(group* first,group* p)
   {
-    if(p->next()!=p){ // open-ended chain, try cellar
-      assert(!p->next());
-      if(boost::core::popcount((unsigned int)
-        top->match_occupied())<max_saturation){
-        return p->next()=top;    
-      }
-      else if(top>v.data()+address_size_)return p->next()=--top;
-      else p->next()=p; // close chain 
+    assert(!p->next()&&!p->match_empty_or_deleted());
+    if(boost::core::popcount((unsigned int)
+      top->match_occupied())<max_saturation){
+      return p->next()=top;    
     }
-
+    else if(top>v.data()+address_size_)return p->next()=--top;
+    
+    p->next()=p; // close chain 
+  
     // probe after cellar exhaustion
     auto pr=make_prober(first);
     while(!pr.get()->match_empty_or_deleted())pr.next();
