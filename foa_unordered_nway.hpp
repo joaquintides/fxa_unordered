@@ -931,7 +931,6 @@ private:
     if(!ita){
       assert(last);
       std::tie(pa,na)=groups.new_group_after(first,last);
-      na=boost::core::countr_zero((unsigned int)pa->match_empty_or_deleted());        
     }
     construct_element(std::forward<Value>(x),pa->at(na).data());  
     pa->set(na,hash);
