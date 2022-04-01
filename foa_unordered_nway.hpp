@@ -25,7 +25,12 @@
 #include "fxa_common.hpp"
 
 #if __SSE2__
-#include <immintrin.h>
+#include <emmintrin.h>
+#endif
+
+#if defined(__SSE2__) || \
+    defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)
+#define FXA_UNORDERED_SSE2
 #endif
 
 namespace fxa_unordered{
@@ -113,7 +118,7 @@ struct nway_group
     node_type *next=nullptr;
   };
 
-#if __SSE2__
+#ifdef FXA_UNORDERED_SSE2
 
   void set(std::size_t pos,std::size_t hash)
   {
@@ -172,13 +177,13 @@ struct nway_group
 
   std::size_t match_empty()const{return (~match_non_empty())&0xFFFFul;}
   
-#endif /* __SSE2__ */
+#endif /* FXA_UNORDERED_SSE2 */
 
   element& at(std::size_t n){return storage[n];}
   node_type*& extra(){return extra_;}
 
 private:
-#if __SSE2__
+#ifdef FXA_UNORDERED_SSE2
   __m128i   mask=_mm_set1_epi8(0);
 #else
   uint64_t  lowmask=0,himask=0;
@@ -531,7 +536,7 @@ struct nwayplus_group
     std::aligned_storage_t<sizeof(T),alignof(T)> storage;
   };
 
-#if __SSE2__
+#ifdef FXA_UNORDERED_SSE2
 
   void set(std::size_t pos,std::size_t hash)
   {
@@ -581,13 +586,13 @@ struct nwayplus_group
 
 #error non-SSE2 code not written yet
 
-#endif /* __SSE2__ */
+#endif /* FXA_UNORDERED_SSE2 */
 
   element& at(std::size_t n){return storage[n];}
   nwayplus_group*& next(){return next_;}
 
 private:
-#if __SSE2__
+#ifdef FXA_UNORDERED_SSE2
   // exact values as per Abseil rationale
   static constexpr int8_t empty_=-128,
                           deleted_=-2,
@@ -609,7 +614,7 @@ private:
   __m128i   mask=_mm_set1_epi8(empty_);
 #else
   uint64_t  lowmask=0,himask=0;
-#endif /* __SSE2__ */
+#endif /* FXA_UNORDERED_SSE2 */
 
   element        storage[N];
   nwayplus_group *next_=nullptr;
