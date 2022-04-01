@@ -668,10 +668,11 @@ public:
     p->next()=p; // close chain 
   
     // probe after cellar exhaustion
-    auto pr=make_prober(first);
-    int  mask;
-    while(!(mask=pr.get()->match_empty_or_deleted()))pr.next();
-    return {pr.get(),boost::core::countr_zero((unsigned int)mask)};
+    for(auto pr=make_prober(first);;pr.next()){
+      if(auto mask=pr.get()->match_empty_or_deleted()){
+        return {pr.get(),boost::core::countr_zero((unsigned int)mask)};
+      }
+    }
   }
 
   struct prober
