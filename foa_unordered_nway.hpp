@@ -569,7 +569,7 @@ struct nwayplus_group
 
   int match_empty_or_deleted()const
   {
-    auto m=_mm_set1_epi8(deleted_);
+    auto m=_mm_set1_epi8(sentinel_);
     return _mm_movemask_epi8(_mm_cmpgt_epi8_fixed(m,mask));    
   }
 
@@ -828,7 +828,7 @@ public:
   {
     auto p=groups.begin();
     const_iterator it=p;
-    if(!(p->match_occupied())&0x1u)++it;
+    if(!(p->match_occupied()&0x1u))++it;
     return it;
   }
   
