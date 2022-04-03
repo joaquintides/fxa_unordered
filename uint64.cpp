@@ -297,6 +297,7 @@ int main()
     test<foa_fmod_unordered_coalesced_map>( "foa_fmod_unordered_coalesced_map" );
     test<foa_fmod_hcached_unordered_coalesced_map>( "foa_fmod_hcached_unordered_coalesced_map" );
     test<foa_pow2_fib_unordered_nway_map>( "foa_pow2_fib_unordered_nway_map" );
+    test<foa_fmod_unordered_nwayplus_map>( "foa_fmod_unordered_nwayplus_map" );
     test<foa_pow2_fib_unordered_nwayplus_map>( "foa_pow2_fib_unordered_nwayplus_map" );
 
 #ifdef HAVE_ABSEIL

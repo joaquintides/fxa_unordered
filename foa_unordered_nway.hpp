@@ -663,7 +663,7 @@ public:
 
   template<typename Allocator>
   coalesced_group_allocator(std::size_t n,const Allocator& al):
-    address_size_{n/N+1},v{std::size_t(address_size_/address_factor),al}
+    address_size_{n},v{std::size_t(address_size_/address_factor),al}
   {
     top->set_sentinel();
   }
@@ -955,7 +955,7 @@ private:
 
   group_iterator group_for(std::size_t hash)const
   {
-    return groups.at(size_policy::position(hash>>3,size_index)/N);
+    return groups.at(size_policy::position(hash,group_size_index));
   }
 
   template<typename Key>
@@ -1021,7 +1021,7 @@ private:
       size_-=num_tx;
       throw;
     }
-    size_index=new_container.size_index;
+    group_size_index=new_container.group_size_index;
     groups=std::move(new_container.groups);
     ml=max_load();   
   }
@@ -1100,7 +1100,7 @@ private:
 
   size_type max_load()const
   {
-    float fml=mlf*static_cast<float>(size_policy::size(size_index));
+    float fml=mlf*static_cast<float>(size_policy::size(group_size_index)*N);
     auto res=(std::numeric_limits<size_type>::max)();
     if(res>fml)res=static_cast<size_type>(fml);
     return res;
@@ -1111,8 +1111,8 @@ private:
   Allocator       al;
   float           mlf=1.0f;
   std::size_t     size_=0;
-  std::size_t     size_index=size_policy::size_index(size_);
-  group_allocator groups{size_policy::size(size_index),al};
+  std::size_t     group_size_index=size_policy::size_index(size_/N+1);
+  group_allocator groups{size_policy::size(group_size_index),al};
   size_type       ml=max_load();
 };
 
