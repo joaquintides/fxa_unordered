@@ -720,12 +720,16 @@ public:
         occupied_address_groups=0,
         free_groups=0;
     long long int occupancy_used_cellar=0,
-                  occupancy_used_address=0;
+                  occupancy_used_address=0,
+                  chain_length=0;
 
     for(auto &g:*this){
       if(g.match_occupied()){
         ++occupied_groups;
-        if(&g<v.data()+address_size_)++occupied_address_groups;
+        if(&g<v.data()+address_size_){
+          ++occupied_address_groups;
+          for(auto p=&g;p->next()&&p->next()!=p;p=p->next())++chain_length;
+        }
       }
       else ++free_groups;
     }
@@ -748,6 +752,7 @@ public:
       <<"cellar remaining: "<<100.0*(top-(v.data()+address_size_))/(v.size()-address_size_)<<"%\n"
       <<"occup. used cellar: "<<(double)occupancy_used_cellar/(v.data()+v.size()-top)<<"\n"
       <<"occup. used address: "<<(double)occupancy_used_address/occupied_address_groups<<"\n"
+      <<"avg. chain length: "<<(double)chain_length/occupied_address_groups<<"\n"
       ;
   }
 #endif /* NWAYPLUS_STATUS */
