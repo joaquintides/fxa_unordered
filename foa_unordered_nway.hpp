@@ -539,9 +539,9 @@ struct nwayplus_group
 
 #ifdef FXA_UNORDERED_SSE2
 
-  void set(std::size_t pos,std::size_t mark)
+  void set(std::size_t pos,std::size_t hash)
   {
-    reinterpret_cast<unsigned char*>(&mask)[pos]=mark&0x7Fu;
+    reinterpret_cast<unsigned char*>(&mask)[pos]=hash&0x7Fu;
   }
 
   void set_sentinel()
@@ -555,9 +555,9 @@ struct nwayplus_group
     reinterpret_cast<unsigned char*>(&mask)[pos]=deleted_;
   }
 
-  int match(std::size_t mark)const
+  int match(std::size_t hash)const
   {
-    auto m=_mm_set1_epi8(mark&0x7Fu);
+    auto m=_mm_set1_epi8(hash&0x7Fu);
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
   }
 
@@ -866,10 +866,9 @@ public:
   iterator find(const Key& x)const
   {
     auto hash=h(x);
-    auto pos=size_policy::position(hash,size_index);
-    auto first=groups.at(pos/N);
+    auto first=group_for(hash);
     for(auto p=first;;){
-      auto [n,found]=find_in_group(x,p,pos);
+      auto [n,found]=find_in_group(x,p,hash);
       if(found)return {p,n};
         
       auto next=p->next();
@@ -880,7 +879,7 @@ public:
 
     for(auto pr=groups.make_prober(first);;pr.next()){
       auto p=pr.get();
-      auto [n,found]=find_in_group(x,p,pos);
+      auto [n,found]=find_in_group(x,p,hash);
       if(found)return {p,n};
       if(p->match_empty())return end();
     }
@@ -911,10 +910,15 @@ private:
     alloc_traits::destroy(al,p);
   }
 
-  template<typename Key>
-  std::pair<int,bool> find_in_group(const Key& x,group* p,std::size_t mark)const
+  group* group_for(std::size_t hash)const
   {
-    auto mask=p->match(mark);
+    return groups.at(size_policy::position(hash>>3,size_index)/N);
+  }
+
+  template<typename Key>
+  std::pair<int,bool> find_in_group(const Key& x,group* p,std::size_t hash)const
+  {
+    auto mask=p->match(hash);
     while(mask){
       auto n=boost::core::countr_zero((unsigned int)mask);
       if(BOOST_LIKELY(pred(x,p->at(n).value())))return {n,true};
@@ -927,9 +931,8 @@ private:
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
     auto hash=h(x);
-    auto pos=size_policy::position(hash,size_index);
-    auto first=groups.at(pos/N);
-    auto [it,ita,last]=find_match_available_last(x,first,pos);
+    auto first=group_for(hash);
+    auto [it,ita,last]=find_match_available_last(x,first,hash);
     if(it!=end())return {it,false};
 
     if(BOOST_UNLIKELY(size_+1>ml)){
@@ -943,7 +946,7 @@ private:
       std::tie(pa,na)=groups.new_group_after(first,last);
     }
     construct_element(std::forward<Value>(x),pa->at(na).data());  
-    pa->set(na,pos);
+    pa->set(na,hash);
     ++size_;
     return {ita,true};
   }
@@ -988,8 +991,7 @@ private:
   template<typename Value>
   iterator unchecked_insert(Value&& x,std::size_t hash)
   {
-    auto pos=size_policy::position(hash,size_index);
-    auto first=groups.at(pos/N),
+    auto first=group_for(hash),
          p=first;
 
     // unchecked_insert only called just after rehashing, so
@@ -1006,7 +1008,7 @@ private:
     }  
       
     construct_element(std::forward<Value>(x),p->at(n).data());
-    p->set(n,pos);
+    p->set(n,hash);
     ++size_;
     return {p,n};
   }
@@ -1019,7 +1021,7 @@ private:
 
   template<typename Key>
   find_match_available_last_return_type
-  find_match_available_last(const Key& x,group* first,std::size_t mark)const
+  find_match_available_last(const Key& x,group* first,std::size_t hash)const
   {
     iterator ita;
     auto     update_ita=[&](group* p)
@@ -1032,7 +1034,7 @@ private:
     };
       
     for(auto p=first;;){
-      auto [n,found]=find_in_group(x,p,mark);
+      auto [n,found]=find_in_group(x,p,hash);
       if(found)return {{p,n}};
       update_ita(p); 
         
@@ -1044,7 +1046,7 @@ private:
 
     for(auto pr=groups.make_prober(first);;pr.next()){
       auto p=pr.get();
-      auto [n,found]=find_in_group(x,p,mark);
+      auto [n,found]=find_in_group(x,p,hash);
       if(found)return {{p,n}};
       update_ita(p); 
       if(p->match_empty())return {end(),ita}; // ita must be non-null
