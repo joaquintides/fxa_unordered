@@ -863,7 +863,8 @@ public:
     auto hash=h(x);
     auto first=groups.at(size_policy::position(hash,size_index)/N);
     for(auto p=first;;){
-      if(auto n=find(x,p,hash);n<N)return {p,n};
+      auto [n,found]=find_in_group(x,p,hash);
+      if(found)return {p,n};
         
       auto next=p->next();
       if(!next)       return end();
@@ -873,7 +874,8 @@ public:
 
     for(auto pr=groups.make_prober(first);;pr.next()){
       auto p=pr.get();
-      if(auto n=find(x,p,hash);n<N)return {p,n};
+      auto [n,found]=find_in_group(x,p,hash);
+      if(found)return {p,n};
       if(p->match_empty())return end();
     }
   }
@@ -904,15 +906,15 @@ private:
   }
 
   template<typename Key>
-  int find(const Key& x,group* p,std::size_t hash)const
+  std::pair<int,bool> find_in_group(const Key& x,group* p,std::size_t hash)const
   {
     auto mask=p->match(hash);
     while(mask){
       auto n=boost::core::countr_zero((unsigned int)mask);
-      if(BOOST_LIKELY(pred(x,p->at(n).value())))return n;
+      if(BOOST_LIKELY(pred(x,p->at(n).value())))return {n,true};
       mask&=mask-1;
     }
-    return N;
+    return {0,false};
   }
 
   template<typename Value>
@@ -950,15 +952,14 @@ private:
     try{
       for(auto& g:groups){
         auto mask=g.match_really_occupied();
-        auto n=std::size_t(boost::core::countr_zero((unsigned int)mask));
-        while(n<N){
+        while(mask){
+          auto n=std::size_t(boost::core::countr_zero((unsigned int)mask));
           auto& x=g.at(n).value();
           new_container.unchecked_insert(std::move(x));
           destroy_element(&x);
           g.reset(n);
           ++num_tx;
           mask&=mask-1;
-          n=boost::core::countr_zero((unsigned int)mask);
         }
       }
     }
@@ -1023,7 +1024,8 @@ private:
     };
       
     for(auto p=first;;){
-      if(auto n=find(x,p,hash);n<N)return {{p,n}};
+      auto [n,found]=find_in_group(x,p,hash);
+      if(found)return {{p,n}};
       update_ita(p); 
         
       auto next=p->next();
@@ -1034,7 +1036,8 @@ private:
 
     for(auto pr=groups.make_prober(first);;pr.next()){
       auto p=pr.get();
-      if(auto n=find(x,p,hash);n<N)return {{p,n}};
+      auto [n,found]=find_in_group(x,p,hash);
+      if(found)return {{p,n}};
       update_ita(p); 
       if(p->match_empty())return {end(),ita}; // ita must be non-null
     }
