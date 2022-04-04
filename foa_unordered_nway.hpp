@@ -632,8 +632,8 @@ template<typename Group,typename Allocator>
 class coalesced_group_array
 {
 public:
-  using value_type=Group;
-  using iterator=value_type*;
+  static constexpr auto N=Group::N;
+  using iterator=Group*;
 
   coalesced_group_array(std::size_t n,const Allocator& al):
     v{n,al}{}
@@ -643,13 +643,13 @@ public:
   static auto& control(iterator it){return *it;}
   static auto& elements(iterator it){return *it;}
   
-  iterator begin()const{return const_cast<value_type*>(v.data());}
-  iterator end()const{return const_cast<value_type*>(v.data()+v.size());}
-  iterator at(std::size_t n)const{return const_cast<value_type*>(&v[n]);}
+  iterator begin()const{return const_cast<Group*>(v.data());}
+  iterator end()const{return const_cast<Group*>(v.data()+v.size());}
+  iterator at(std::size_t n)const{return const_cast<Group*>(&v[n]);}
   std::size_t size()const{return v.size();}
 
 private:
-  std::vector<value_type,Allocator> v;
+  std::vector<Group,Allocator> v;
 };
 
 template<typename GroupArray>
@@ -659,7 +659,7 @@ public:
   static constexpr auto address_factor=0.86f;
   static constexpr int  max_saturation=4;
 
-  using value_type=typename GroupArray::value_type;
+  using GroupArray::N;
   using iterator=typename GroupArray::iterator;
 
   template<typename Allocator>
@@ -667,7 +667,7 @@ public:
     GroupArray{std::size_t(n/address_factor),al},
     address_size_{n}
   {
-    top->set_sentinel();
+    control(top).set_sentinel();
   }
 
   coalesced_group_allocator(coalesced_group_allocator&&)=default;
@@ -682,10 +682,14 @@ public:
   {
     assert(!control(it).next()&&!control(it).match_empty_or_deleted());
     if(auto n=boost::core::countr_zero((unsigned int)
-         top->match_empty_or_deleted());n<max_saturation){
-      return {control(it).next()=top,n};
+         control(top).match_empty_or_deleted());n<max_saturation){
+      control(it).next()=top;
+      return {top,n};
     }
-    else if(top>this->begin()+address_size_)return {control(it).next()=--top,0};
+    else if(top>this->begin()+address_size_){
+      control(it).next()=--top;
+      return {top,0};
+    }
     
     control(it).next()=it; // close chain 
   
@@ -784,8 +788,6 @@ public:
 #endif /* NWAYPLUS_STATUS */
 
 private:
-  static constexpr auto N=value_type::N;
-
   std::size_t  address_size_;
   iterator     top=this->end()-1;
 };
@@ -798,6 +800,147 @@ struct coallesced_node_allocation
   template<typename Group,typename Allocator>
   using allocator_type=coalesced_group_allocator<
     coalesced_group_array<Group,Allocator>>;
+};
+
+template<typename T>
+struct soa_coalesced_group:group_base
+{
+  struct element
+  {
+    T* data(){return reinterpret_cast<T*>(&storage);}
+    T& value(){return *data();}
+
+  private:
+    std::aligned_storage_t<sizeof(T),alignof(T)> storage;
+  };
+
+  soa_coalesced_group*& next(){return next_;}
+
+private:
+  soa_coalesced_group *next_=nullptr;
+};
+
+template<typename Group,typename Allocator>
+class soa_coalesced_group_array
+{
+public:
+  static constexpr auto N=Group::N;
+  class iterator:public boost::iterator_facade<
+    iterator,const std::size_t,boost::random_access_traversal_tag>
+  {
+    using super=boost::iterator_facade<
+      iterator,const std::size_t,boost::random_access_traversal_tag>;
+  public:
+    iterator()=default;
+
+    using super::operator=;
+    iterator& operator=(Group* pg)noexcept
+    {
+      assert(p);
+      n=pg-p->v.data();
+      return *this;
+    }
+
+    operator Group*()const noexcept
+    {
+      assert(p);
+      return p->v.data()+n;
+    }
+
+    explicit operator bool()const noexcept{return p;}
+    bool operator!()const noexcept{return !p;}
+
+  private:
+    friend class soa_coalesced_group_array;
+    friend class boost::iterator_core_access;
+
+    iterator(soa_coalesced_group_array *p,std::size_t n):p{p},n{n}{}
+
+    bool equal(Group* pg)const noexcept
+    {
+      assert(p);
+      return n==std::size_t(pg-p->v.data());
+    }
+
+    bool equal(const iterator& x)const noexcept
+    {
+      assert(p&&x.p);
+      return n==x.n;
+    }
+
+    friend bool operator==(const iterator& x,Group* pg)noexcept
+      {return x.equal(pg);}
+    friend bool operator==(Group* pg,const iterator& x)noexcept
+      {return x.equal(pg);}
+    friend bool operator!=(const iterator& x,Group* pg)noexcept
+      {return !x.equal(pg);}
+    friend bool operator!=(Group* pg,const iterator& x)noexcept
+      {return !x.equal(pg);}
+    friend bool operator==(const iterator& x,const iterator& y)noexcept
+      {return x.equal(y);}
+    friend bool operator!=(const iterator& x,const iterator& y)noexcept
+      {return !x.equal(y);}
+
+    const std::size_t& dereference()const noexcept{assert(p);return n;} // not really used
+    void increment()noexcept{assert(p);++n;}
+    void decrement()noexcept{assert(p);--n;}
+    void advance(std::ptrdiff_t i)noexcept{assert(p);n+=i;}
+    std::ptrdiff_t distance_to(const iterator& x)const{assert(p);return x.n-n;}
+
+    soa_coalesced_group_array *p=nullptr;
+    std::size_t               n=0;
+  };
+  friend class iterator;
+
+  soa_coalesced_group_array(std::size_t n,const Allocator& al):
+    v{n,al},e{n,al}{}
+  soa_coalesced_group_array(soa_coalesced_group_array&&)=default;
+  soa_coalesced_group_array& operator=(soa_coalesced_group_array&&)=default;
+
+  static auto& control(iterator it)
+  {
+    assert(it.p);
+    return it.p->v[it.n];
+  }
+  static auto& elements(iterator it)
+  {
+    assert(it.p);
+    return it.p->e[it.n];
+  }
+  
+  iterator begin()const{return at(0);}
+  iterator end()const{return at(size());}
+
+  iterator at(std::size_t n)const
+  {
+    return {const_cast<soa_coalesced_group_array*>(this),n};
+  }
+
+  std::size_t size()const{return v.size();}
+
+private:
+  struct elements_type
+  {
+    auto& at(std::size_t n){return storage[n];}
+
+  private:
+    typename Group::element storage[N];
+  };
+  using elements_allocator_type=typename std::allocator_traits<Allocator>::
+    template rebind_alloc<elements_type>;
+
+  std::vector<Group,Allocator>                       v;
+  std::vector<elements_type,elements_allocator_type> e;
+};
+
+struct soa_coallesced_node_allocation
+{
+  template<typename T>
+  using group_type=soa_coalesced_group<T>;
+
+  template<typename Group,typename Allocator>
+  using allocator_type=coalesced_group_allocator<
+    soa_coalesced_group_array<Group,Allocator>>;
 };
 
 template<
@@ -920,7 +1063,7 @@ public:
         
       auto next=control(itg).next();
       if(!next)         return end();
-      else if(next==itg)break; // chain closed, go probing
+      else if(itg==next)break; // chain closed, go probing
       else              itg=next;
     };
 
@@ -928,7 +1071,7 @@ public:
       auto itg=pr.get();
       auto [n,found]=find_in_group(x,itg,hash);
       if(found)return {itg,n};
-      if(elements(itg).match_empty())return end();
+      if(control(itg).match_empty())return end();
     }
   }
 
@@ -973,6 +1116,7 @@ private:
   template<typename Value>
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
+    //if(x>200)std::cout<<__LINE__<<std::endl;
     auto hash=h(x);
     auto first=group_for(hash);
     auto [it,ita,last]=find_match_available_last(x,first,hash);
@@ -991,6 +1135,7 @@ private:
     construct_element(std::forward<Value>(x),elements(itga).at(na).data());  
     control(itga).set(na,hash);
     ++size_;
+    //if(x>200)std::cout<<__LINE__<<std::endl;      
     return {ita,true};
   }
 
@@ -1039,7 +1184,7 @@ private:
 
     // unchecked_insert only called just after rehashing, so
     // there are no deleted elements and we can go till end of chain
-    while(control(itg).next()&&control(itg).next()!=itg)itg=control(itg).next();
+    while(control(itg).next()&&itg!=control(itg).next())itg=control(itg).next();
 
     // if chain's not closed see occupancy, otherwise go probing
     int mask,n;
@@ -1084,7 +1229,7 @@ private:
         
       auto next=control(itg).next();
       if(!next)         return {end(),ita,itg};
-      else if(next==itg)break; // chain closed, go probing
+      else if(itg==next)break; // chain closed, go probing
       else              itg=next;
     }
 
