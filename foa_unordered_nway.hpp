@@ -1260,7 +1260,7 @@ private:
   Hash            h;
   Pred            pred;
   Allocator       al;
-  float           mlf=0.875f;
+  float           mlf=1.0f;
   std::size_t     size_=0;
   std::size_t     group_size_index=size_policy::size_index(size_/N+1);
   group_allocator groups{size_policy::size(group_size_index),al};
