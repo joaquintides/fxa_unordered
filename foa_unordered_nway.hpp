@@ -671,7 +671,16 @@ public:
   }
 
   coalesced_group_allocator(coalesced_group_allocator&&)=default;
-  coalesced_group_allocator& operator=(coalesced_group_allocator&&)=default;
+  coalesced_group_allocator& operator=(coalesced_group_allocator&& x)
+  {
+    // TODO: Superhack: soa_coalesced_group_array iterators are unstable
+    // after moving.
+    auto off=x.top-x.begin();
+    static_cast<GroupArray&>(*this)=std::move(x);
+    address_size_=x.address_size_;
+    top=this->begin()+off;
+    return *this;
+  }
 
   using GroupArray::control;
 
@@ -755,7 +764,7 @@ public:
         if(it<this->begin()+address_size_){
           ++occupied_address_groups;
           for(
-            auto it2=it;control(it2).next()&&control(it2).next()!=it2;
+            auto it2=it;control(it2).next()&&it2!=control(it2).next();
             it2=control(it2).next()){
             ++chain_length;
           }
@@ -1116,7 +1125,6 @@ private:
   template<typename Value>
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
-    //if(x>200)std::cout<<__LINE__<<std::endl;
     auto hash=h(x);
     auto first=group_for(hash);
     auto [it,ita,last]=find_match_available_last(x,first,hash);
@@ -1135,7 +1143,6 @@ private:
     construct_element(std::forward<Value>(x),elements(itga).at(na).data());  
     control(itga).set(na,hash);
     ++size_;
-    //if(x>200)std::cout<<__LINE__<<std::endl;      
     return {ita,true};
   }
 
