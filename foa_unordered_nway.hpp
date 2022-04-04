@@ -689,7 +689,7 @@ public:
 
   std::pair<iterator,int> new_group_after(iterator first,iterator it)
   {
-    assert(!control(it).next()&&!control(it).match_empty_or_deleted());
+    assert(!control(it).match_empty_or_deleted());
     if(auto n=boost::core::countr_zero((unsigned int)
          control(top).match_empty_or_deleted());n<max_saturation){
       control(it).next()=top;
@@ -1260,7 +1260,7 @@ private:
   Hash            h;
   Pred            pred;
   Allocator       al;
-  float           mlf=1.0f;
+  float           mlf=0.875f;
   std::size_t     size_=0;
   std::size_t     group_size_index=size_policy::size_index(size_/N+1);
   group_allocator groups{size_policy::size(group_size_index),al};
