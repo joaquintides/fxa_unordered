@@ -609,36 +609,69 @@ private:
 };
 
 template<typename T>
-struct coalesced_group:group_base
+struct element
 {
-  struct element
+  T* data(){return reinterpret_cast<T*>(&storage);}
+  T& value(){return *data();}
+
+private:
+  std::aligned_storage_t<sizeof(T),alignof(T)> storage;
+};
+
+template<typename T>
+struct soa_group:group_base
+{
+  using element_type=element<T>;
+
+  soa_group* next()
   {
-    T* data(){return reinterpret_cast<T*>(&storage);}
-    T& value(){return *data();}
+    // this strange API is used for coalesced extension
+    if(this->match_empty())return nullptr; // look no further
+    else                   return this;    // go probing
+  }
+};
 
-  private:
-    std::aligned_storage_t<sizeof(T),alignof(T)> storage;
-  };
+template<typename T>
+struct regular_group:soa_group<T>
+{
+  auto& at(std::size_t n){return storage[n];}
 
-  element& at(std::size_t n){return storage[n];}
+  regular_group* next(){return static_cast<regular_group*>(super::next());}
+
+private:
+  using super=soa_group<T>;
+  typename super::element_type storage[super::N];
+};
+
+template<typename T>
+struct soa_coalesced_group:soa_group<T>
+{
+  soa_coalesced_group*& next(){return next_;}
+
+private:
+  soa_coalesced_group *next_=nullptr;
+};
+
+template<typename T>
+struct coalesced_group:regular_group<T>
+{
   coalesced_group*& next(){return next_;}
 
 private:
-  element         storage[N];
   coalesced_group *next_=nullptr;
 };
 
 template<typename Group,typename Allocator>
-class coalesced_group_array
+class group_array
 {
 public:
   static constexpr auto N=Group::N;
   using iterator=Group*;
 
-  coalesced_group_array(std::size_t n,const Allocator& al):
+  group_array(std::size_t n,const Allocator& al):
     v{n,al}{}
-  coalesced_group_array(coalesced_group_array&&)=default;
-  coalesced_group_array& operator=(coalesced_group_array&&)=default;
+  group_array(group_array&&)=default;
+  group_array& operator=(group_array&&)=default;
 
   static auto& control(iterator it){return *it;}
   static auto& elements(iterator it){return *it;}
@@ -652,47 +685,131 @@ private:
   std::vector<Group,Allocator> v;
 };
 
-template<typename GroupArray>
-class coalesced_group_allocator:public GroupArray
+template<typename Group,typename Allocator>
+class soa_group_array
 {
 public:
-  static constexpr auto address_factor=0.86f;
-  static constexpr int  max_saturation=4;
+  static constexpr auto N=Group::N;
 
+private:
+  struct elements_type
+  {
+    auto& at(std::size_t n){return storage[n];}
+
+  private:
+    typename Group::element_type storage[N];
+  };
+
+public:
+  class iterator:public boost::iterator_facade<
+    iterator,const Group,boost::random_access_traversal_tag>
+  {
+    using super=boost::iterator_facade<
+      iterator,const Group,boost::random_access_traversal_tag>;
+
+  public:
+    iterator()=default;
+
+    using super::operator=;
+    iterator& operator=(Group* pg)noexcept
+    {
+      auto diff=pg-this->pg;
+      this->pg=pg;
+      this->pe+=diff;
+      return *this;
+    }
+
+    operator Group*()const noexcept{return pg;}
+
+    explicit operator bool()const noexcept{return pg;}
+    bool operator!()const noexcept{return !pg;}
+
+  private:
+    friend class soa_group_array;
+    friend class boost::iterator_core_access;
+
+    iterator(Group *pg,elements_type* pe):pg{pg},pe{pe}{}
+
+    bool equal(Group* pg)const noexcept{return this->pg==pg;}
+    bool equal(const iterator& x)const noexcept{return pg==x.pg;}
+
+    friend bool operator==(const iterator& x,Group* pg)noexcept
+      {return x.equal(pg);}
+    friend bool operator==(Group* pg,const iterator& x)noexcept
+      {return x.equal(pg);}
+    friend bool operator!=(const iterator& x,Group* pg)noexcept
+      {return !x.equal(pg);}
+    friend bool operator!=(Group* pg,const iterator& x)noexcept
+      {return !x.equal(pg);}
+    friend bool operator==(const iterator& x,const iterator& y)noexcept
+      {return x.equal(y);}
+    friend bool operator!=(const iterator& x,const iterator& y)noexcept
+      {return !x.equal(y);}
+
+    const auto& dereference()const noexcept{return *pg;} // not really used
+    void increment()noexcept{++pg;++pe;}
+    void decrement()noexcept{--pg;--pe;}
+    void advance(std::ptrdiff_t i)noexcept{pg+=i;pe+=i;}
+    std::ptrdiff_t distance_to(const iterator& x)const{return x.pg-pg;}
+
+    Group         *pg=nullptr;
+    elements_type *pe;
+  };
+  friend class iterator;
+
+  soa_group_array(std::size_t n,const Allocator& al):
+    v{n,al},e{n,al}{}
+  soa_group_array(soa_group_array&&)=default;
+  soa_group_array& operator=(soa_group_array&&)=default;
+
+  static auto& control(iterator it){return *it.pg;}
+  static auto& elements(iterator it){return *it.pe;}
+  
+  iterator begin()const{return at(0);}
+  iterator end()const{return at(size());}
+
+  iterator at(std::size_t n)const
+  {
+    return {
+      const_cast<Group*>(v.data()+n),
+      const_cast<elements_type*>(e.data()+n)
+    };
+  }
+
+  std::size_t size()const{return v.size();}
+
+private:
+  using elements_allocator_type=typename std::allocator_traits<Allocator>::
+    template rebind_alloc<elements_type>;
+
+  std::vector<Group,Allocator>                       v;
+  std::vector<elements_type,elements_allocator_type> e;
+};
+
+template<typename GroupArray>
+class group_allocator:public GroupArray
+{
+public:
   using GroupArray::N;
   using iterator=typename GroupArray::iterator;
 
   template<typename Allocator>
-  coalesced_group_allocator(std::size_t n,const Allocator& al):
-    GroupArray{std::size_t(n/address_factor),al},
-    address_size_{n}
+  group_allocator(std::size_t n,const Allocator& al):
+    GroupArray{n,al}
   {
-    control(top).set_sentinel();
+    control(this->end()-1).set_sentinel();
   }
 
-  coalesced_group_allocator(coalesced_group_allocator&&)=default;
-  coalesced_group_allocator& operator=(coalesced_group_allocator&& x)=default;
+  group_allocator(group_allocator&&)=default;
+  group_allocator& operator=(group_allocator&& x)=default;
 
   using GroupArray::control;
 
   // only in moved-from state when rehashing
   bool empty()const{return !this->size();}
 
-  std::pair<iterator,int> new_group_after(iterator first,iterator it)
+  std::pair<iterator,int> new_group_after(iterator first,iterator /*it*/)
   {
-    assert(!control(it).match_empty_or_deleted());
-    if(auto n=boost::core::countr_zero((unsigned int)
-         control(top).match_empty_or_deleted());n<max_saturation){
-      control(it).next()=top;
-      return {top,n};
-    }
-    else if(top>this->begin()+address_size_){
-      control(it).next()=--top;
-      return {top,0};
-    }
-    control(it).next()=it; // close chain 
-  
-    // probe after cellar exhaustion
     for(auto pr=make_prober(first);;pr.next()){
       if(auto mask=control(pr.get()).match_empty_or_deleted()){
         return {pr.get(),boost::core::countr_zero((unsigned int)mask)};
@@ -714,7 +831,7 @@ public:
     }
 
   private:
-    friend class coalesced_group_allocator;
+    friend class group_allocator;
 
     prober(iterator begin,std::size_t size,iterator it):
       begin{begin},size{size},n{(std::size_t)(it-begin)}
@@ -729,8 +846,55 @@ public:
 
   prober make_prober(iterator it)const
   {
-    assert(!theres_remaining_cellar());
     return {this->begin(),this->size(),it};
+  }
+
+#ifdef NWAYPLUS_STATUS
+  void status(){}
+#endif
+};
+
+template<typename GroupArray>
+class coalesced_group_allocator:public group_allocator<GroupArray>
+{
+  using super=group_allocator<GroupArray>;
+public:
+  static constexpr auto address_factor=0.86f;
+  static constexpr int  max_saturation=4;
+
+  using GroupArray::N;
+  using iterator=typename GroupArray::iterator;
+
+  template<typename Allocator>
+  coalesced_group_allocator(std::size_t n,const Allocator& al):
+    super{std::size_t(n/address_factor),al},address_size_{n}{}
+
+  coalesced_group_allocator(coalesced_group_allocator&&)=default;
+  coalesced_group_allocator& operator=(coalesced_group_allocator&& x)=default;
+
+  using GroupArray::control;
+
+  std::pair<iterator,int> new_group_after(iterator first,iterator it)
+  {
+    assert(!control(it).match_empty_or_deleted());
+    if(auto n=boost::core::countr_zero((unsigned int)
+         control(top).match_empty_or_deleted());n<max_saturation){
+      control(it).next()=top;
+      return {top,n};
+    }
+    else if(top>this->begin()+address_size_){
+      control(it).next()=--top;
+      return {top,0};
+    }
+    control(it).next()=it; // close chain 
+
+    return super::new_group_after(first,it);
+  }
+
+  auto make_prober(iterator it)const
+  {
+    assert(!theres_remaining_cellar());
+    return super::make_prober(it);
   }
 
   bool theres_remaining_cellar()const
@@ -791,150 +955,59 @@ private:
   iterator     top=this->end()-1;
 };
 
-struct coallesced_node_allocation
+struct regular_allocation
+{
+  template<typename T>
+  using group_type=regular_group<T>;
+
+  static constexpr float mlf=0.875;
+
+  template<typename Group,typename Allocator>
+  using allocator_type=group_allocator<
+    group_array<Group,Allocator>>;
+};
+
+struct soa_allocation
+{
+  template<typename T>
+  using group_type=soa_group<T>;
+
+  static constexpr float mlf=0.875;
+
+  template<typename Group,typename Allocator>
+  using allocator_type=group_allocator<
+    soa_group_array<Group,Allocator>>;
+};
+
+struct coallesced_allocation
 {
   template<typename T>
   using group_type=coalesced_group<T>;
 
+  static constexpr float mlf=1.0;
+
   template<typename Group,typename Allocator>
   using allocator_type=coalesced_group_allocator<
-    coalesced_group_array<Group,Allocator>>;
+    group_array<Group,Allocator>>;
 };
 
-template<typename T>
-struct soa_coalesced_group:group_base
-{
-  struct element
-  {
-    T* data(){return reinterpret_cast<T*>(&storage);}
-    T& value(){return *data();}
-
-  private:
-    std::aligned_storage_t<sizeof(T),alignof(T)> storage;
-  };
-
-  soa_coalesced_group*& next(){return next_;}
-
-private:
-  soa_coalesced_group *next_=nullptr;
-};
-
-template<typename Group,typename Allocator>
-class soa_coalesced_group_array
-{
-public:
-  static constexpr auto N=Group::N;
-
-private:
-  struct elements_type
-  {
-    auto& at(std::size_t n){return storage[n];}
-
-  private:
-    typename Group::element storage[N];
-  };
-
-public:
-  class iterator:public boost::iterator_facade<
-    iterator,const Group,boost::random_access_traversal_tag>
-  {
-    using super=boost::iterator_facade<
-      iterator,const Group,boost::random_access_traversal_tag>;
-
-  public:
-    iterator()=default;
-
-    using super::operator=;
-    iterator& operator=(Group* pg)noexcept
-    {
-      auto diff=pg-this->pg;
-      this->pg=pg;
-      this->pe+=diff;
-      return *this;
-    }
-
-    operator Group*()const noexcept{return pg;}
-
-    explicit operator bool()const noexcept{return pg;}
-    bool operator!()const noexcept{return !pg;}
-
-  private:
-    friend class soa_coalesced_group_array;
-    friend class boost::iterator_core_access;
-
-    iterator(Group *pg,elements_type* pe):pg{pg},pe{pe}{}
-
-    bool equal(Group* pg)const noexcept{return this->pg==pg;}
-    bool equal(const iterator& x)const noexcept{return pg==x.pg;}
-
-    friend bool operator==(const iterator& x,Group* pg)noexcept
-      {return x.equal(pg);}
-    friend bool operator==(Group* pg,const iterator& x)noexcept
-      {return x.equal(pg);}
-    friend bool operator!=(const iterator& x,Group* pg)noexcept
-      {return !x.equal(pg);}
-    friend bool operator!=(Group* pg,const iterator& x)noexcept
-      {return !x.equal(pg);}
-    friend bool operator==(const iterator& x,const iterator& y)noexcept
-      {return x.equal(y);}
-    friend bool operator!=(const iterator& x,const iterator& y)noexcept
-      {return !x.equal(y);}
-
-    const auto& dereference()const noexcept{return *pg;} // not really used
-    void increment()noexcept{++pg;++pe;}
-    void decrement()noexcept{--pg;--pe;}
-    void advance(std::ptrdiff_t i)noexcept{pg+=i;pe+=i;}
-    std::ptrdiff_t distance_to(const iterator& x)const{return x.pg-pg;}
-
-    Group         *pg=nullptr;
-    elements_type *pe;
-  };
-  friend class iterator;
-
-  soa_coalesced_group_array(std::size_t n,const Allocator& al):
-    v{n,al},e{n,al}{}
-  soa_coalesced_group_array(soa_coalesced_group_array&&)=default;
-  soa_coalesced_group_array& operator=(soa_coalesced_group_array&&)=default;
-
-  static auto& control(iterator it){return *it.pg;}
-  static auto& elements(iterator it){return *it.pe;}
-  
-  iterator begin()const{return at(0);}
-  iterator end()const{return at(size());}
-
-  iterator at(std::size_t n)const
-  {
-    return {
-      const_cast<Group*>(v.data()+n),
-      const_cast<elements_type*>(e.data()+n)
-    };
-  }
-
-  std::size_t size()const{return v.size();}
-
-private:
-  using elements_allocator_type=typename std::allocator_traits<Allocator>::
-    template rebind_alloc<elements_type>;
-
-  std::vector<Group,Allocator>                       v;
-  std::vector<elements_type,elements_allocator_type> e;
-};
-
-struct soa_coallesced_node_allocation
+struct soa_coallesced_allocation
 {
   template<typename T>
   using group_type=soa_coalesced_group<T>;
 
+  static constexpr float mlf=1.0;
+
   template<typename Group,typename Allocator>
   using allocator_type=coalesced_group_allocator<
-    soa_coalesced_group_array<Group,Allocator>>;
+    soa_group_array<Group,Allocator>>;
 };
 
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
   typename SizePolicy=prime_size,
-  typename GroupAllocationPolicy=coallesced_node_allocation
+  typename GroupAllocationPolicy=regular_allocation
 >
 class foa_unordered_nwayplus_set 
 {
@@ -1238,7 +1311,7 @@ private:
   Hash            h;
   Pred            pred;
   Allocator       al;
-  float           mlf=1.0f;
+  float           mlf=group_allocation_policy::mlf;
   std::size_t     size_=0;
   std::size_t     size_index=size_policy::size_index(size_);
   group_allocator groups{size_policy::size(size_index)/N+1,al};
@@ -1250,7 +1323,7 @@ template<
   typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
   typename Allocator=std::allocator<map_value_adaptor<Key,Value>>,
   typename SizePolicy=prime_size,
-  typename GroupAllocationPolicy=coallesced_node_allocation
+  typename GroupAllocationPolicy=regular_allocation
 >
 using foa_unordered_nwayplus_map=foa_unordered_nwayplus_set<
   map_value_adaptor<Key,Value>,
