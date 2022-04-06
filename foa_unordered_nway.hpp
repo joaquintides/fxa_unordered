@@ -671,16 +671,7 @@ public:
   }
 
   coalesced_group_allocator(coalesced_group_allocator&&)=default;
-  coalesced_group_allocator& operator=(coalesced_group_allocator&& x)
-  {
-    // TODO: Superhack: soa_coalesced_group_array iterators are unstable
-    // after moving.
-    auto off=x.top-x.begin();
-    static_cast<GroupArray&>(*this)=std::move(x);
-    address_size_=x.address_size_;
-    top=this->begin()+off;
-    return *this;
-  }
+  coalesced_group_allocator& operator=(coalesced_group_allocator&& x)=default;
 
   using GroupArray::control;
 
@@ -699,7 +690,6 @@ public:
       control(it).next()=--top;
       return {top,0};
     }
-    
     control(it).next()=it; // close chain 
   
     // probe after cellar exhaustion
@@ -834,48 +824,48 @@ class soa_coalesced_group_array
 {
 public:
   static constexpr auto N=Group::N;
+
+private:
+  struct elements_type
+  {
+    auto& at(std::size_t n){return storage[n];}
+
+  private:
+    typename Group::element storage[N];
+  };
+
+public:
   class iterator:public boost::iterator_facade<
-    iterator,const std::size_t,boost::random_access_traversal_tag>
+    iterator,const Group,boost::random_access_traversal_tag>
   {
     using super=boost::iterator_facade<
-      iterator,const std::size_t,boost::random_access_traversal_tag>;
+      iterator,const Group,boost::random_access_traversal_tag>;
+
   public:
     iterator()=default;
 
     using super::operator=;
     iterator& operator=(Group* pg)noexcept
     {
-      assert(p);
-      n=pg-p->v.data();
+      auto diff=pg-this->pg;
+      this->pg=pg;
+      this->pe+=diff;
       return *this;
     }
 
-    operator Group*()const noexcept
-    {
-      assert(p);
-      return p->v.data()+n;
-    }
+    operator Group*()const noexcept{return pg;}
 
-    explicit operator bool()const noexcept{return p;}
-    bool operator!()const noexcept{return !p;}
+    explicit operator bool()const noexcept{return pg;}
+    bool operator!()const noexcept{return !pg;}
 
   private:
     friend class soa_coalesced_group_array;
     friend class boost::iterator_core_access;
 
-    iterator(soa_coalesced_group_array *p,std::size_t n):p{p},n{n}{}
+    iterator(Group *pg,elements_type* pe):pg{pg},pe{pe}{}
 
-    bool equal(Group* pg)const noexcept
-    {
-      assert(p);
-      return n==std::size_t(pg-p->v.data());
-    }
-
-    bool equal(const iterator& x)const noexcept
-    {
-      assert(p&&x.p);
-      return n==x.n;
-    }
+    bool equal(Group* pg)const noexcept{return this->pg==pg;}
+    bool equal(const iterator& x)const noexcept{return pg==x.pg;}
 
     friend bool operator==(const iterator& x,Group* pg)noexcept
       {return x.equal(pg);}
@@ -890,14 +880,14 @@ public:
     friend bool operator!=(const iterator& x,const iterator& y)noexcept
       {return !x.equal(y);}
 
-    const std::size_t& dereference()const noexcept{assert(p);return n;} // not really used
-    void increment()noexcept{assert(p);++n;}
-    void decrement()noexcept{assert(p);--n;}
-    void advance(std::ptrdiff_t i)noexcept{assert(p);n+=i;}
-    std::ptrdiff_t distance_to(const iterator& x)const{assert(p);return x.n-n;}
+    const auto& dereference()const noexcept{return *pg;} // not really used
+    void increment()noexcept{++pg;++pe;}
+    void decrement()noexcept{--pg;--pe;}
+    void advance(std::ptrdiff_t i)noexcept{pg+=i;pe+=i;}
+    std::ptrdiff_t distance_to(const iterator& x)const{return x.pg-pg;}
 
-    soa_coalesced_group_array *p=nullptr;
-    std::size_t               n=0;
+    Group         *pg=nullptr;
+    elements_type *pe;
   };
   friend class iterator;
 
@@ -906,35 +896,23 @@ public:
   soa_coalesced_group_array(soa_coalesced_group_array&&)=default;
   soa_coalesced_group_array& operator=(soa_coalesced_group_array&&)=default;
 
-  static auto& control(iterator it)
-  {
-    assert(it.p);
-    return it.p->v[it.n];
-  }
-  static auto& elements(iterator it)
-  {
-    assert(it.p);
-    return it.p->e[it.n];
-  }
+  static auto& control(iterator it){return *it.pg;}
+  static auto& elements(iterator it){return *it.pe;}
   
   iterator begin()const{return at(0);}
   iterator end()const{return at(size());}
 
   iterator at(std::size_t n)const
   {
-    return {const_cast<soa_coalesced_group_array*>(this),n};
+    return {
+      const_cast<Group*>(v.data()+n),
+      const_cast<elements_type*>(e.data()+n)
+    };
   }
 
   std::size_t size()const{return v.size();}
 
 private:
-  struct elements_type
-  {
-    auto& at(std::size_t n){return storage[n];}
-
-  private:
-    typename Group::element storage[N];
-  };
   using elements_allocator_type=typename std::allocator_traits<Allocator>::
     template rebind_alloc<elements_type>;
 
@@ -1069,7 +1047,7 @@ public:
     for(auto itg=first;;){
       auto [n,found]=find_in_group(x,itg,hash);
       if(found)return {itg,n};
-        
+
       auto next=control(itg).next();
       if(!next)         return end();
       else if(itg==next)break; // chain closed, go probing
@@ -1106,7 +1084,7 @@ private:
 
   group_iterator group_for(std::size_t hash)const
   {
-    return groups.at(size_policy::position(hash,group_size_index));
+    return groups.at(size_policy::position(hash>>3,size_index)/N);
   }
 
   template<typename Key>
@@ -1172,7 +1150,7 @@ private:
       size_-=num_tx;
       throw;
     }
-    group_size_index=new_container.group_size_index;
+    size_index=new_container.size_index;
     groups=std::move(new_container.groups);
     ml=max_load();   
   }
@@ -1251,7 +1229,7 @@ private:
 
   size_type max_load()const
   {
-    float fml=mlf*static_cast<float>(size_policy::size(group_size_index)*N);
+    float fml=mlf*static_cast<float>(size_policy::size(size_index));
     auto res=(std::numeric_limits<size_type>::max)();
     if(res>fml)res=static_cast<size_type>(fml);
     return res;
@@ -1262,8 +1240,8 @@ private:
   Allocator       al;
   float           mlf=1.0f;
   std::size_t     size_=0;
-  std::size_t     group_size_index=size_policy::size_index(size_/N+1);
-  group_allocator groups{size_policy::size(group_size_index),al};
+  std::size_t     size_index=size_policy::size_index(size_);
+  group_allocator groups{size_policy::size(size_index)/N+1,al};
   size_type       ml=max_load();
 };
 
