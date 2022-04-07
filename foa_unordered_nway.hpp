@@ -36,11 +36,17 @@
 
 // ripped from
 // https://github.com/abseil/abseil-cpp/blob/master/absl/base/optimization.h
+#ifdef __has_builtin
+#define FXA_HAVE_BUILTIN(x) __has_builtin(x)
+#else
+#define FXA_HAVE_BUILTIN(x) 0
+#endif
+
 #if !defined(NDEBUG)
 #define FXA_ASSUME(cond) assert(cond)
-#elif ABSL_HAVE_BUILTIN(__builtin_assume)
+#elif FXA_HAVE_BUILTIN(__builtin_assume)
 #define FXA_ASSUME(cond) __builtin_assume(cond)
-#elif defined(__GNUC__) || ABSL_HAVE_BUILTIN(__builtin_unreachable)
+#elif defined(__GNUC__) || FXA_HAVE_BUILTIN(__builtin_unreachable)
 #define FXA_ASSUME(cond)                 \
   do {                                    \
     if (!(cond)) __builtin_unreachable(); \
