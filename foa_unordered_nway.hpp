@@ -34,6 +34,26 @@
 #define FXA_UNORDERED_SSE2
 #endif
 
+// ripped from
+// https://github.com/abseil/abseil-cpp/blob/master/absl/base/optimization.h
+#if !defined(NDEBUG)
+#define FXA_ASSUME(cond) assert(cond)
+#elif ABSL_HAVE_BUILTIN(__builtin_assume)
+#define FXA_ASSUME(cond) __builtin_assume(cond)
+#elif defined(__GNUC__) || ABSL_HAVE_BUILTIN(__builtin_unreachable)
+#define FXA_ASSUME(cond)                 \
+  do {                                    \
+    if (!(cond)) __builtin_unreachable(); \
+  } while (0)
+#elif defined(_MSC_VER)
+#define FXA_ASSUME(cond) __assume(cond)
+#else
+#define FXA_ASSUME(cond)               \
+  do {                                  \
+    static_cast<void>(false && (cond)); \
+  } while (0)
+#endif
+
 namespace fxa_unordered{
 
 namespace uint64_ops{
@@ -812,6 +832,7 @@ public:
   {
     for(auto pr=make_prober(first);;pr.next()){
       if(auto mask=control(pr.get()).match_empty_or_deleted()){
+        FXA_ASSUME(mask!=0);
         return {pr.get(),boost::core::countr_zero((unsigned int)mask)};
       }
     }
@@ -1166,6 +1187,7 @@ private:
   {
     auto mask=control(itg).match(hash);
     while(mask){
+      FXA_ASSUME(mask!=0);
       auto n=boost::core::countr_zero((unsigned int)mask);
       if(BOOST_LIKELY(pred(x,elements(itg).at(n).value())))return {n,true};
       mask&=mask-1;
@@ -1209,6 +1231,7 @@ private:
       for(auto itg=groups.begin(),last=groups.end();itg!=last;++itg){
         auto mask=control(itg).match_really_occupied();
         while(mask){
+          FXA_ASSUME(mask!=0);
           auto n=std::size_t(boost::core::countr_zero((unsigned int)mask));
           auto& x=elements(itg).at(n).value();
           new_container.unchecked_insert(std::move(x));
@@ -1247,6 +1270,7 @@ private:
     // if chain's not closed see occupancy, otherwise go probing
     int mask,n;
     if(!control(itg).next()&&(mask=control(itg).match_empty())){
+      FXA_ASSUME(mask!=0);
       n=boost::core::countr_zero((unsigned int)mask);
     }
     else{
@@ -1275,6 +1299,7 @@ private:
     {
       if(!ita){
         if(auto mask=control(itg).match_empty_or_deleted()){
+          FXA_ASSUME(mask!=0);
           ita={itg,boost::core::countr_zero((unsigned int)mask)};
         }
       }        
