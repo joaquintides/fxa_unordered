@@ -602,14 +602,7 @@ struct group_base
     return (~_mm_movemask_epi8(mask))&0xFFFFul;
   }
 
-#else
-
-#error non-SSE2 code not written yet
-
-#endif /* FXA_UNORDERED_SSE2 */
-
 private:
-#ifdef FXA_UNORDERED_SSE2
   // exact values as per Abseil rationale
   static constexpr int8_t empty_=-128,
                           deleted_=-2,
@@ -627,10 +620,69 @@ private:
     return _mm_cmpgt_epi8(a, b);
   }
 
-
   __m128i   mask=_mm_set1_epi8(empty_);
+
 #else
-  uint64_t  lowmask=0,himask=0;
+
+  void set(std::size_t pos,std::size_t hash)
+  {
+    set_impl(pos,hash&0x7Fu);
+  }
+
+  void set_sentinel()
+  {
+    set_impl(N-1,sentinel_);
+  }
+
+  void reset(std::size_t pos)
+  {
+    set_impl(pos,deleted_);
+  }
+
+  int match(std::size_t hash)const
+  {
+    return match_impl(hash&0x7Fu);
+  }
+
+  int match_empty()const
+  {
+    return match_impl(empty_);
+  }
+
+  int match_empty_or_deleted()const
+  {
+    return match_empty()|match_impl(deleted_);
+  }
+
+  int match_occupied()const
+  {
+    return (~match_empty_or_deleted())&0xFFFFul;
+  }
+
+  int match_really_occupied()const // excluding sentinel
+  {
+    return match_occupied()&~match_impl(sentinel_);
+  }
+
+private:
+  // exact values as per Abseil rationale
+  static constexpr int8_t empty_=-128,
+                          deleted_=-2,
+                          sentinel_=-1;
+
+  void set_impl(std::size_t pos,unsigned char m)
+  {
+    uint64_ops::set(lowmask,pos,m&0xFu);
+    uint64_ops::set(himask,pos,m>>4);
+  }
+  
+  int match_impl(unsigned char m)const
+  {
+    return uint64_ops::match(lowmask,m&0xFu)&
+           uint64_ops::match(himask,m>>4);
+  }
+
+  uint64_t lowmask=0,himask=0xFFFF000000000000ull;
 #endif /* FXA_UNORDERED_SSE2 */
 };
 
