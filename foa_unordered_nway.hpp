@@ -1246,7 +1246,7 @@ private:
 
     // if chain's not closed see occupancy, otherwise go probing
     int mask,n;
-    if(!control(itg).next()&&(mask=control(itg).match_empty_or_deleted())){
+    if(!control(itg).next()&&(mask=control(itg).match_empty())){
       n=boost::core::countr_zero((unsigned int)mask);
     }
     else{
