@@ -296,20 +296,20 @@ using foa_pow2_fib_unordered_soa_nwayplus_map =
     fxa_unordered::nwayplus::soa_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
-using foa_pow2_fib_unordered_coallesced_nwayplus_map =
+using foa_pow2_fib_unordered_coalesced_nwayplus_map =
   foa_unordered_nwayplus_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::pow2_fib_size,
-    fxa_unordered::nwayplus::coallesced_allocation>;
+    fxa_unordered::nwayplus::coalesced_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
-using foa_pow2_fib_unordered_soa_coallesced_nwayplus_map =
+using foa_pow2_fib_unordered_soa_coalesced_nwayplus_map =
   foa_unordered_nwayplus_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::pow2_fib_size,
-    fxa_unordered::nwayplus::soa_coallesced_allocation>;
+    fxa_unordered::nwayplus::soa_coalesced_allocation>;
 
 // fnv1a_hash
 
@@ -516,11 +516,11 @@ template<class K, class V> using foa_pow2_fib_unordered_nwayplus_map_fnv1a =
 template<class K, class V> using foa_pow2_fib_unordered_soa_nwayplus_map_fnv1a =
   foa_pow2_fib_unordered_soa_nwayplus_map<K, V, fnv1a_hash>;
 
-template<class K, class V> using foa_pow2_fib_unordered_coallesced_nwayplus_map_fnv1a =
-  foa_pow2_fib_unordered_coallesced_nwayplus_map<K, V, fnv1a_hash>;
+template<class K, class V> using foa_pow2_fib_unordered_coalesced_nwayplus_map_fnv1a =
+  foa_pow2_fib_unordered_coalesced_nwayplus_map<K, V, fnv1a_hash>;
   
-template<class K, class V> using foa_pow2_fib_unordered_soa_coallesced_nwayplus_map_fnv1a =
-  foa_pow2_fib_unordered_soa_coallesced_nwayplus_map<K, V, fnv1a_hash>;
+template<class K, class V> using foa_pow2_fib_unordered_soa_coalesced_nwayplus_map_fnv1a =
+  foa_pow2_fib_unordered_soa_coalesced_nwayplus_map<K, V, fnv1a_hash>;
   
 #ifdef HAVE_ABSEIL
 

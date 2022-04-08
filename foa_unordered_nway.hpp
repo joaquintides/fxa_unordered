@@ -1058,7 +1058,7 @@ struct soa_allocation
     soa_group_array<Group,Allocator>>;
 };
 
-struct coallesced_allocation
+struct coalesced_allocation
 {
   template<typename T>
   using group_type=coalesced_group<T>;
@@ -1070,7 +1070,7 @@ struct coallesced_allocation
     group_array<Group,Allocator>>;
 };
 
-struct soa_coallesced_allocation
+struct soa_coalesced_allocation
 {
   template<typename T>
   using group_type=soa_coalesced_group<T>;

@@ -280,8 +280,8 @@ int main()
     test<foa_pow2_fib_unordered_nway_map_fnv1a>( "foa_pow2_fib_unordered_nway_map, FNV-1a" );
     test<foa_pow2_fib_unordered_nwayplus_map_fnv1a>( "foa_pow2_fib_unordered_nwayplus_map, FNV-1a" );
     test<foa_pow2_fib_unordered_soa_nwayplus_map_fnv1a>( "foa_pow2_fib_unordered_soa_nwayplus_map, FNV-1a" );
-    test<foa_pow2_fib_unordered_coallesced_nwayplus_map_fnv1a>( "foa_pow2_fib_unordered_coallesced_nwayplus_map, FNV-1a" );
-    test<foa_pow2_fib_unordered_soa_coallesced_nwayplus_map_fnv1a>( "foa_pow2_fib_unordered_soa_coallesced_nwayplus_map, FNV-1a" );
+    test<foa_pow2_fib_unordered_coalesced_nwayplus_map_fnv1a>( "foa_pow2_fib_unordered_coalesced_nwayplus_map, FNV-1a" );
+    test<foa_pow2_fib_unordered_soa_coalesced_nwayplus_map_fnv1a>( "foa_pow2_fib_unordered_soa_coalesced_nwayplus_map, FNV-1a" );
 
 #ifdef HAVE_ABSEIL
     test<absl_node_hash_map_fnv1a>( "absl::node_hash_map, FNV-1a" );
