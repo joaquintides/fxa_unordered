@@ -294,6 +294,7 @@ int main()
     test<foa_pow2_fib_unordered_nway_map>( "foa_pow2_fib_unordered_nway_map" );
     test<foa_pow2_fib_unordered_nwayplus_map>( "foa_pow2_fib_unordered_nwayplus_map" );
     test<foa_pow2_fib_unordered_soa_nwayplus_map>( "foa_pow2_fib_unordered_soa_nwayplus_map" );
+    test<foa_frng_fib_unordered_soa_nwayplus_map>( "foa_frng_fib_unordered_soa_nwayplus_map" );
     test<foa_pow2_fib_unordered_coalesced_nwayplus_map>( "foa_pow2_fib_unordered_coalesced_nwayplus_map" );
     test<foa_pow2_fib_unordered_soa_coalesced_nwayplus_map>( "foa_pow2_fib_unordered_soa_coalesced_nwayplus_map" );
 
