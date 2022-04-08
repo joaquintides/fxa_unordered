@@ -7,6 +7,7 @@ Proof of concept of closed- and open-addressing unordered associative containers
 * [Open addressing](#open-addressing)
   * [`foa_unordered_coalesced_set`, `foa_unordered_coalesced_map`](#foa_unordered_coalesced)
   * [`foa_unordered_nway_set`, `foa_unordered_nway_map`](#foa_unordered_nway)
+  * [`foa_unordered_nwayplus_set`, `foa_unordered_nwayplus_map`](#foa_unordered_nwayplus)
 * [Benchmark results](https://github.com/joaquintides/fca_unordered/actions) for this PoC
 
 ## Closed addressing
@@ -204,7 +205,7 @@ template<
 class foa_unordered_nway_map;
 ```
 
-Nodes are logically divided in groups of size 16. Slots are probed *only* within
+Slots are logically divided in groups of size 16. Slots are probed *only* within
 the target group looking for a reduced 7-bit hash value with vectorized
 byte operations (using [SSE2](https://en.wikipedia.org/wiki/SSE2) when available):
 if the group is full, extra nodes are allocated and kept in a singly linked list,
@@ -213,3 +214,59 @@ where each group has its own list.
 **`SizePolicy`**
 
 As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered_*).
+
+<a name="foa_unordered_nwayplus"></a>
+```cpp
+template<
+  typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
+  typename Allocator=std::allocator<T>,
+  typename SizePolicy=prime_size,
+  typename GroupAllocationPolicy=regular_allocation
+>
+class foa_unordered_nwayplus_set 
+
+template<
+  typename Key,typename Value,
+  typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
+  typename Allocator=std::allocator<map_value_adaptor<Key,Value>>,
+  typename SizePolicy=prime_size,
+  typename GroupAllocationPolicy=regular_allocation
+>
+class foa_unordered_nwayplus_map;
+```
+
+Slots are logically divided in groups of size 16. On first attempt, slots
+are probed within the target group looking for a reduced 7-bit hash value
+with vectorized byte operations
+(using [SSE2](https://en.wikipedia.org/wiki/SSE2) when available); if this
+first group is unsuccessful (key not found, group full), additional groups
+are tried according to the rules encoded by `GroupAllocationPolicy`.
+
+**`SizePolicy`**
+
+As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered_*).
+N-way<sup>+</sup> maps are very sensitive to the hash function
+[uniformity](https://en.wikipedia.org/wiki/Hash_function#Uniformity), which
+makes policies using Fibonacci hashing (or other bit spreading techniques)
+the only viable alternatives (unless a really good hash function is provided
+in the first place).
+
+**`GroupAllocationPolicy`**
+* `regular_allocation`: N-groups are probed quadratically.
+*  `soa_allocation`: N-group metadata and the associated slots
+are kept in separate arrays to improve cache locality. Quadratic probing
+is used.
+* `coalesced_allocation`: Borrowing ideas from coalesced hashing, a portion
+of the array (the cellar) is kept out of hash-based positioning and
+used when a regular N-group is full; N-groups are then linked via a `next`
+pointer. When the cellar is exhausted, quadratic probing is resorted to.
+`coalesced_allocation` depends on the following parameters:
+  * *β* = 0.86, ratio of regular N-groups to total groups.
+  * maximum saturation = 4: When a new cellar N-group is requested, the
+  previously used one is re-used as long as its occupancy level (saturation)
+  is below a predetermined threshold, which implies that several regular
+  N-groups can be linked to the same cellar location. This approach strikes
+  a balance between average chain length and cellar efficiency (the occupancy
+  level of cellar N-groups).
+* `soa_coalesced_allocation`: As `coalesced_allocation`, but group metadata and
+slots are kept in separate arrays.
