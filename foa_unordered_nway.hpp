@@ -631,12 +631,12 @@ private:
 
   void set_sentinel()
   {
-    set_impl(N-1,sentinel_);
+    uint64_ops::set(himask,N-1,sentinel_);
   }
 
   void reset(std::size_t pos)
   {
-    set_impl(pos,deleted_);
+    uint64_ops::set(himask,pos,deleted_);
   }
 
   int match(std::size_t hash)const
@@ -646,29 +646,35 @@ private:
 
   int match_empty()const
   {
-    return match_impl(empty_);
+    return
+      (himask & uint64_t(0x0000FFFF00000000ull))>>32&
+      (himask & uint64_t(0xFFFF000000000000ull))>>48;
   }
 
   int match_empty_or_deleted()const
   {
-    return match_empty()|match_impl(deleted_);
+    return
+      (himask & uint64_t(0x00000000FFFF0000ull))>>16&
+      (himask & uint64_t(0xFFFF000000000000ull))>>48;
   }
 
   int match_occupied()const
   {
-    return (~match_empty_or_deleted())&0xFFFFul;
+    return // ~match_empty_or_deleted()
+      (~himask | uint64_t(0xFFFFFFFF0000FFFFull))>>16|
+      (~himask | uint64_t(0x0000FFFFFFFFFFFFull))>>48;
   }
 
   int match_really_occupied()const // excluding sentinel
   {
-    return match_occupied()&~match_impl(sentinel_);
+    return
+      (~himask & uint64_t(0xFFFF000000000000ull))>>48;
   }
 
 private:
-  // exact values as per Abseil rationale
-  static constexpr int8_t empty_=-128,
-                          deleted_=-2,
-                          sentinel_=-1;
+  static constexpr int empty_=   0xE, // 1110
+                       deleted_= 0xA, // 1010
+                       sentinel_=0x8; // 1000
 
   void set_impl(std::size_t pos,unsigned char m)
   {
@@ -682,7 +688,7 @@ private:
            uint64_ops::match(himask,m>>4);
   }
 
-  uint64_t lowmask=0,himask=0xFFFF000000000000ull;
+  uint64_t lowmask=0,himask=0xFFFFFFFFFFFF0000ull;
 #endif /* FXA_UNORDERED_SSE2 */
 };
 
