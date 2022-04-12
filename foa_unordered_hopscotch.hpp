@@ -46,13 +46,24 @@ private:
 struct control
 {
   auto value()const{return control_;}
-  void set(std::size_t hash){control_=0x80u|(hash&0x7Fu);}
+  void set(std::size_t pos,std::size_t hash){control_=set_value(pos,hash);}
+  void resit(std::size_t pos,control x){control_=set_value(pos,x.hash_value());}
   void reset(){control_=0;}
   bool occupied()const{return control_&0x80u;}
   bool empty()const{return !occupied();}
-  bool match(std::size_t hash)const{return control_==(0x80u|(hash&0x7Fu));}
+  bool match(std::size_t pos,std::size_t hash)const
+    {return control_==set_value(pos,hash);}
 
 private:
+  std::size_t hash_value()const
+  {
+    return control_&0xFu;
+  }
+
+  static unsigned char set_value(std::size_t pos,std::size_t hash)
+  {
+    return 0x80u|((pos&0x7u)<<4)|(hash&0xFu);
+  }
   unsigned char control_=0;
 };
 
@@ -115,7 +126,7 @@ public:
 
   foa_unordered_hopscotch_set()
   {
-    controls.back().set(0);
+    controls.back().set(0,0);
   }
 
   foa_unordered_hopscotch_set(foa_unordered_hopscotch_set&&)=default;
@@ -172,7 +183,7 @@ public:
   size_type erase(const Key& x)
   {
     auto hash=h(x);
-    auto pos=size_policy::position(hash,size_index);
+    auto pos=position_for(hash);
     auto it=find(x,pos,hash);
     if(it!=end()){
       auto [pc,pe]=it;
@@ -189,7 +200,7 @@ public:
   iterator find(const Key& x)const
   {
     auto hash=h(x);
-    auto pos=size_policy::position(hash,size_index);
+    auto pos=position_for(hash);
     return find(x,pos,hash);
   }
 
@@ -224,7 +235,7 @@ private:
   foa_unordered_hopscotch_set(std::size_t n,Allocator al):
     al{al},size_index{size_policy::size_index(n)}
   {
-    controls.back().set(0);
+    controls.back().set(0,0);
   }
 
   template<typename Value>
@@ -236,6 +247,11 @@ private:
   void destroy_element(value_type* p)
   {
     alloc_traits::destroy(al,p);
+  }
+
+  std::size_t position_for(std::size_t hash)const
+  {
+    return size_policy::position(hash*N,size_index);
   }
 
   std::size_t plus_wrap(std::size_t n,std::size_t m)const
@@ -254,7 +270,7 @@ private:
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
     auto hash=h(x);
-    auto pos=size_policy::position(hash,size_index);
+    auto pos=position_for(hash);
     auto it=find(x,pos,hash);
     if(it!=end())return {it,false};
 
@@ -262,7 +278,7 @@ private:
       size_+1>ml||
       (it=unchecked_insert(std::forward<Value>(x),pos,hash))==end())){
       rehash(ml+1);
-      pos=size_policy::position(hash,size_index);
+      pos=position_for(hash);
       it=unchecked_insert(std::forward<Value>(x),pos,hash);
       if(it==end())throw std::runtime_error("hopscotching failed");
     }
@@ -305,7 +321,7 @@ private:
   iterator unchecked_insert(Value&& x)
   {
     auto hash=h(x);
-    auto pos=size_policy::position(hash,size_index);
+    auto pos=position_for(hash);
     return unchecked_insert(std::forward<Value>(x),pos,hash);
   }
 
@@ -325,7 +341,7 @@ private:
           construct_element(
             std::move(elements[hop_j].value()),elements[dst].data());
           destroy_element(elements[hop_j].data());
-          controls[dst]=controls[hop_j];
+          controls[dst].resit(hop,controls[hop_j]);
           controls[hop_j].reset();
           buckets[hop].set(i);
           buckets[hop].reset(j);
@@ -344,7 +360,7 @@ private:
     }
 
     construct_element(std::forward<Value>(x),elements[dst].data());  
-    controls[dst].set(hash);
+    controls[dst].set(pos,hash);
     bucket.set(n);
     ++size_;
     return at(dst);
@@ -366,7 +382,7 @@ private:
     if(BOOST_LIKELY(pos+N<=capacity_)){
 #ifdef FXA_UNORDERED_SSE2
       control ctrl;
-      ctrl.set(hash);
+      ctrl.set(pos,hash);
       auto        a=_mm_set1_epi8(ctrl.value()),
                   b=_mm_loadu_si128(
                     reinterpret_cast<const __m128i*>(&controls[pos]));
@@ -387,7 +403,7 @@ private:
       for(auto mask=buckets[pos].hopmask();mask;mask&=mask-1){
         auto n=boost::core::countr_zero(mask);
         auto pos_n=pos+n;
-        if(controls[pos_n].match(hash)&&
+        if(controls[pos_n].match(pos,hash)&&
            BOOST_LIKELY(pred(x,elements[pos_n].value()))){
           return at(pos_n); 
         }
@@ -398,7 +414,7 @@ private:
       for(auto mask=buckets[pos].hopmask();mask;mask&=mask-1){
         auto n=boost::core::countr_zero(mask);
         auto pos_n=plus_wrap(pos,n);
-        if(controls[pos_n].match(hash)&&
+        if(controls[pos_n].match(pos,hash)&&
            BOOST_LIKELY(pred(x,elements[pos_n].value()))){
           return at(pos_n); 
         }
