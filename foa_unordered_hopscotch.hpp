@@ -73,15 +73,13 @@ struct control
   auto value()const{return control_;}
   void set(std::size_t hash){control_=set_value(hash);}
   void reset(){control_=0;}
-  bool occupied()const{return control_;}
+  bool occupied()const{return control_&0x80u;}
   bool empty()const{return !occupied();}
   bool match(std::size_t hash)const{return control_==set_value(hash);}
 
 private:
-  static unsigned char set_value(std::size_t hash)
-  {
-    return (hash%255)+1;
-  }
+  static unsigned char set_value(std::size_t hash){return 0x80u|(hash&0x7Fu);}
+
   unsigned char control_=0;
 };
 
