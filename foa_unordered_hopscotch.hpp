@@ -73,7 +73,7 @@ struct control
   auto value()const{return control_;}
   void set(std::size_t hash){control_=set_value(hash);}
   void reset(){control_=0;}
-  bool occupied()const{return control_&0x80u;}
+  bool occupied()const{return control_;}
   bool empty()const{return !occupied();}
   bool match(std::size_t hash)const{return control_==set_value(hash);}
 
@@ -209,10 +209,33 @@ public:
 #ifdef FXA_UNORDERED_HOPSCOTCH_STATUS
   void status()const
   {
+    int           buckets_by_len[N]={0,};
+    int           nonempty_buckets=0;
+    long long int nonempty_len=0;
+    for(std::size_t pos=0;pos<capacity_;++pos)
+    {
+      int len=0;
+      for(std::size_t i=0;i<N;++i){
+        if(controls[plus_wrap(pos,i)].occupied()&&
+          const_cast<bucket_array_type&>(buckets)[plus_wrap(pos,i)]==i){
+          ++len;
+        }
+      }
+      ++buckets_by_len[len];
+      if(len){
+        ++nonempty_buckets;
+        nonempty_len+=len;
+      }
+    }
+      
     std::cout<<"\n"
       <<"size: "<<size_<<"\n"
       <<"capacity: "<<capacity_<<"\n"
       <<"load factor: "<<(float)size_/capacity_<<"\n"
+      <<"buckets by length: ";
+    for(std::size_t i=0;i<N;++i)std::cout<<i<<":"<<buckets_by_len[i]<<" ";
+    std::cout<<"\n"
+      <<"avg non-empty bucket length: "<<(float)nonempty_len/nonempty_buckets<<"\n"
       <<"no of hops: "<<num_hops<<"\n"
       <<"no of hopscotch blocks: "<<num_hopscotch_blocks<<"\n"
       ;
