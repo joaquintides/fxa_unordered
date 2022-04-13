@@ -320,10 +320,17 @@ using foa_pow2_fib_unordered_soa_coalesced_nwayplus_map =
     fxa_unordered::pow2_fib_size,
     fxa_unordered::nwayplus::soa_coalesced_allocation>;
 
-template<class K, class V, class H=absl::container_internal::hash_default_hash<K>>
+template<class K, class V, class H=boost::hash<K>>
 using foa_frng_fib_unordered_hopscotch_map =
   foa_unordered_hopscotch_map<
-    K, V, H,absl::container_internal::hash_default_eq<K>,
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_frng_fib_size>;
+    
+template<class K, class V, class H=absl::container_internal::hash_default_hash<K>>
+using foa_absl_unordered_hopscotch_map =
+  foa_unordered_hopscotch_map<
+    K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::pow2_size>;
 
@@ -543,6 +550,9 @@ template<class K, class V> using foa_pow2_fib_unordered_soa_coalesced_nwayplus_m
   
 template<class K, class V> using foa_frng_fib_unordered_hopscotch_map_fnv1a =
   foa_frng_fib_unordered_hopscotch_map<K, V, fnv1a_hash>;
+
+template<class K, class V> using foa_absl_unordered_hopscotch_map_fnv1a =
+  foa_absl_unordered_hopscotch_map<K, V, fnv1a_hash>;
 
 #ifdef HAVE_ABSEIL
 
