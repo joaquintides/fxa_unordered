@@ -49,7 +49,7 @@ struct control
   void set(std::size_t pos,std::size_t hash){control_=set_value(pos,hash);}
   void resit(std::size_t pos,control x){control_=set_value(pos,x.hash_value());}
   void reset(){control_=0;}
-  bool occupied()const{return control_&0x80u;}
+  bool occupied()const{return control_;}
   bool empty()const{return !occupied();}
   bool match(std::size_t pos,std::size_t hash)const
     {return control_==set_value(pos,hash);}
@@ -57,12 +57,12 @@ struct control
 private:
   std::size_t hash_value()const
   {
-    return control_&0xFu;
+    return control_-1;
   }
 
-  static unsigned char set_value(std::size_t pos,std::size_t hash)
+  static unsigned char set_value(std::size_t /*pos*/,std::size_t hash)
   {
-    return 0x80u|((pos&0x7u)<<4)|(hash&0xFu);
+    return (hash%255)+1;
   }
   unsigned char control_=0;
 };
@@ -173,7 +173,7 @@ public:
         buckets[base].reset(i);  
         --size_;
 
-        // we could try further elements down here 
+        // we could try moving further elements down here 
         return;
       }
     }
@@ -251,7 +251,7 @@ private:
 
   std::size_t position_for(std::size_t hash)const
   {
-    return size_policy::position(hash*N,size_index);
+    return size_policy::position(hash,size_index);
   }
 
   std::size_t plus_wrap(std::size_t n,std::size_t m)const

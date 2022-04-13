@@ -320,12 +320,12 @@ using foa_pow2_fib_unordered_soa_coalesced_nwayplus_map =
     fxa_unordered::pow2_fib_size,
     fxa_unordered::nwayplus::soa_coalesced_allocation>;
 
-template<class K, class V, class H=boost::hash<K>>
+template<class K, class V, class H=absl::container_internal::hash_default_hash<K>>
 using foa_frng_fib_unordered_hopscotch_map =
   foa_unordered_hopscotch_map<
-    K, V, H,std::equal_to<K>,
+    K, V, H,absl::container_internal::hash_default_eq<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
-    fxa_unordered::prime_frng_fib_size>;
+    fxa_unordered::pow2_size>;
 
 // fnv1a_hash
 
