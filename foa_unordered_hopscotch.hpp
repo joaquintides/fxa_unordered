@@ -33,34 +33,52 @@ struct bucket
 {
   static constexpr std::size_t N=16;
 
-  auto hopmask()const{return hopmask_;}
-  auto& hopmask(){return hopmask_;}
-  void set(std::size_t n){hopmask_|=set_bit(n);}
-  void reset(std::size_t n){hopmask_&=reset_bit(n);}
-  bool is_set(std::size_t n)const{return hopmask_&set_bit(n);}
+  operator unsigned char()const{return (ref>>shift)&0xFu;}
+
+  void set(unsigned char x)
+  {
+    assert(x<N);
+    ref&=~(0xFu<<shift);
+    ref|=x<<shift;
+  }
+
+  void reset(){set(N);}
 
 private:
-  uint16_t hopmask_=0;
+  template <typename> friend class bucket_array;
+
+  bucket(unsigned char& ref,std::size_t mod2):ref{ref},shift(mod2*4){}
+  
+  unsigned char &ref;
+  unsigned char shift;
+};
+
+template<typename Allocator>
+class bucket_array
+{
+public:
+  bucket_array(std::size_t n,const Allocator& al):v{(n+1)/2,0xFFu,al}{}
+
+  bucket operator[](std::size_t n){return {v[n/2],n%2};}
+
+private:
+  std::vector<
+    unsigned char,
+    typename std::allocator_traits<Allocator>::
+      template rebind_alloc<unsigned char>>     v;
 };
 
 struct control
 {
   auto value()const{return control_;}
-  void set(std::size_t pos,std::size_t hash){control_=set_value(pos,hash);}
-  void resit(std::size_t pos,control x){control_=set_value(pos,x.hash_value());}
+  void set(std::size_t hash){control_=set_value(hash);}
   void reset(){control_=0;}
   bool occupied()const{return control_;}
   bool empty()const{return !occupied();}
-  bool match(std::size_t pos,std::size_t hash)const
-    {return control_==set_value(pos,hash);}
+  bool match(std::size_t hash)const{return control_==set_value(hash);}
 
 private:
-  std::size_t hash_value()const
-  {
-    return control_-1;
-  }
-
-  static unsigned char set_value(std::size_t /*pos*/,std::size_t hash)
+  static unsigned char set_value(std::size_t hash)
   {
     return (hash%255)+1;
   }
@@ -88,8 +106,7 @@ class foa_unordered_hopscotch_set
 {
   using size_policy=SizePolicy;
   using alloc_traits=std::allocator_traits<Allocator>;
-  using bucket_array=std::vector<
-    bucket,
+  using bucket_array_type=bucket_array<
     typename alloc_traits::template rebind_alloc<bucket>>;
   using control_array=std::vector<
     control,
@@ -126,7 +143,7 @@ public:
 
   foa_unordered_hopscotch_set()
   {
-    controls.back().set(0,0);
+    controls.back().set(0);
   }
 
   foa_unordered_hopscotch_set(foa_unordered_hopscotch_set&&)=default;
@@ -164,33 +181,20 @@ public:
   void erase(const_iterator posit)
   {
     auto        [pc,pe]=posit;
-    std::size_t pos=pe-elements.data();
-    for(std::size_t i=0;;++i){
-      auto base=minus_wrap(pos,i);
-      if(buckets[base].is_set(i)){
-        destroy_element(pe->data());
-        pc->reset();
-        buckets[base].reset(i);  
-        --size_;
+    destroy_element(pe->data());
+    pc->reset();
+    buckets[pe-elements.data()].reset();
+    --size_;
 
-        // we could try moving further elements down here 
-        return;
-      }
-    }
+    // we could try moving further elements down here 
   }
 
   template<typename Key>
   size_type erase(const Key& x)
   {
-    auto hash=h(x);
-    auto pos=position_for(hash);
-    auto it=find(x,pos,hash);
+    auto it=find(x);
     if(it!=end()){
-      auto [pc,pe]=it;
-      destroy_element(pe->data());
-      pc->reset();
-      buckets[pos].reset(minus_wrap(pe-elements.data(),pos));
-      --size_;
+      erase(it);
       return 1;
     }
     else return 0;
@@ -207,25 +211,12 @@ public:
 #ifdef FXA_UNORDERED_HOPSCOTCH_STATUS
   void status()const
   {
-    long long int occupancy=0;
-    int           nonempty_buckets=0;
-    int           full_buckets=0;
-    for(const auto& b:buckets){
-      auto n=boost::core::popcount(b.hopmask());
-      if(n==N)++full_buckets;
-      if(n!=0){
-        occupancy+=n;
-        ++nonempty_buckets;
-      }
-    }
     std::cout<<"\n"
       <<"size: "<<size_<<"\n"
       <<"capacity: "<<capacity_<<"\n"
       <<"load factor: "<<(float)size_/capacity_<<"\n"
       <<"no of hops: "<<num_hops<<"\n"
       <<"no of hopscotch blocks: "<<num_hopscotch_blocks<<"\n"
-      <<"no of full buckets: "<<full_buckets<<"\n"
-      <<"non-empty bucket occupancy: "<<(float)occupancy/nonempty_buckets<<"/"<<N<<"\n"
       ;
   }
 #endif
@@ -235,7 +226,7 @@ private:
   foa_unordered_hopscotch_set(std::size_t n,Allocator al):
     al{al},size_index{size_policy::size_index(n)}
   {
-    controls.back().set(0,0);
+    controls.back().set(0);
   }
 
   template<typename Value>
@@ -296,12 +287,11 @@ private:
     std::size_t                 num_tx=0;
     try{
       for(std::size_t pos=0;pos<capacity_;++pos){
-        for(auto& mask=buckets[pos].hopmask();mask;mask&=mask-1){
-          auto n=boost::core::countr_zero(mask);
-          auto pos_n=plus_wrap(pos,n);
-          new_container.unchecked_insert(std::move(elements[pos_n].value()));
-          destroy_element(elements[pos_n].data());
-          controls[pos_n].reset();
+        if(controls[pos].occupied()){
+          new_container.unchecked_insert(std::move(elements[pos].value()));
+          destroy_element(elements[pos].data());
+          controls[pos].reset();
+          buckets[pos].reset();
           ++num_tx;
         }
       }
@@ -328,24 +318,21 @@ private:
   template<typename Value>
   iterator unchecked_insert(Value&& x,std::size_t pos,std::size_t hash)
   {
-    auto        &bucket=buckets[pos];
     auto        dst=find_empty_slot(pos);
     std::size_t n=0;
     
     while((n=minus_wrap(dst,pos))>=N){
       for(auto i=N-1;i;--i){
         auto hop=minus_wrap(dst,i);
-        auto j=(std::size_t)boost::core::countr_zero(buckets[hop].hopmask());
-        if(j<i){ // hop
-          auto hop_j=plus_wrap(hop,j);
+        if(buckets[hop]+i<N){ // hop
           construct_element(
-            std::move(elements[hop_j].value()),elements[dst].data());
-          destroy_element(elements[hop_j].data());
-          controls[dst].resit(hop,controls[hop_j]);
-          controls[hop_j].reset();
-          buckets[hop].set(i);
-          buckets[hop].reset(j);
-          dst=hop_j;
+            std::move(elements[hop].value()),elements[dst].data());
+          destroy_element(elements[hop].data());
+          controls[dst]=controls[hop];
+          controls[hop].reset();
+          buckets[dst].set(buckets[hop]+i);
+          buckets[hop].reset();
+          dst=hop;
 #ifdef FXA_UNORDERED_HOPSCOTCH_STATUS
           ++num_hops;
 #endif
@@ -360,8 +347,8 @@ private:
     }
 
     construct_element(std::forward<Value>(x),elements[dst].data());  
-    controls[dst].set(pos,hash);
-    bucket.set(n);
+    controls[dst].set(hash);
+    buckets[dst].set(n);
     ++size_;
     return at(dst);
   }
@@ -382,16 +369,11 @@ private:
     if(BOOST_LIKELY(pos+N<=capacity_)){
 #ifdef FXA_UNORDERED_SSE2
       control ctrl;
-      ctrl.set(pos,hash);
+      ctrl.set(hash);
       auto        a=_mm_set1_epi8(ctrl.value()),
                   b=_mm_loadu_si128(
                     reinterpret_cast<const __m128i*>(&controls[pos]));
-#if 0
-      std::size_t mask=_mm_movemask_epi8(_mm_cmpeq_epi8(a,b))&
-                    buckets[pos].hopmask();
-#else /* not loading buckets seems to outperform hopmask filtering */
       std::size_t mask=_mm_movemask_epi8(_mm_cmpeq_epi8(a,b));
-#endif
       for(;mask;mask&=mask-1){
         auto n=boost::core::countr_zero(mask);
         auto pos_n=pos+n;
@@ -400,10 +382,9 @@ private:
         }
       }
 #else
-      for(auto mask=buckets[pos].hopmask();mask;mask&=mask-1){
-        auto n=boost::core::countr_zero(mask);
+      for(unsigned int n=0;n<N;++n){
         auto pos_n=pos+n;
-        if(controls[pos_n].match(pos,hash)&&
+        if(controls[pos_n].match(hash)&&
            BOOST_LIKELY(pred(x,elements[pos_n].value()))){
           return at(pos_n); 
         }
@@ -411,10 +392,9 @@ private:
 #endif /* FXA_UNORDERED_SSE2 */
     }
     else{
-      for(auto mask=buckets[pos].hopmask();mask;mask&=mask-1){
-        auto n=boost::core::countr_zero(mask);
+      for(unsigned int n=0;n<N;++n){
         auto pos_n=plus_wrap(pos,n);
-        if(controls[pos_n].match(pos,hash)&&
+        if(controls[pos_n].match(hash)&&
            BOOST_LIKELY(pred(x,elements[pos_n].value()))){
           return at(pos_n); 
         }
@@ -431,17 +411,17 @@ private:
     return res;
   }  
 
-  Hash          h;
-  Pred          pred;
-  Allocator     al;
-  float         mlf=0.875;
-  std::size_t   size_=0;
-  std::size_t   size_index=size_policy::size_index(size_);
-  std::size_t   capacity_=size_policy::size(size_index);
-  size_type     ml=max_load();
-  bucket_array  buckets{capacity_,al};
-  control_array controls{capacity_+1,al};
-  element_array elements{capacity_,al};
+  Hash              h;
+  Pred              pred;
+  Allocator         al;
+  float             mlf=0.875;
+  std::size_t       size_=0;
+  std::size_t       size_index=size_policy::size_index(size_);
+  std::size_t       capacity_=size_policy::size(size_index);
+  size_type         ml=max_load();
+  bucket_array_type buckets{capacity_,al};
+  control_array     controls{capacity_+1,al};
+  element_array     elements{capacity_,al};
 
 #ifdef FXA_UNORDERED_HOPSCOTCH_STATUS
   int           num_hops=0;
