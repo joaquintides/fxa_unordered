@@ -222,6 +222,11 @@ public:
 #endif
 
 private:
+  struct hopscotch_failure:std::runtime_error
+  {
+    hopscotch_failure():std::runtime_error{"hopscotching failed"}{}
+  };
+
   // used only on rehash
   foa_unordered_hopscotch_set(std::size_t n,Allocator al):
     al{al},size_index{size_policy::size_index(n)}
@@ -271,7 +276,7 @@ private:
       rehash(ml+1);
       pos=position_for(hash);
       it=unchecked_insert(std::forward<Value>(x),pos,hash);
-      if(it==end())throw std::runtime_error("hopscotching failed");
+      if(it==end())throw hopscotch_failure();
     }
 
     return {it,true};
@@ -288,7 +293,10 @@ private:
     try{
       for(std::size_t pos=0;pos<capacity_;++pos){
         if(controls[pos].occupied()){
-          new_container.unchecked_insert(std::move(elements[pos].value()));
+          if(new_container.unchecked_insert(
+            std::move(elements[pos].value()))==new_container.end()){
+            throw hopscotch_failure();
+          }
           destroy_element(elements[pos].data());
           controls[pos].reset();
           buckets[pos].reset();
