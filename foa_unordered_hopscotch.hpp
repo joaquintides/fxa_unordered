@@ -113,6 +113,7 @@ class foa_unordered_hopscotch_set
     element<T>,
     typename alloc_traits::template rebind_alloc<element<T>>>;
   static constexpr auto N=bucket::N;
+  static constexpr std::size_t gather_factor=16;
 
 public:
   using key_type=T;
@@ -266,9 +267,14 @@ private:
     alloc_traits::destroy(al,p);
   }
 
+  static std::size_t rounded(std::size_t pos)
+  {
+    return pos/gather_factor*gather_factor;  
+  }
+
   std::size_t position_for(std::size_t hash)const
   {
-    return size_policy::position(boost::core::rotl(hash,4),size_index);
+    return rounded(size_policy::position(boost::core::rotl(hash,4),size_index));
   }
 
   std::size_t plus_wrap(std::size_t n,std::size_t m)const
@@ -350,7 +356,7 @@ private:
     auto        dst=find_empty_slot(pos);
     std::size_t n=0;
     
-    while((n=minus_wrap(dst,pos))>=N){
+    while((n=minus_wrap(dst,pos)*(rounded(dst)!=rounded(pos)))>=N){
       for(auto i=N-1;i;--i){
         auto hop=minus_wrap(dst,i);
         if(buckets[hop]+i<N){ // hop
@@ -359,7 +365,7 @@ private:
           destroy_element(elements[hop].data());
           controls[dst]=controls[hop];
           controls[hop].reset();
-          buckets[dst].set(buckets[hop]+i);
+          buckets[dst].set((buckets[hop]+i)*(rounded(dst)!=rounded(hop)));
           buckets[hop].reset();
           dst=hop;
 #ifdef FXA_UNORDERED_HOPSCOTCH_STATUS
@@ -395,7 +401,7 @@ private:
   template<typename Key>
   iterator find(const Key& x,std::size_t pos,std::size_t hash)const
   {
-    if(BOOST_LIKELY(pos+N<=capacity_)){
+    if(BOOST_LIKELY(pos+N+(gather_factor>1)*N<=capacity_)){
 #ifdef FXA_UNORDERED_SSE2
       control ctrl;
       ctrl.set(hash);
@@ -410,8 +416,21 @@ private:
           return at(pos_n); 
         }
       }
+      if constexpr(gather_factor>1){
+        b=_mm_loadu_si128(
+          reinterpret_cast<const __m128i*>(&controls[pos+N]));
+        mask=_mm_movemask_epi8(_mm_cmpeq_epi8(a,b))&
+          set_first_bits(gather_factor-1);
+        for(;mask;mask&=mask-1){
+          auto n=boost::core::countr_zero(mask);
+          auto pos_n=pos+N+n;
+          if(BOOST_LIKELY(pred(x,elements[pos_n].value()))){
+            return at(pos_n); 
+          }
+        }
+      }
 #else
-      for(unsigned int n=0;n<N;++n){
+      for(unsigned int n=0;n<N+gather_factor;++n){
         auto pos_n=pos+n;
         if(controls[pos_n].match(hash)&&
            BOOST_LIKELY(pred(x,elements[pos_n].value()))){
@@ -421,7 +440,7 @@ private:
 #endif /* FXA_UNORDERED_SSE2 */
     }
     else{
-      for(unsigned int n=0;n<N;++n){
+      for(unsigned int n=0;n<N+gather_factor;++n){
         auto pos_n=plus_wrap(pos,n);
         if(controls[pos_n].match(hash)&&
            BOOST_LIKELY(pred(x,elements[pos_n].value()))){
