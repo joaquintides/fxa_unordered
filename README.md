@@ -8,6 +8,7 @@ Proof of concept of closed- and open-addressing unordered associative containers
   * [`foa_unordered_coalesced_set`, `foa_unordered_coalesced_map`](#foa_unordered_coalesced)
   * [`foa_unordered_nway_set`, `foa_unordered_nway_map`](#foa_unordered_nway)
   * [`foa_unordered_nwayplus_set`, `foa_unordered_nwayplus_map`](#foa_unordered_nwayplus)
+  * [`foa_unordered_hopscotch_set`, `foa_unordered_hopscotch_map`](#foa_unordered_hopscotch)
 * [Benchmark results](https://github.com/joaquintides/fca_unordered/actions) for this PoC
 
 ## Closed addressing
@@ -168,7 +169,7 @@ algorithm).
 of a (sub)chain. In particular, erased cellar nodes are always recycled.
 
 In addition to the general deviations from the standard incurred by open-addressing
-containers in this PoC, `foa_unordered_coalesced_map`/`foa_unordered_coalesced_map`
+containers in this PoC, `foa_unordered_coalesced_set`/`foa_unordered_coalesced_map`
 have the following:
 * `erase(iterator)` is implemented as `erase(*iterator)`: this will throw if `Hash` or `Pred` do,
 but allows for node recycling.
@@ -270,3 +271,55 @@ pointer. When the cellar is exhausted, quadratic probing is resorted to.
   level of cellar N-groups).
 * `soa_coalesced_allocation`: As `coalesced_allocation`, but group metadata and
 slots are kept in separate arrays.
+
+<a name="foa_unordered_hopscotch"></a>
+```cpp
+template<
+  typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
+  typename Allocator=std::allocator<T>,
+  typename SizePolicy=prime_size
+>
+class foa_unordered_hopscotch_set;
+
+template<
+  typename Key,typename Value,
+  typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
+  typename Allocator=std::allocator<map_value_adaptor<Key,Value>>,
+  typename SizePolicy=prime_size
+>
+class foa_unordered_hopscotch_map;
+```
+
+Containers based on [hopscotch hashing](http://mcg.cs.tau.ac.il/papers/disc2008-hopscotch.pdf).
+We introduce the following modifications with respect to the approach described
+in chapter 2 of the referenced paper:
+* The original formulation assumed that element slots can be checked for
+occupancy/emptiness, which requires that a special value of `Key` is
+designated as meaning "empty". To avoid imposing this requirement, we
+maintain a separate array of control metadata bytes keeping an occupancy
+bit and a reduced 7-bit hash value.
+* As checking for matching elements for a bucket can be done very
+efficiently using [SSE2](https://en.wikipedia.org/wiki/SSE2) on the control array,
+bucket *hop-information bitmaps*, as defined in the original paper, are not strictly
+needed and have been replaced by an array of *delta values*
+(distances from the elements to their base buckets), which perform better for
+the hopscotch algorithm and occupy less memory (4 bits per slot for a
+bucket maximum length of 16).
+
+In addition to the general deviations from the standard incurred by
+open-addressing containers in this PoC,
+`foa_unordered_hopscotch_set`/`foa_unordered_hopscotch_map` have the following:
+* Rehashing happens when the number of elements in the container hits the
+maximum load, or, before that, if the hopscotch algorithm is blocked
+(no empty slot can be produced in the vicinity of a bucket).
+* If hopscotch block happens *during or immediately after* rehashing,
+a `hopscotch_failure` exception is thrown.
+
+**`SizePolicy`**
+
+As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered_*).
+Hopscotch maps are very sensitive to the hash function
+[uniformity](https://en.wikipedia.org/wiki/Hash_function#Uniformity), which
+makes policies using Fibonacci hashing (or other bit spreading techniques)
+the only viable alternatives (unless a really good hash function is provided
+in the first place).
