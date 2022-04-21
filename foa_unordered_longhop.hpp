@@ -506,15 +506,14 @@ private:
   iterator find(const Key& x,std::size_t pos,std::size_t hash)const
   {
     auto n=elements[pos].first();
-    pos=minus_wrap(pos,1);
-    while(n){
+    if(n--)do{
       pos=plus_wrap(pos,n);
       if(elements[pos].match(hash)&&
         BOOST_LIKELY(pred(x,elements[pos].value()))){
         return at(pos); 
       }
       n=elements[pos].next();
-    }
+    }while(n);
     return end();
   }
 
