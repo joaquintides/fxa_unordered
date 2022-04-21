@@ -74,8 +74,18 @@ private:
   std::aligned_storage_t<sizeof(T),alignof(T)> storage;
   uint16_t                                     metadata=0;
 
+  static constexpr std::size_t floorlog2(std::size_t n)
+  {
+#ifdef _MSC_VER
+    // https://github.com/boostorg/core/issues/109
+    return n==1?0:1+floorlog2(n>>1);
+#else
+    return boost::core::bit_width(n)-1;
+#endif
+  }
+
   static constexpr std::size_t width=sizeof(metadata)*CHAR_BIT,
-                               width_next=boost::core::bit_width(N)-1,
+                               width_next=floorlog2(N),
                                shift_next=0u,
                                width_first=width_next,
                                shift_first=width_next,
