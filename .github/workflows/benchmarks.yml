@@ -420,7 +420,7 @@ jobs:
           git clone https://github.com/boostorg/boost.git boost-root
           cd boost-root
           git submodule update --init
-          git rm --ignore-unmatch libs/unordered/
+          git rm --ignore-unmatch libs\unordered\
           xcopy  ..\unordered libs\unordered /E /I         
           cmd /c bootstrap.bat
           .\b2.exe -d0 headers
