@@ -533,16 +533,17 @@ private:
   // returns pos-1 if result is first in bucket
   {
     auto n=controls[pos].first();
-    pos=minus_wrap(pos,1);
-    auto prev=pos;
-    while(n){
-      pos=plus_wrap(pos,n);
-      if(controls[pos].match(hash)&&
-        BOOST_LIKELY(pred(x,elements[pos].value()))){
-        return prev;
-      }
-      n=controls[pos].next();
-      prev=pos;
+    if(n--){
+      auto prev=minus_wrap(pos,1);
+      do{
+        pos=plus_wrap(pos,n);
+        if(controls[pos].match(hash)&&
+          BOOST_LIKELY(pred(x,elements[pos].value()))){
+          return prev;
+        }
+        prev=pos;
+        n=controls[pos].next();
+      }while(n);
     }
     return capacity_;
   }
