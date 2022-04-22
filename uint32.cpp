@@ -248,7 +248,6 @@ int main()
     // test<fca_pow2_unordered_map>( "fca_pow2_unordered_map" );
     
     test<fca_pow2_fib_unordered_map>( "fca_pow2_fib_unordered_map" );
-    test<fca_fmod_unordered_bucket_map>( "fca_fmod_unordered_bucket_map" );
 
     std::cout << "---\n\n";
 

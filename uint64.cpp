@@ -249,11 +249,11 @@ int main()
 #if defined(IN_32BIT_ARCHITECTURE)
     test<fca_frng_fib_unordered_map>( "fca_frng_fib_unordered_map" );
 #endif
+
     // same as frng
     // test<fca_pow2_unordered_map>( "fca_pow2_unordered_map" );
     
     test<fca_pow2_fib_unordered_map>( "fca_pow2_fib_unordered_map" );
-    test<fca_fmod_unordered_bucket_map>( "fca_fmod_unordered_bucket_map" );
 
     std::cout << "---\n\n";
 
