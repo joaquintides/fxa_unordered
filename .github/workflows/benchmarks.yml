@@ -304,9 +304,13 @@ jobs:
             export BOOST_BRANCH=boost-1.78.0
             cd $HOME
             if [ ! -d boost-root ]; then
+              git clone -b feature/fca-unordered https://github.com/boostorg/unordered.git unordered
               git clone -b $BOOST_BRANCH https://github.com/boostorg/boost.git boost-root --depth 1
               cd boost-root
               git submodule update --init --depth 1
+              git rm --ignore-unmatch libs/unordered/
+              mkdir libs/unordered
+              cp -r ../unordered/* libs/unordered
               ./bootstrap.sh
               ./b2 headers
               cd ..
@@ -409,10 +413,14 @@ jobs:
         shell: cmd
         run: |
           cd %GITHUB_WORKSPACE%
+          git clone -b feature/fca-unordered https://github.com/boostorg/unordered.git unordered
           git clone https://github.com/boostorg/boost.git boost-root
           cd boost-root
           git checkout boost-1.78.0
           git submodule update --init
+          git rm --ignore-unmatch libs/unordered/
+          mkdir libs\unordered
+          copy  ..\unordered\* libs\unordered          
           cmd /c bootstrap.bat
           .\b2.exe -d0 headers
       - name: Install Abseil
