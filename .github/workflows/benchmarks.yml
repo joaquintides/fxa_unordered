@@ -307,7 +307,6 @@ jobs:
               git clone -b feature/fca-unordered https://github.com/boostorg/unordered.git unordered
               git clone -b $BOOST_BRANCH https://github.com/boostorg/boost.git boost-root --depth 1
               cd boost-root
-              git checkout boost-1.79.0
               git submodule update --init --depth 1
               git rm --ignore-unmatch libs/unordered/
               mkdir libs/unordered
@@ -324,7 +323,6 @@ jobs:
             git clone -b feature/fca-unordered https://github.com/boostorg/unordered.git unordered
             git clone https://github.com/boostorg/boost.git boost-root
             cd boost-root
-            git checkout boost-1.79.0
             git submodule update --init
             git rm --ignore-unmatch libs/unordered/
             mkdir libs/unordered
@@ -421,7 +419,6 @@ jobs:
           git clone -b feature/fca-unordered https://github.com/boostorg/unordered.git unordered
           git clone https://github.com/boostorg/boost.git boost-root
           cd boost-root
-          git checkout boost-1.79.0
           git submodule update --init
           git rm --ignore-unmatch libs/unordered/
           xcopy  ..\unordered libs\unordered /E /I         
