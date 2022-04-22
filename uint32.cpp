@@ -306,6 +306,7 @@ int main()
     test<foa_pow2_fib_unordered_soa_coalesced_nwayplus_map>( "foa_pow2_fib_unordered_soa_coalesced_nwayplus_map" );
     test<foa_frng_fib_unordered_hopscotch_map>( "foa_frng_fib_unordered_hopscotch_map" );
     test<foa_absl_unordered_hopscotch_map>( "foa_absl_unordered_hopscotch_map" );
+    test<foa_fmod_unordered_longhop_map>( "foa_fmod_unordered_longhop_map" );
     test<foa_frng_fib_unordered_longhop_map>( "foa_frng_fib_unordered_longhop_map" );
     test<foa_absl_unordered_longhop_map>( "foa_absl_unordered_longhop_map" );
 
