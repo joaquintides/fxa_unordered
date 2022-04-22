@@ -320,10 +320,14 @@ jobs:
             ln -s $HOME/boost-root $GITHUB_WORKSPACE/boost-root
           else
             cd $GITHUB_WORKSPACE
+            git clone -b feature/fca-unordered https://github.com/boostorg/unordered.git unordered
             git clone https://github.com/boostorg/boost.git boost-root
             cd boost-root
             git checkout boost-1.78.0
             git submodule update --init
+            git rm --ignore-unmatch libs/unordered/
+            mkdir libs/unordered
+            cp -r ../unordered/* libs/unordered
             ./bootstrap.sh
             ./b2 -d0 headers
           fi
