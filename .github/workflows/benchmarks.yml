@@ -419,8 +419,7 @@ jobs:
           git checkout boost-1.78.0
           git submodule update --init
           git rm --ignore-unmatch libs/unordered/
-          mkdir libs\unordered
-          copy  ..\unordered\* libs\unordered          
+          xcopy  ..\unordered libs\unordered          
           cmd /c bootstrap.bat
           .\b2.exe -d0 headers
       - name: Install Abseil
