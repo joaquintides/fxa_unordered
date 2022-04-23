@@ -2,17 +2,18 @@
 Proof of concept of closed- and open-addressing unordered associative containers.
 * [Development Plan for Boost.Unordered](https://pdimov.github.io/articles/unordered_dev_plan.html)
 * [Closed addressing](#closed-addressing)
-  * [`fca_unordered_set`, `fca_unordered_map`](#fca_unordered_*)
+  * [`fca_unordered_set`, `fca_unordered_map`](#fca_unordered)
   * [`fca_simple_unordered_set`, `fca_simple_unordered_map`](#fca_simple_unordered)
 * [Open addressing](#open-addressing)
   * [`foa_unordered_coalesced_set`, `foa_unordered_coalesced_map`](#foa_unordered_coalesced)
   * [`foa_unordered_nway_set`, `foa_unordered_nway_map`](#foa_unordered_nway)
   * [`foa_unordered_nwayplus_set`, `foa_unordered_nwayplus_map`](#foa_unordered_nwayplus)
   * [`foa_unordered_hopscotch_set`, `foa_unordered_hopscotch_map`](#foa_unordered_hopscotch)
+  * [`foa_unordered_longhop_set`, `foa_unordered_longhop_map`](#foa_unordered_longhop)
 * [Benchmark results](https://github.com/joaquintides/fca_unordered/actions) for this PoC
 
 ## Closed addressing
-<a name="fca_unordered_*"></a>
+<a name="fca_unordered"></a>
 
 ```cpp
 template<
@@ -181,7 +182,7 @@ presence of erasures.
   
 **`SizePolicy`**
 
-As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered_*).
+As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered).
 
 **`NodePolicy`**
 * `simple_coalesced_set_nodes`: Regular nodes are used with storage for the value and a `next` pointer.
@@ -214,7 +215,7 @@ where each group has its own list.
 
 **`SizePolicy`**
 
-As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered_*).
+As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered).
 
 <a name="foa_unordered_nwayplus"></a>
 ```cpp
@@ -245,7 +246,7 @@ are tried according to the rules encoded by `GroupAllocationPolicy`.
 
 **`SizePolicy`**
 
-As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered_*).
+As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered).
 N-way<sup>+</sup> maps are very sensitive to the hash function
 [uniformity](https://en.wikipedia.org/wiki/Hash_function#Uniformity), which
 makes policies using Fibonacci hashing (or other bit spreading techniques)
@@ -317,7 +318,63 @@ a `hopscotch_failure` exception is thrown.
 
 **`SizePolicy`**
 
-As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered_*).
+As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered).
+Hopscotch maps are very sensitive to the hash function
+[uniformity](https://en.wikipedia.org/wiki/Hash_function#Uniformity), which
+makes policies using Fibonacci hashing (or other bit spreading techniques)
+the only viable alternatives (unless a really good hash function is provided
+in the first place).
+
+<a name="foa_unordered_longhop"></a>
+```cpp
+template<
+  typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
+  typename Allocator=std::allocator<T>,
+  typename SizePolicy=prime_size
+>
+class foa_unordered_longhop_set;
+
+template<
+  typename Key,typename Value,
+  typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
+  typename Allocator=std::allocator<map_value_adaptor<Key,Value>>,
+  typename SizePolicy=prime_size
+>
+class foa_unordered_longhop_map;
+```
+
+Further variation on [hopscotch hashing](http://mcg.cs.tau.ac.il/papers/disc2008-hopscotch.pdf):
+* Instead of using hop-information bitmaps or deltas to the beginning
+of the bucket, slots are linked via 4-bit values `first` and `next` acting
+as "short" pointers to the first and next element of the bucket, respectively.
+This allows for buckets to be of indefinite length, as opposed to
+[`foa_unordered_hopscotch_set`/`foa_unordered_hopscotch_map`](#foa_unordered_hopscotch),
+where the maximum size is 16.
+* `first`/`next` info is conflated with an occupancy bit and a 7-bit reduced
+hash value in a 2-byte metadata word per slot kept in a separate array.
+This layout prevents the usage of [SSE2](https://en.wikipedia.org/wiki/SSE2)
+for quick match checking.
+
+In addition to the general deviations from the standard incurred by
+open-addressing containers in this PoC,
+`foa_unordered_longhop_set`/`foa_unordered_longhop_map` have the following:
+* Rehashing happens when the number of elements in the container hits the
+maximum load, or, before that, if the hopscotch algorithm is blocked
+(no empty slot can be produced in the vicinity of the last bucket element).
+* If hopscotch block happens *during or immediately after* rehashing,
+a `hopscotch_failure` exception is thrown.
+* On erasure, elements in the same bucket beyond that being erased are
+moved towards the beginning of the bucket to occupy the slot left
+available. This means that the `erase(it++)` idiom won't work for
+erasure on container traversal: instead, one has to write `it=erase(it)`
+as would be done with, say, a `std::vector`. As a consequence of
+`erase` returning an iterator, its complexity is not average constant
+but suffers from the problem described in
+[N2023](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2023.pdf).
+
+**`SizePolicy`**
+
+As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered).
 Hopscotch maps are very sensitive to the hash function
 [uniformity](https://en.wikipedia.org/wiki/Hash_function#Uniformity), which
 makes policies using Fibonacci hashing (or other bit spreading techniques)
