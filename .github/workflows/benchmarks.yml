@@ -301,23 +301,44 @@ jobs:
         run: |
           if [ -n "${{matrix.command}}" ]; then
             set -xe
-            export BOOST_BRANCH=boost-1.78.0
+            #
+            # Note: this is a spin-off branch. Using a different strategy.
+            #
+            export BOOST_BRANCH=develop
+            export BOOST_ROOT=$HOME/boost-root-develop
+            export UNORDERED_BRANCH=feature/fca-unordered
             cd $HOME
-            if [ ! -d boost-root ]; then
-              git clone -b feature/fca-unordered https://github.com/boostorg/unordered.git unordered
-              git clone -b $BOOST_BRANCH https://github.com/boostorg/boost.git boost-root --depth 1
-              cd boost-root
-              git submodule update --init --depth 1
+            if [ ! -d unordered ]; then
+              git clone -b $UNORDERED_BRANCH https://github.com/boostorg/unordered.git unordered
+            else
+              cd unordered
+              git checkout $UNORDERED_BRANCH
+              git pull
+              cd ..
+            fi
+            if [ ! -d $BOOST_ROOT ]; then
+              git clone -b $BOOST_BRANCH https://github.com/boostorg/boost.git $BOOST_ROOT
+              cd $BOOST_ROOT
+              git submodule update --init
               git rm --ignore-unmatch libs/unordered/
-              mkdir libs/unordered
+              mkdir -p libs/unordered
               cp -r ../unordered/* libs/unordered
               ./bootstrap.sh
               ./b2 headers
               cd ..
             else
-              : # Manually reset the self-hosted runner if modifying BOOST_BRANCH.
+              cd $BOOST_ROOT
+              git checkout $BOOST_BRANCH
+              git pull
+              git submodule update --init
+              git rm --ignore-unmatch libs/unordered/
+              mkdir -p libs/unordered
+              cp -r ../unordered/* libs/unordered
+              ./bootstrap.sh
+              ./b2 headers
+              cd ..
             fi
-            ln -s $HOME/boost-root $GITHUB_WORKSPACE/boost-root
+            ln -s $BOOST_ROOT $GITHUB_WORKSPACE/boost-root
           else
             cd $GITHUB_WORKSPACE
             git clone -b feature/fca-unordered https://github.com/boostorg/unordered.git unordered
