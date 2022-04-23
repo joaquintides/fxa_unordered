@@ -1207,7 +1207,7 @@ private:
 
   group_iterator group_for(std::size_t hash)const
   {
-    return groups.at(size_policy::position(hash>>3,size_index)/N);
+    return groups.at(size_policy::position(hash,size_index)/N);
   }
 
   template<typename Key>
