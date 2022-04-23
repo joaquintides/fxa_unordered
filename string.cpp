@@ -131,7 +131,14 @@ template<class Map> void BOOST_NOINLINE test_iteration( Map& map, std::chrono::s
     {
         if( it->second & 1 )
         {
+          if constexpr( std::is_void_v< decltype( map.erase( it ) ) > )
+          {
             map.erase( it++ );
+          }
+          else
+          {
+            it = map.erase( it );    
+          }
         }
         else
         {
@@ -283,6 +290,10 @@ int main()
     test<foa_frng_fib_unordered_soa_nwayplus_map_fnv1a>( "foa_frng_fib_unordered_soa_nwayplus_map, FNV-1a" );
     test<foa_pow2_fib_unordered_coalesced_nwayplus_map_fnv1a>( "foa_pow2_fib_unordered_coalesced_nwayplus_map, FNV-1a" );
     test<foa_pow2_fib_unordered_soa_coalesced_nwayplus_map_fnv1a>( "foa_pow2_fib_unordered_soa_coalesced_nwayplus_map, FNV-1a" );
+    test<foa_frng_fib_unordered_hopscotch_map_fnv1a>( "foa_frng_fib_unordered_hopscotch_map, FNV-1a" );
+    test<foa_absl_unordered_hopscotch_map_fnv1a>( "foa_absl_unordered_hopscotch_map, FNV-1a" );
+    test<foa_frng_fib_unordered_longhop_map_fnv1a>( "foa_frng_fib_unordered_longhop_map, FNV-1a" );
+    test<foa_absl_unordered_longhop_map_fnv1a>( "foa_absl_unordered_longhop_map, FNV-1a" );
 
 #ifdef HAVE_ABSEIL
     test<absl_node_hash_map_fnv1a>( "absl::node_hash_map, FNV-1a" );

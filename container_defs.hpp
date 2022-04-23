@@ -22,6 +22,8 @@
 #include "fca_unordered.hpp"
 #include "foa_unordered_coalesced.hpp"
 #include "foa_unordered_nway.hpp"
+#include "foa_unordered_hopscotch.hpp"
+#include "foa_unordered_longhop.hpp"
 #ifdef HAVE_ABSEIL
 # include "absl/container/node_hash_map.h"
 # include "absl/container/flat_hash_map.h"
@@ -319,6 +321,34 @@ using foa_pow2_fib_unordered_soa_coalesced_nwayplus_map =
     fxa_unordered::pow2_fib_size,
     fxa_unordered::nwayplus::soa_coalesced_allocation>;
 
+template<class K, class V, class H=boost::hash<K>>
+using foa_frng_fib_unordered_hopscotch_map =
+  foa_unordered_hopscotch_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_frng_fib_size>;
+    
+template<class K, class V, class H=absl::container_internal::hash_default_hash<K>>
+using foa_absl_unordered_hopscotch_map =
+  foa_unordered_hopscotch_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::pow2_size>;
+
+template<class K, class V, class H=boost::hash<K>>
+using foa_frng_fib_unordered_longhop_map =
+  foa_unordered_longhop_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_frng_fib_size>;
+    
+template<class K, class V, class H=absl::container_internal::hash_default_hash<K>>
+using foa_absl_unordered_longhop_map =
+  foa_unordered_longhop_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::pow2_size>;
+
 // fnv1a_hash
 
 template<int Bits> struct fnv1a_hash_impl;
@@ -533,6 +563,18 @@ template<class K, class V> using foa_pow2_fib_unordered_coalesced_nwayplus_map_f
 template<class K, class V> using foa_pow2_fib_unordered_soa_coalesced_nwayplus_map_fnv1a =
   foa_pow2_fib_unordered_soa_coalesced_nwayplus_map<K, V, fnv1a_hash>;
   
+template<class K, class V> using foa_frng_fib_unordered_hopscotch_map_fnv1a =
+  foa_frng_fib_unordered_hopscotch_map<K, V, fnv1a_hash>;
+
+template<class K, class V> using foa_absl_unordered_hopscotch_map_fnv1a =
+  foa_absl_unordered_hopscotch_map<K, V, fnv1a_hash>;
+
+template<class K, class V> using foa_frng_fib_unordered_longhop_map_fnv1a =
+  foa_frng_fib_unordered_longhop_map<K, V, fnv1a_hash>;
+
+template<class K, class V> using foa_absl_unordered_longhop_map_fnv1a =
+  foa_absl_unordered_longhop_map<K, V, fnv1a_hash>;
+
 #ifdef HAVE_ABSEIL
 
 template<class K, class V> using absl_node_hash_map_fnv1a =

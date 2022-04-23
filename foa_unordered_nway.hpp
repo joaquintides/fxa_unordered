@@ -25,41 +25,6 @@
 #include <vector>
 #include "fxa_common.hpp"
 
-#if __SSE2__
-#include <emmintrin.h>
-#endif
-
-#if defined(__SSE2__) || \
-    defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)
-#define FXA_UNORDERED_SSE2
-#endif
-
-// ripped from
-// https://github.com/abseil/abseil-cpp/blob/master/absl/base/optimization.h
-#ifdef __has_builtin
-#define FXA_HAVE_BUILTIN(x) __has_builtin(x)
-#else
-#define FXA_HAVE_BUILTIN(x) 0
-#endif
-
-#if !defined(NDEBUG)
-#define FXA_ASSUME(cond) assert(cond)
-#elif FXA_HAVE_BUILTIN(__builtin_assume)
-#define FXA_ASSUME(cond) __builtin_assume(cond)
-#elif defined(__GNUC__) || FXA_HAVE_BUILTIN(__builtin_unreachable)
-#define FXA_ASSUME(cond)                 \
-  do {                                    \
-    if (!(cond)) __builtin_unreachable(); \
-  } while (0)
-#elif defined(_MSC_VER)
-#define FXA_ASSUME(cond) __assume(cond)
-#else
-#define FXA_ASSUME(cond)               \
-  do {                                  \
-    static_cast<void>(false && (cond)); \
-  } while (0)
-#endif
-
 namespace fxa_unordered{
 
 namespace uint64_ops{
