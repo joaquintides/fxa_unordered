@@ -276,8 +276,8 @@ private:
 
   std::size_t position_for(std::size_t hash)const
   {
-    //return size_policy::position(boost::core::rotl(hash,4),size_index);
-    return size_policy::position(hash+(hash<<3),size_index);
+    return size_policy::position(boost::core::rotl(hash,4),size_index);
+    //return size_policy::position(hash,size_index);
   }
 
   std::size_t plus_wrap(std::size_t n,std::size_t m)const
