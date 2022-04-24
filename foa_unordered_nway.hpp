@@ -723,7 +723,9 @@ public:
   group_array& operator=(group_array&&)=default;
 
   static auto& control(iterator it){return *it;}
+  auto& control(std::size_t pos)const{return const_cast<Group&>(v[pos]);}
   static auto& elements(iterator it){return *it;}
+  auto& elements(std::size_t pos)const{return const_cast<Group&>(v[pos]);}
   
   iterator begin()const{return const_cast<Group*>(v.data());}
   iterator end()const{return const_cast<Group*>(v.data()+v.size());}
@@ -812,7 +814,9 @@ public:
   soa_group_array& operator=(soa_group_array&&)=default;
 
   static auto& control(iterator it){return *it.pg;}
+  auto& control(std::size_t pos)const{return const_cast<Group&>(v[pos]);}
   static auto& elements(iterator it){return *it.pe;}
+  auto& elements(std::size_t pos)const{return const_cast<elements_type&>(e[pos]);}
   
   iterator begin()const{return at(0);}
   iterator end()const{return at(size());}
@@ -857,7 +861,7 @@ public:
   // only in moved-from state when rehashing
   bool empty()const{return !this->size();}
 
-  std::pair<iterator,int> new_group_after(iterator first,iterator /*it*/)
+  std::pair<std::size_t,int> new_group_after(std::size_t first,std::size_t /*pos*/)
   {
     for(auto pr=make_prober(first);;pr.next()){
       if(auto mask=control(pr.get()).match_empty_or_deleted()){
@@ -869,7 +873,7 @@ public:
 
   struct prober
   {        
-    iterator get()const noexcept{return begin+n;}
+    std::size_t get()const noexcept{return n;}
 
     void next()noexcept
     {
@@ -883,20 +887,17 @@ public:
   private:
     friend class group_allocator;
 
-    prober(iterator begin,std::size_t size,iterator it):
-      begin{begin},size{size},n{(std::size_t)(it-begin)}
-      {next();}
+    prober(std::size_t size,std::size_t pos):size{size},n{pos}{next();}
 
-    iterator    begin;
     std::size_t size,
                 n,
                 i=1,
                 pow2mask=boost::core::bit_ceil(size)-1;
   };
 
-  prober make_prober(iterator it)const
+  prober make_prober(std::size_t pos)const
   {
-    return {this->begin(),this->size(),it};
+    return {this->size(),pos};
   }
 
 #ifdef NWAYPLUS_STATUS
@@ -924,32 +925,32 @@ public:
 
   using GroupArray::control;
 
-  std::pair<iterator,int> new_group_after(iterator first,iterator it)
+  std::pair<std::size_t,int> new_group_after(std::size_t first,std::size_t pos)
   {
     assert(!control(it).match_empty_or_deleted());
     if(auto n=boost::core::countr_zero((unsigned int)
          control(top).match_empty_or_deleted());n<max_saturation){
-      control(it).next()=top;
+      control(pos).next()=top;
       return {top,n};
     }
     else if(top>this->begin()+address_size_){
-      control(it).next()=--top;
+      control(pos).next()=--top;
       return {top,0};
     }
-    control(it).next()=it; // close chain 
+    control(pos).next()=pos; // close chain 
 
-    return super::new_group_after(first,it);
+    return super::new_group_after(first,pos);
   }
 
-  auto make_prober(iterator it)const
+  auto make_prober(std::size_t pos)const
   {
     assert(!theres_remaining_cellar());
-    return super::make_prober(it);
+    return super::make_prober(pos);
   }
 
   bool theres_remaining_cellar()const
   {
-    return top>this->begin()+address_size_;
+    return top>address_size_;
   }
 
 #ifdef NWAYPLUS_STATUS
@@ -992,7 +993,7 @@ public:
       <<"occupied groups: "<<occupied_groups<<"\n"
       <<"occupied address groups: "<<occupied_address_groups<<"\n"
       <<"free groups: "<<free_groups<<"\n"
-      <<"cellar remaining: "<<100.0*(top-(this->begin()+address_size_))/(this->size()-address_size_)<<"%\n"
+      <<"cellar remaining: "<<100.0*(top-address_size_)/(this->size()-address_size_)<<"%\n"
       <<"occup. used cellar: "<<(double)occupancy_used_cellar/(this->begin()+this->size()-top)<<"\n"
       <<"occup. used address: "<<(double)occupancy_used_address/occupied_address_groups<<"\n"
       <<"avg. chain length: "<<(double)chain_length/occupied_address_groups<<"\n"
@@ -1002,7 +1003,7 @@ public:
 
 private:
   std::size_t  address_size_;
-  iterator     top=this->end()-1;
+  std::size_t  top=this->size()-1;
 };
 
 struct regular_allocation
@@ -1077,8 +1078,12 @@ class foa_unordered_nwayplus_set
 
   static auto& control(group_iterator itg)
     {return group_allocator::control(itg);}
+  auto& control(std::size_t pos)const
+    {return groups.control(pos);}
   static auto& elements(group_iterator itg)
     {return group_allocator::elements(itg);}
+  auto& elements(std::size_t pos)const
+    {return groups.elements(pos);}
 
 public:
   using key_type=T;
@@ -1169,21 +1174,24 @@ public:
   {
     auto hash=h(x);
     auto first=group_for(hash);
-    for(auto itg=first;;){
-      auto [n,found]=find_in_group(x,itg,hash);
-      if(found)return {itg,n};
+    for(auto pos=first;;){
+      auto [n,found]=find_in_group(x,pos,hash);
+      if(found)return {groups.at(pos),n};
 
-      auto next=control(itg).next();
-      if(!next)         return end();
-      else if(itg==next)break; // chain closed, go probing
-      else              itg=next;
-    };
+      auto next=control(pos).next();
+      if(!next)return end();
+      else{
+        std::size_t next_pos=next-groups.begin();
+        if(pos==next_pos)break; // chain closed, go probing
+        else             pos=next_pos;
+      }
+    }
 
     for(auto pr=groups.make_prober(first);;pr.next()){
-      auto itg=pr.get();
-      auto [n,found]=find_in_group(x,itg,hash);
-      if(found)return {itg,n};
-      if(control(itg).match_empty())return end();
+      auto pos=pr.get();
+      auto [n,found]=find_in_group(x,pos,hash);
+      if(found)return {groups.at(pos),n};
+      if(control(pos).match_empty())return end();
     }
   }
 
@@ -1207,21 +1215,21 @@ private:
     alloc_traits::destroy(al,p);
   }
 
-  group_iterator group_for(std::size_t hash)const
+  std::size_t group_for(std::size_t hash)const
   {
-    return groups.at(
-      size_policy::position(hash_split_policy::long_hash(hash),size_index)/N);
+    return
+      size_policy::position(hash_split_policy::long_hash(hash),size_index)/N;
   }
 
   template<typename Key>
   std::pair<int,bool> find_in_group(
-    const Key& x,group_iterator itg,std::size_t hash)const
+    const Key& x,std::size_t pos,std::size_t hash)const
   {
-    auto mask=control(itg).match(hash_split_policy::short_hash(hash));
+    auto mask=control(pos).match(hash_split_policy::short_hash(hash));
     while(mask){
       FXA_ASSUME(mask!=0);
       auto n=boost::core::countr_zero((unsigned int)mask);
-      if(BOOST_LIKELY(pred(x,elements(itg).at(n).value())))return {n,true};
+      if(BOOST_LIKELY(pred(x,elements(pos).at(n).value())))return {n,true};
       mask&=mask-1;
     }
     return {0,false};
@@ -1243,7 +1251,9 @@ private:
     auto& [itga,na]=ita;
     if(!itga){
       assert(last);
-      std::tie(itga,na)=groups.new_group_after(first,last);
+      std::size_t pos;
+      std::tie(pos,na)=groups.new_group_after(first,last);
+      itga=groups.at(pos);
     }
     construct_element(std::forward<Value>(x),elements(itga).at(na).data());  
     control(itga).set(na,hash_split_policy::short_hash(hash));
@@ -1293,67 +1303,74 @@ private:
   iterator unchecked_insert(Value&& x,std::size_t hash)
   {
     auto first=group_for(hash),
-         itg=first;
+         pos=first;
 
     // unchecked_insert only called just after rehashing, so
     // there are no deleted elements and we can go till end of chain
-    while(control(itg).next()&&itg!=control(itg).next())itg=control(itg).next();
+    while(control(pos).next()&&
+      pos!=std::size_t(control(pos).next()-groups.begin()))
+      pos=control(pos).next()-groups.begin();
 
     // if chain's not closed see occupancy, otherwise go probing
     int mask,n;
-    if(!control(itg).next()&&(mask=control(itg).match_empty())){
+    if(!control(pos).next()&&(mask=control(pos).match_empty())){
       FXA_ASSUME(mask!=0);
       n=boost::core::countr_zero((unsigned int)mask);
     }
     else{
-      std::tie(itg,n)=groups.new_group_after(first,itg);
+      std::tie(pos,n)=groups.new_group_after(first,pos);
     }  
       
-    construct_element(std::forward<Value>(x),elements(itg).at(n).data());
-    control(itg).set(n,hash_split_policy::short_hash(hash));
+    construct_element(std::forward<Value>(x),elements(pos).at(n).data());
+    control(pos).set(n,hash_split_policy::short_hash(hash));
     ++size_;
-    return {itg,n};
+    return {groups.at(pos),n};
   }
 
   struct find_match_available_last_return_type
   {
     iterator       it,ita={};
-    group_iterator last={};
+    std::size_t    last=0;
   };
 
   template<typename Key>
   find_match_available_last_return_type
   find_match_available_last(
-    const Key& x,group_iterator first,std::size_t hash)const
+    const Key& x,std::size_t first,std::size_t hash)const
   {
     iterator ita;
-    auto     update_ita=[&](group_iterator itg)
+    auto     update_ita=[&](std::size_t pos)
     {
       if(!ita){
-        if(auto mask=control(itg).match_empty_or_deleted()){
+        if(auto mask=control(pos).match_empty_or_deleted()){
           FXA_ASSUME(mask!=0);
-          ita={itg,boost::core::countr_zero((unsigned int)mask)};
+          ita={
+            groups.at(pos),
+            boost::core::countr_zero((unsigned int)mask)};
         }
       }        
     };
       
-    for(auto itg=first;;){
-      auto [n,found]=find_in_group(x,itg,hash);
-      if(found)return {{itg,n}};
-      update_ita(itg); 
+    for(auto pos=first;;){
+      auto [n,found]=find_in_group(x,pos,hash);
+      if(found)return {{groups.at(pos),n}};
+      update_ita(pos); 
         
-      auto next=control(itg).next();
-      if(!next)         return {end(),ita,itg};
-      else if(itg==next)break; // chain closed, go probing
-      else              itg=next;
+      auto next=control(pos).next();
+      if(!next)return {end(),ita,pos};
+      else{
+        std::size_t next_pos=next-groups.begin();
+        if(pos==next_pos)break; // chain closed, go probing
+        else             pos=next_pos;
+      }
     }
 
     for(auto pr=groups.make_prober(first);;pr.next()){
-      auto itg=pr.get();
-      auto [n,found]=find_in_group(x,itg,hash);
-      if(found)return {{itg,n}};
-      update_ita(itg); 
-      if(control(itg).match_empty())return {end(),ita}; // ita must be non-null
+      auto pos=pr.get();
+      auto [n,found]=find_in_group(x,pos,hash);
+      if(found)return {{groups.at(pos),n}};
+      update_ita(pos); 
+      if(control(pos).match_empty())return {end(),ita}; // ita must be non-null
     }
   }
 
