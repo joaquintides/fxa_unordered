@@ -295,6 +295,7 @@ using foa_pow2_fib_unordered_soa_nwayplus_map =
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::pow2_fib_size,
+    fxa_unordered::shift_hash<3>,
     fxa_unordered::nwayplus::soa_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
@@ -303,6 +304,7 @@ using foa_frng_fib_unordered_soa_nwayplus_map =
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::prime_frng_fib_size,
+    fxa_unordered::shift_hash<3>,
     fxa_unordered::nwayplus::soa_allocation>;
 
 template<class K, class V, class H=absl::container_internal::hash_default_hash<K>>
@@ -311,6 +313,7 @@ using foa_absl_unordered_soa_nwayplus_map =
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::pow2_size,
+    fxa_unordered::shift_hash<7>,
     fxa_unordered::nwayplus::soa_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
@@ -319,6 +322,7 @@ using foa_pow2_fib_unordered_coalesced_nwayplus_map =
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::pow2_fib_size,
+    fxa_unordered::shift_hash<3>,
     fxa_unordered::nwayplus::coalesced_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
@@ -327,6 +331,7 @@ using foa_pow2_fib_unordered_soa_coalesced_nwayplus_map =
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::pow2_fib_size,
+    fxa_unordered::shift_hash<3>,
     fxa_unordered::nwayplus::soa_coalesced_allocation>;
     
 template<class K, class V, class H=boost::hash<K>>

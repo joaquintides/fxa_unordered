@@ -333,6 +333,12 @@ struct pow2_fib_size:pow2_size
   }
 };
 
+template<unsigned N>
+struct shift_hash
+{
+  static inline std::size_t long_hash(std::size_t hash){return hash>>N;}
+  static inline std::size_t short_hash(std::size_t hash){return hash;}
+};
 
 template<class Key,class Value>
 struct map_value_adaptor

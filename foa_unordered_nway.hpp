@@ -1057,11 +1057,13 @@ template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
   typename SizePolicy=prime_size,
+  typename HashSplitPolicy=shift_hash<3>,
   typename GroupAllocationPolicy=regular_allocation
 >
 class foa_unordered_nwayplus_set 
 {
   using size_policy=SizePolicy;
+  using hash_split_policy=HashSplitPolicy;
   using group_allocation_policy=GroupAllocationPolicy;
   using alloc_traits=std::allocator_traits<Allocator>;
   using group=typename group_allocation_policy::template group_type<T>;
@@ -1207,14 +1209,15 @@ private:
 
   group_iterator group_for(std::size_t hash)const
   {
-    return groups.at(size_policy::position(hash,size_index)/N);
+    return groups.at(
+      size_policy::position(hash_split_policy::long_hash(hash),size_index)/N);
   }
 
   template<typename Key>
   std::pair<int,bool> find_in_group(
     const Key& x,group_iterator itg,std::size_t hash)const
   {
-    auto mask=control(itg).match(hash);
+    auto mask=control(itg).match(hash_split_policy::short_hash(hash));
     while(mask){
       FXA_ASSUME(mask!=0);
       auto n=boost::core::countr_zero((unsigned int)mask);
@@ -1243,7 +1246,7 @@ private:
       std::tie(itga,na)=groups.new_group_after(first,last);
     }
     construct_element(std::forward<Value>(x),elements(itga).at(na).data());  
-    control(itga).set(na,hash);
+    control(itga).set(na,hash_split_policy::short_hash(hash));
     ++size_;
     return {ita,true};
   }
@@ -1307,7 +1310,7 @@ private:
     }  
       
     construct_element(std::forward<Value>(x),elements(itg).at(n).data());
-    control(itg).set(n,hash);
+    control(itg).set(n,hash_split_policy::short_hash(hash));
     ++size_;
     return {itg,n};
   }
@@ -1377,12 +1380,13 @@ template<
   typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
   typename Allocator=std::allocator<map_value_adaptor<Key,Value>>,
   typename SizePolicy=prime_size,
+  typename HashSplitPolicy=shift_hash<3>,
   typename GroupAllocationPolicy=regular_allocation
 >
 using foa_unordered_nwayplus_map=foa_unordered_nwayplus_set<
   map_value_adaptor<Key,Value>,
   map_hash_adaptor<Hash>,map_pred_adaptor<Pred>,
-  Allocator,SizePolicy,GroupAllocationPolicy
+  Allocator,SizePolicy,HashSplitPolicy,GroupAllocationPolicy
 >;
 
 } // namespace nwayplus
