@@ -930,14 +930,14 @@ public:
     assert(!control(it).match_empty_or_deleted());
     if(auto n=boost::core::countr_zero((unsigned int)
          control(top).match_empty_or_deleted());n<max_saturation){
-      control(pos).next()=top;
+      control(pos).next()=this->at(top);
       return {top,n};
     }
-    else if(top>this->begin()+address_size_){
-      control(pos).next()=--top;
+    else if(top>address_size_){
+      control(pos).next()=this->at(--top);
       return {top,0};
     }
-    control(pos).next()=pos; // close chain 
+    control(pos).next()=this->at(pos); // close chain 
 
     return super::new_group_after(first,pos);
   }
@@ -977,7 +977,7 @@ public:
       }
       else ++free_groups;
     }
-    for(auto it=top;it<this->end();++it){
+    for(auto it=this->at(top);it<this->end();++it){
       assert(boost::core::popcount((unsigned int)control(it).match_occupied())<=N);
       occupancy_used_cellar+=boost::core::popcount((unsigned int)
         control(it).match_occupied());
@@ -994,7 +994,7 @@ public:
       <<"occupied address groups: "<<occupied_address_groups<<"\n"
       <<"free groups: "<<free_groups<<"\n"
       <<"cellar remaining: "<<100.0*(top-address_size_)/(this->size()-address_size_)<<"%\n"
-      <<"occup. used cellar: "<<(double)occupancy_used_cellar/(this->begin()+this->size()-top)<<"\n"
+      <<"occup. used cellar: "<<(double)occupancy_used_cellar/(this->size()-top)<<"\n"
       <<"occup. used address: "<<(double)occupancy_used_address/occupied_address_groups<<"\n"
       <<"avg. chain length: "<<(double)chain_length/occupied_address_groups<<"\n"
       ;
