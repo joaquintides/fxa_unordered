@@ -857,9 +857,9 @@ public:
   // only in moved-from state when rehashing
   bool empty()const{return !this->size();}
 
-  std::pair<iterator,int> new_group_after(iterator first,iterator /*it*/)
+  std::pair<iterator,int> new_group_after(iterator /*it*/,std::size_t probe_pos)
   {
-    for(auto pr=make_prober(first);;pr.next()){
+    for(auto pr=make_prober(probe_pos);;pr.next()){
       if(auto mask=control(pr.get()).match_empty_or_deleted()){
         FXA_ASSUME(mask!=0);
         return {pr.get(),boost::core::countr_zero((unsigned int)mask)};
@@ -869,34 +869,34 @@ public:
 
   struct prober
   {        
-    iterator get()const noexcept{return begin+n;}
+    iterator get()const noexcept{return begin+pos;}
 
     void next()noexcept
     {
       for(;;){
-        n=(n+i)&pow2mask;
+        pos=(pos+i)&pow2mask;
         i+=1;
-        if(n<size)break;
+        if(pos<size)break;
       }
     }
 
   private:
     friend class group_allocator;
 
-    prober(iterator begin,std::size_t size,iterator it):
-      begin{begin},size{size},n{(std::size_t)(it-begin)}
+    prober(iterator begin,std::size_t size,std::size_t pos):
+      begin{begin},size{size},pos{pos}
       {next();}
 
     iterator    begin;
     std::size_t size,
-                n,
+                pos,
                 i=1,
                 pow2mask=boost::core::bit_ceil(size)-1;
   };
 
-  prober make_prober(iterator it)const
+  prober make_prober(std::size_t pos)const
   {
-    return {this->begin(),this->size(),it};
+    return {this->begin(),this->size(),pos};
   }
 
 #ifdef NWAYPLUS_STATUS
@@ -924,7 +924,7 @@ public:
 
   using GroupArray::control;
 
-  std::pair<iterator,int> new_group_after(iterator first,iterator it)
+  std::pair<iterator,int> new_group_after(iterator it,std::size_t probe_pos)
   {
     assert(!control(it).match_empty_or_deleted());
     if(auto n=boost::core::countr_zero((unsigned int)
@@ -938,13 +938,13 @@ public:
     }
     control(it).next()=it; // close chain 
 
-    return super::new_group_after(first,it);
+    return super::new_group_after(it,probe_pos);
   }
 
-  auto make_prober(iterator it)const
+  auto make_prober(std::size_t pos)const
   {
     assert(!theres_remaining_cellar());
-    return super::make_prober(it);
+    return super::make_prober(pos);
   }
 
   bool theres_remaining_cellar()const
@@ -1057,7 +1057,7 @@ template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
   typename SizePolicy=prime_size,
-  typename HashSplitPolicy=shift_hash<3>,
+  typename HashSplitPolicy=shift_hash<7>,
   typename GroupAllocationPolicy=regular_allocation
 >
 class foa_unordered_nwayplus_set 
@@ -1179,7 +1179,7 @@ public:
       else              itg=next;
     };
 
-    for(auto pr=groups.make_prober(first);;pr.next()){
+    for(auto pr=make_prober(hash);;pr.next()){
       auto itg=pr.get();
       auto [n,found]=find_in_group(x,itg,hash);
       if(found)return {itg,n};
@@ -1227,6 +1227,21 @@ private:
     return {0,false};
   }
 
+  auto pos_for(std::size_t hash)const
+  {
+    return hash%groups.size();
+  }
+
+  auto make_prober(std::size_t hash)const
+  {
+    return groups.make_prober(pos_for(hash));
+  }
+
+  auto new_group_after(group_iterator itg,std::size_t hash)
+  {
+    return groups.new_group_after(itg,pos_for(hash));
+  }
+
   template<typename Value>
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
@@ -1243,7 +1258,7 @@ private:
     auto& [itga,na]=ita;
     if(!itga){
       assert(last);
-      std::tie(itga,na)=groups.new_group_after(first,last);
+      std::tie(itga,na)=new_group_after(last,hash);
     }
     construct_element(std::forward<Value>(x),elements(itga).at(na).data());  
     control(itga).set(na,hash_split_policy::short_hash(hash));
@@ -1306,7 +1321,7 @@ private:
       n=boost::core::countr_zero((unsigned int)mask);
     }
     else{
-      std::tie(itg,n)=groups.new_group_after(first,itg);
+      std::tie(itg,n)=new_group_after(itg,hash);
     }  
       
     construct_element(std::forward<Value>(x),elements(itg).at(n).data());
@@ -1348,7 +1363,7 @@ private:
       else              itg=next;
     }
 
-    for(auto pr=groups.make_prober(first);;pr.next()){
+    for(auto pr=make_prober(hash);;pr.next()){
       auto itg=pr.get();
       auto [n,found]=find_in_group(x,itg,hash);
       if(found)return {{itg,n}};
@@ -1380,7 +1395,7 @@ template<
   typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
   typename Allocator=std::allocator<map_value_adaptor<Key,Value>>,
   typename SizePolicy=prime_size,
-  typename HashSplitPolicy=shift_hash<3>,
+  typename HashSplitPolicy=shift_hash<7>,
   typename GroupAllocationPolicy=regular_allocation
 >
 using foa_unordered_nwayplus_map=foa_unordered_nwayplus_set<

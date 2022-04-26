@@ -283,6 +283,13 @@ using foa_pow2_fib_unordered_nway_map =
     fxa_unordered::pow2_fib_size>;
 
 template<class K, class V, class H=boost::hash<K>>
+using foa_fmod_unordered_nwayplus_map =
+  foa_unordered_nwayplus_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::prime_fmod_size>;
+
+template<class K, class V, class H=boost::hash<K>>
 using foa_pow2_fib_unordered_nwayplus_map =
   foa_unordered_nwayplus_map<
     K, V, H,std::equal_to<K>,
@@ -560,6 +567,9 @@ template<class K, class V> using foa_fmod_hcached_unordered_coalesced_map_fnv1a 
 
 template<class K, class V> using foa_pow2_fib_unordered_nway_map_fnv1a =
   foa_pow2_fib_unordered_nway_map<K, V, fnv1a_hash>;
+
+template<class K, class V> using foa_fmod_unordered_nwayplus_map_fnv1a =
+  foa_fmod_unordered_nwayplus_map<K, V, fnv1a_hash>;
 
 template<class K, class V> using foa_pow2_fib_unordered_nwayplus_map_fnv1a =
   foa_pow2_fib_unordered_nwayplus_map<K, V, fnv1a_hash>;
