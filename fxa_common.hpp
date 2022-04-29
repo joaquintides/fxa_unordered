@@ -340,6 +340,13 @@ struct shift_hash
   static inline std::size_t short_hash(std::size_t hash){return hash;}
 };
 
+template<unsigned N>
+struct shift_mod_hash
+{
+  static inline std::size_t long_hash(std::size_t hash){return hash>>N;}
+  static inline std::size_t short_hash(std::size_t hash){return hash%131;}
+};
+
 template<class Key,class Value>
 struct map_value_adaptor
 {
