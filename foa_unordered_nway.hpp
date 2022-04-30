@@ -1174,10 +1174,15 @@ public:
       auto [n,found]=find_in_group(x,itg,pos);
       if(found)return {itg,n};
 
+#if 0
       auto next=control(itg).next();
       if(!next)         return end();
       else if(itg==next)break; // chain closed, go probing
       else              itg=next;
+#else
+      if(control(itg).match_empty())return end();
+      break;
+#endif
     };
 
     for(auto pr=groups.make_prober(first);;pr.next()){
@@ -1302,13 +1307,20 @@ private:
     auto first=group_for(pos),
          itg=first;
 
+#if 0
     // unchecked_insert only called just after rehashing, so
     // there are no deleted elements and we can go till end of chain
     while(control(itg).next()&&itg!=control(itg).next())itg=control(itg).next();
-
+#endif
+      
     // if chain's not closed see occupancy, otherwise go probing
     int mask,n;
+
+#if 0
     if(!control(itg).next()&&(mask=control(itg).match_empty())){
+#else
+    if((mask=control(itg).match_empty_or_deleted())){
+#endif
       FXA_ASSUME(mask!=0);
       n=boost::core::countr_zero((unsigned int)mask);
     }
@@ -1348,11 +1360,16 @@ private:
       auto [n,found]=find_in_group(x,itg,pos);
       if(found)return {{itg,n}};
       update_ita(itg); 
-        
+
+#if 0
       auto next=control(itg).next();
       if(!next)         return {end(),ita,itg};
       else if(itg==next)break; // chain closed, go probing
       else              itg=next;
+#else
+      if(control(itg).match_empty())return {end(),ita,itg};
+      break;
+#endif
     }
 
     for(auto pr=groups.make_prober(first);;pr.next()){
