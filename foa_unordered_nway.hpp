@@ -1168,10 +1168,9 @@ public:
   iterator find(const Key& x)const
   {
     auto hash=h(x);
-    auto pos=position_for(hash);
-    auto first=group_for(pos);
+    auto first=group_for(hash);
     for(auto itg=first;;){
-      auto [n,found]=find_in_group(x,itg,pos);
+      auto [n,found]=find_in_group(x,itg,hash);
       if(found)return {itg,n};
 
 #if 0
@@ -1187,7 +1186,7 @@ public:
 
     for(auto pr=groups.make_prober(first);;pr.next()){
       auto itg=pr.get();
-      auto [n,found]=find_in_group(x,itg,pos);
+      auto [n,found]=find_in_group(x,itg,hash);
       if(found)return {itg,n};
       if(control(itg).match_empty())return end();
     }
@@ -1213,22 +1212,18 @@ private:
     alloc_traits::destroy(al,p);
   }
 
-  std::size_t position_for(std::size_t hash)const
+  group_iterator group_for(std::size_t hash)const
   {
-    return size_policy::position(
-      boost::core::rotl(hash_split_policy::long_hash(hash),4),size_index);
-  }
-
-  group_iterator group_for(std::size_t pos)const
-  {
-    return groups.at(pos/N);
+    return groups.at(
+      size_policy::position(
+        boost::core::rotl(hash_split_policy::long_hash(hash),4),size_index)/N);
   }
 
   template<typename Key>
   std::pair<int,bool> find_in_group(
-    const Key& x,group_iterator itg,std::size_t pos)const
+    const Key& x,group_iterator itg,std::size_t hash)const
   {
-    auto mask=control(itg).match(pos);
+    auto mask=control(itg).match(hash_split_policy::short_hash(hash));
     while(mask){
       FXA_ASSUME(mask!=0);
       auto n=boost::core::countr_zero((unsigned int)mask);
@@ -1242,14 +1237,13 @@ private:
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
     auto hash=h(x);
-    auto pos=position_for(hash);
-    auto first=group_for(pos);
-    auto [it,ita,last]=find_match_available_last(x,first,pos);
+    auto first=group_for(hash);
+    auto [it,ita,last]=find_match_available_last(x,first,hash);
     if(it!=end())return {it,false};
 
     if(BOOST_UNLIKELY(size_+1>ml)){
       rehash(size_+1);
-      return {unchecked_insert(std::forward<Value>(x),pos),true};
+      return {unchecked_insert(std::forward<Value>(x),hash),true};
     }
 
     auto& [itga,na]=ita;
@@ -1258,7 +1252,7 @@ private:
       std::tie(itga,na)=groups.new_group_after(first,last);
     }
     construct_element(std::forward<Value>(x),elements(itga).at(na).data());  
-    control(itga).set(na,pos);
+    control(itga).set(na,hash_split_policy::short_hash(hash));
     ++size_;
     return {ita,true};
   }
@@ -1298,13 +1292,13 @@ private:
   template<typename Value>
   iterator unchecked_insert(Value&& x)
   {
-    return unchecked_insert(std::forward<Value>(x),position_for(h(x)));
+    return unchecked_insert(std::forward<Value>(x),h(x));
   }
 
   template<typename Value>
-  iterator unchecked_insert(Value&& x,std::size_t pos)
+  iterator unchecked_insert(Value&& x,std::size_t hash)
   {
-    auto first=group_for(pos),
+    auto first=group_for(hash),
          itg=first;
 
 #if 0
@@ -1329,7 +1323,7 @@ private:
     }  
       
     construct_element(std::forward<Value>(x),elements(itg).at(n).data());
-    control(itg).set(n,pos);
+    control(itg).set(n,hash_split_policy::short_hash(hash));
     ++size_;
     return {itg,n};
   }
@@ -1343,7 +1337,7 @@ private:
   template<typename Key>
   find_match_available_last_return_type
   find_match_available_last(
-    const Key& x,group_iterator first,std::size_t pos)const
+    const Key& x,group_iterator first,std::size_t hash)const
   {
     iterator ita;
     auto     update_ita=[&](group_iterator itg)
@@ -1357,7 +1351,7 @@ private:
     };
       
     for(auto itg=first;;){
-      auto [n,found]=find_in_group(x,itg,pos);
+      auto [n,found]=find_in_group(x,itg,hash);
       if(found)return {{itg,n}};
       update_ita(itg); 
 
@@ -1374,7 +1368,7 @@ private:
 
     for(auto pr=groups.make_prober(first);;pr.next()){
       auto itg=pr.get();
-      auto [n,found]=find_in_group(x,itg,pos);
+      auto [n,found]=find_in_group(x,itg,hash);
       if(found)return {{itg,n}};
       update_ita(itg); 
       if(control(itg).match_empty())return {end(),ita}; // ita must be non-null
