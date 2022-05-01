@@ -313,7 +313,7 @@ using foa_absl_unordered_soa_nwayplus_map =
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::pow2_size,
-    fxa_unordered::shift_hash<7>,
+    fxa_unordered::shift_hash<3>,
     fxa_unordered::nwayplus::soa_allocation>;
 
 template<class K, class V, class H=boost::hash<K>>
