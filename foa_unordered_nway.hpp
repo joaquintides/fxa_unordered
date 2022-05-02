@@ -1458,7 +1458,6 @@ private:
       size_-=num_tx;
       throw;
     }
-    size_index=new_container.size_index;
     group_size_index=new_container.group_size_index;
     groups=std::move(new_container.groups);
     ml=max_load();   
@@ -1552,7 +1551,7 @@ private:
 
   size_type max_load()const
   {
-    float fml=mlf*static_cast<float>(size_policy::size(size_index));
+    float fml=mlf*static_cast<float>(size_policy::size(group_size_index)*N-1);
     auto res=(std::numeric_limits<size_type>::max)();
     if(res>fml)res=static_cast<size_type>(fml);
     return res;
@@ -1563,9 +1562,7 @@ private:
   Allocator       al;
   float           mlf=group_allocation_policy::mlf;
   std::size_t     size_=0;
-  std::size_t     size_index=size_policy::size_index(size_);
-  std::size_t     group_size_index=size_policy::size_index(
-                    size_policy::size(size_index)/N+1);
+  std::size_t     group_size_index=size_policy::size_index(size_/N+1);
   group_allocator groups{size_policy::size(group_size_index),al};
   size_type       ml=max_load();
 
