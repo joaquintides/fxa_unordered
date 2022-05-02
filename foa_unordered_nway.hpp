@@ -1194,7 +1194,7 @@ template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
   typename SizePolicy=prime_size,
-  typename HashSplitPolicy=shift_mod_hash<0>,
+  typename HashSplitPolicy=shift_hash<0>,
   typename GroupAllocationPolicy=regular_allocation
 >
 class foa_unordered_nwayplus_set 
@@ -1582,7 +1582,7 @@ template<
   typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
   typename Allocator=std::allocator<map_value_adaptor<Key,Value>>,
   typename SizePolicy=prime_size,
-  typename HashSplitPolicy=shift_mod_hash<0>,
+  typename HashSplitPolicy=shift_hash<0>,
   typename GroupAllocationPolicy=regular_allocation
 >
 using foa_unordered_nwayplus_map=foa_unordered_nwayplus_set<
