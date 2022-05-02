@@ -16,6 +16,7 @@
 #include <boost/iterator/iterator_facade.hpp>
 #include <cassert>
 #include <climits>
+#include <cmath>
 #include <cstdint>
 #include <functional>
 #include <limits>
@@ -904,6 +905,130 @@ public:
 #endif
 };
 
+
+template<typename GroupArray>
+class pyramid_allocator:public GroupArray
+{
+public:
+  using GroupArray::N;
+  using iterator=typename GroupArray::iterator;
+
+  template<typename Allocator>
+  pyramid_allocator(std::size_t n,const Allocator& al):
+    GroupArray{std::size_t(std::ceil(n/0.875)),al},
+    address_size{n}
+  {
+    control(this->end()-1).set_sentinel();
+  }
+
+  pyramid_allocator(pyramid_allocator&&)=default;
+  pyramid_allocator& operator=(pyramid_allocator&& x)=default;
+
+  using GroupArray::control;
+
+  // only in moved-from state when rehashing
+  bool empty()const{return !this->size();}
+
+  std::pair<iterator,int> new_group_after(iterator first,iterator /*it*/)
+  {
+    for(auto pr=make_prober(first);;pr.next()){
+      if(auto mask=control(pr.get()).match_empty_or_deleted()){
+        FXA_ASSUME(mask!=0);
+        return {pr.get(),boost::core::countr_zero((unsigned int)mask)};
+      }
+    }
+  }
+
+  struct prober
+  {        
+    iterator get()const noexcept{return begin+n;}
+
+    void next()noexcept
+    {
+      if(delta){
+        n=base+delta+(n-base)/8;
+        base+=delta;
+        delta/=8;
+        return;
+      }
+      for(;;){
+        n0=(n0+i)&pow2mask;
+        i+=1;
+        if(n0<size){
+          n=n0;
+          return;
+        }
+      }
+    }
+
+  private:
+    friend class pyramid_allocator;
+
+    prober(iterator begin,std::size_t size,iterator it):
+      begin{begin},size{size},
+      n0{(std::size_t)(it-begin)}
+    {
+      assert(n0<size);
+      next();
+    }
+
+    iterator    begin;
+    std::size_t size,
+                n0,
+                n=n0,
+                delta=size,
+                base=0,
+                i=1,
+                pow2mask=boost::core::bit_ceil(size)-1;
+  };
+
+  prober make_prober(iterator it)const
+  {
+    return {this->begin(),address_size,it};
+  }
+
+#ifdef NWAYPLUS_STATUS
+  void status()
+  {
+    int occupied_groups=0,
+        occupied_address_groups=0,
+        occupied_cellar_groups=0,
+        free_groups=0;
+    long long int occupancy_used_address=0,
+                  occupancy_used_cellar=0;
+    for(auto it=this->begin(),last=this->end();it!=last;++it){
+      if(control(it).match_occupied()){
+        ++occupied_groups;
+        if(it<this->begin()+address_size){
+          ++occupied_address_groups;
+          occupancy_used_address+=boost::core::popcount((unsigned int)
+            control(it).match_occupied());
+        }
+        else{            
+          ++occupied_cellar_groups;
+          occupancy_used_cellar+=boost::core::popcount((unsigned int)
+            control(it).match_occupied());
+        }
+      }
+      else ++free_groups;
+    }
+    std::cout<<"\n"
+      <<"size: "<<this->size()<<"\n"
+      <<"address size: "<<address_size<<"\n"
+      <<"occupied groups: "<<occupied_groups<<"\n"
+      <<"occupied address groups: "<<occupied_address_groups<<"\n"
+      <<"occupied cellar groups: "<<occupied_cellar_groups<<"\n"     
+      <<"free groups: "<<free_groups<<"\n"
+      <<"occup. used address: "<<(double)occupancy_used_address/occupied_address_groups<<"\n"
+      <<"occup. used cellar: "<<(double)occupancy_used_cellar/occupied_cellar_groups<<"\n"
+      ;
+  }
+#endif
+
+private:
+  std::size_t address_size;
+};
+
 template<typename GroupArray>
 class coalesced_group_allocator:public group_allocator<GroupArray>
 {
@@ -1014,6 +1139,18 @@ struct regular_allocation
 
   template<typename Group,typename Allocator>
   using allocator_type=group_allocator<
+    group_array<Group,Allocator>>;
+};
+
+struct pyramid_allocation
+{
+  template<typename T>
+  using group_type=regular_group<T>;
+
+  static constexpr float mlf=1.0;
+
+  template<typename Group,typename Allocator>
+  using allocator_type=pyramid_allocator<
     group_array<Group,Allocator>>;
 };
 
@@ -1166,12 +1303,22 @@ public:
   
   template<typename Key>
   iterator find(const Key& x)const
-  {
+  {    
+#ifdef NWAYPLUS_STATUS
+    int runlength=1;
+#endif
+
     auto hash=h(x);
     auto first=group_for(hash);
     for(auto itg=first;;){
       auto [n,found]=find_in_group(x,itg,hash);
-      if(found)return {itg,n};
+      if(found){
+#ifdef NWAYPLUS_STATUS
+        successful_find_runlengths+=runlength;
+        successful_find_runs+=1;  
+#endif
+        return {itg,n};
+      }
 
 #if 0
       auto next=control(itg).next();
@@ -1179,21 +1326,50 @@ public:
       else if(itg==next)break; // chain closed, go probing
       else              itg=next;
 #else
-      if(control(itg).match_empty())return end();
+      if(control(itg).match_empty()){
+#ifdef NWAYPLUS_STATUS
+        unsuccessful_find_runlengths+=runlength;
+        unsuccessful_find_runs+=1;  
+#endif
+        return end();
+      }
       break;
 #endif
     };
 
     for(auto pr=groups.make_prober(first);;pr.next()){
+#ifdef NWAYPLUS_STATUS
+      ++runlength;
+#endif
+        
       auto itg=pr.get();
       auto [n,found]=find_in_group(x,itg,hash);
-      if(found)return {itg,n};
-      if(control(itg).match_empty())return end();
+      if(found){
+#ifdef NWAYPLUS_STATUS
+        successful_find_runlengths+=runlength;
+        successful_find_runs+=1;  
+#endif
+        return {itg,n};
+      }
+      if(control(itg).match_empty()){
+#ifdef NWAYPLUS_STATUS
+        unsuccessful_find_runlengths+=runlength;
+        unsuccessful_find_runs+=1;  
+#endif
+        return end();
+      }
     }
   }
 
 #ifdef NWAYPLUS_STATUS
-  void status(){groups.status();}
+  void status()
+  {
+    groups.status();
+    std::cout
+      <<"succesful avg. runlength: "<<float(successful_find_runlengths)/successful_find_runs<<"\n"
+      <<"unsuccesful avg. runlength: "<<float(unsuccessful_find_runlengths)/unsuccessful_find_runs<<"\n"
+      ;
+  }
 #endif
 
 private:
@@ -1214,9 +1390,7 @@ private:
 
   group_iterator group_for(std::size_t hash)const
   {
-    return groups.at(
-      size_policy::position(
-        boost::core::rotl(hash_split_policy::long_hash(hash),4),size_index)/N);
+    return groups.at(size_policy::position(hash,group_size_index));
   }
 
   template<typename Key>
@@ -1285,6 +1459,7 @@ private:
       throw;
     }
     size_index=new_container.size_index;
+    group_size_index=new_container.group_size_index;
     groups=std::move(new_container.groups);
     ml=max_load();   
   }
@@ -1389,8 +1564,17 @@ private:
   float           mlf=group_allocation_policy::mlf;
   std::size_t     size_=0;
   std::size_t     size_index=size_policy::size_index(size_);
-  group_allocator groups{size_policy::size(size_index)/N+1,al};
+  std::size_t     group_size_index=size_policy::size_index(
+                    size_policy::size(size_index)/N+1);
+  group_allocator groups{size_policy::size(group_size_index),al};
   size_type       ml=max_load();
+
+#ifdef NWAYPLUS_STATUS
+  mutable long long int successful_find_runlengths=0,
+                        unsuccessful_find_runlengths=0,
+                        successful_find_runs=0,
+                        unsuccessful_find_runs=0;
+#endif
 };
 
 template<
