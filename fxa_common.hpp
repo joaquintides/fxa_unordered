@@ -344,7 +344,7 @@ template<unsigned N>
 struct shift_mod_hash
 {
   static inline std::size_t long_hash(std::size_t hash){return hash>>N;}
-  static inline std::size_t short_hash(std::size_t hash){return hash%131;}
+  static inline std::size_t short_hash(std::size_t hash){return hash%127;}
 };
 
 template<class Key,class Value>
