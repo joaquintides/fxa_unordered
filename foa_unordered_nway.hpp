@@ -524,7 +524,7 @@ struct group_base
 
 #ifdef FXA_UNORDERED_SSE2
 
-  void set(std::size_t pos,std::size_t hash)
+  void set(std::size_t pos,unsigned char hash)
   {
     reinterpret_cast<unsigned char*>(&mask)[pos]=hash&0x7Fu;
   }
@@ -540,7 +540,7 @@ struct group_base
     reinterpret_cast<unsigned char*>(&mask)[pos]=deleted_;
   }
 
-  int match(std::size_t hash)const
+  int match(unsigned char hash)const
   {
     auto m=_mm_set1_epi8(hash&0x7Fu);
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
@@ -590,7 +590,7 @@ private:
 
 #else
 
-  void set(std::size_t pos,std::size_t hash)
+  void set(std::size_t pos,unsigned char hash)
   {
     set_impl(pos,hash&0x7Fu);
   }
@@ -605,7 +605,7 @@ private:
     uint64_ops::set(himask,pos,deleted_);
   }
 
-  int match(std::size_t hash)const
+  int match(unsigned char hash)const
   {
     return match_impl(hash&0x7Fu);
   }
@@ -1398,7 +1398,7 @@ private:
 
   template<typename Key>
   std::pair<int,bool> find_in_group(
-    const Key& x,group_iterator itg,std::size_t short_hash)const
+    const Key& x,group_iterator itg,unsigned char short_hash)const
   {
     auto mask=control(itg).match(short_hash);
     while(mask){
@@ -1481,7 +1481,7 @@ private:
 
   template<typename Value>
   iterator unchecked_insert(
-    Value&& x,std::size_t hash,std::size_t short_hash)
+    Value&& x,std::size_t hash,unsigned char short_hash)
   {
     auto first=group_for(hash),
          itg=first;
@@ -1522,7 +1522,7 @@ private:
   template<typename Key>
   find_match_available_last_return_type
   find_match_available_last(
-    const Key& x,group_iterator first,std::size_t short_hash)const
+    const Key& x,group_iterator first,unsigned char short_hash)const
   {
     iterator ita;
     auto     update_ita=[&](group_iterator itg)
