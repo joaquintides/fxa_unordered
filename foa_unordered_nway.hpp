@@ -1305,13 +1305,15 @@ public:
   iterator find(const Key& x)const
   {    
 #ifdef NWAYPLUS_STATUS
+    ++num_finds;
     int runlength=1;
 #endif
 
     auto hash=h(x);
+    auto short_hash=hash_split_policy::short_hash(hash);
     auto first=group_for(hash);
     for(auto itg=first;;){
-      auto [n,found]=find_in_group(x,itg,hash);
+      auto [n,found]=find_in_group(x,itg,short_hash);
       if(found){
 #ifdef NWAYPLUS_STATUS
         successful_find_runlengths+=runlength;
@@ -1343,7 +1345,7 @@ public:
 #endif
         
       auto itg=pr.get();
-      auto [n,found]=find_in_group(x,itg,hash);
+      auto [n,found]=find_in_group(x,itg,short_hash);
       if(found){
 #ifdef NWAYPLUS_STATUS
         successful_find_runlengths+=runlength;
@@ -1368,6 +1370,7 @@ public:
     std::cout
       <<"succesful avg. runlength: "<<float(successful_find_runlengths)/successful_find_runs<<"\n"
       <<"unsuccesful avg. runlength: "<<float(unsuccessful_find_runlengths)/unsuccessful_find_runs<<"\n"
+      <<"avg. matches per find: "<<float(num_matches)/num_finds<<"\n"
       ;
   }
 #endif
@@ -1395,10 +1398,14 @@ private:
 
   template<typename Key>
   std::pair<int,bool> find_in_group(
-    const Key& x,group_iterator itg,std::size_t hash)const
+    const Key& x,group_iterator itg,std::size_t short_hash)const
   {
-    auto mask=control(itg).match(hash_split_policy::short_hash(hash));
+    auto mask=control(itg).match(short_hash);
     while(mask){
+#ifdef NWAYPLUS_STATUS
+      ++num_matches;
+#endif
+        
       FXA_ASSUME(mask!=0);
       auto n=boost::core::countr_zero((unsigned int)mask);
       if(BOOST_LIKELY(pred(x,elements(itg).at(n).value())))return {n,true};
@@ -1411,13 +1418,14 @@ private:
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
     auto hash=h(x);
+    auto short_hash=hash_split_policy::short_hash(hash);
     auto first=group_for(hash);
-    auto [it,ita,last]=find_match_available_last(x,first,hash);
+    auto [it,ita,last]=find_match_available_last(x,first,short_hash);
     if(it!=end())return {it,false};
 
     if(BOOST_UNLIKELY(size_+1>ml)){
       rehash(size_+1);
-      return {unchecked_insert(std::forward<Value>(x),hash),true};
+      return {unchecked_insert(std::forward<Value>(x),hash,short_hash),true};
     }
 
     auto& [itga,na]=ita;
@@ -1426,7 +1434,7 @@ private:
       std::tie(itga,na)=groups.new_group_after(first,last);
     }
     construct_element(std::forward<Value>(x),elements(itga).at(na).data());  
-    control(itga).set(na,hash_split_policy::short_hash(hash));
+    control(itga).set(na,short_hash);
     ++size_;
     return {ita,true};
   }
@@ -1466,11 +1474,14 @@ private:
   template<typename Value>
   iterator unchecked_insert(Value&& x)
   {
-    return unchecked_insert(std::forward<Value>(x),h(x));
+    auto hash=h(x);
+    return unchecked_insert(
+      std::forward<Value>(x),hash,hash_split_policy::short_hash(hash));
   }
 
   template<typename Value>
-  iterator unchecked_insert(Value&& x,std::size_t hash)
+  iterator unchecked_insert(
+    Value&& x,std::size_t hash,std::size_t short_hash)
   {
     auto first=group_for(hash),
          itg=first;
@@ -1497,7 +1508,7 @@ private:
     }  
       
     construct_element(std::forward<Value>(x),elements(itg).at(n).data());
-    control(itg).set(n,hash_split_policy::short_hash(hash));
+    control(itg).set(n,short_hash);
     ++size_;
     return {itg,n};
   }
@@ -1511,7 +1522,7 @@ private:
   template<typename Key>
   find_match_available_last_return_type
   find_match_available_last(
-    const Key& x,group_iterator first,std::size_t hash)const
+    const Key& x,group_iterator first,std::size_t short_hash)const
   {
     iterator ita;
     auto     update_ita=[&](group_iterator itg)
@@ -1525,7 +1536,7 @@ private:
     };
       
     for(auto itg=first;;){
-      auto [n,found]=find_in_group(x,itg,hash);
+      auto [n,found]=find_in_group(x,itg,short_hash);
       if(found)return {{itg,n}};
       update_ita(itg); 
 
@@ -1542,7 +1553,7 @@ private:
 
     for(auto pr=groups.make_prober(first);;pr.next()){
       auto itg=pr.get();
-      auto [n,found]=find_in_group(x,itg,hash);
+      auto [n,found]=find_in_group(x,itg,short_hash);
       if(found)return {{itg,n}};
       update_ita(itg); 
       if(control(itg).match_empty())return {end(),ita}; // ita must be non-null
@@ -1570,7 +1581,9 @@ private:
   mutable long long int successful_find_runlengths=0,
                         unsuccessful_find_runlengths=0,
                         successful_find_runs=0,
-                        unsuccessful_find_runs=0;
+                        unsuccessful_find_runs=0,
+                        num_matches=0,
+                        num_finds=0;
 #endif
 };
 
