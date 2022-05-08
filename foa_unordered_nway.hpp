@@ -672,21 +672,12 @@ template<typename T>
 struct soa_group:group_base
 {
   using element_type=element<T>;
-
-  soa_group* next()
-  {
-    // this strange API is used for coalesced extension
-    if(this->match_empty())return nullptr; // look no further
-    else                   return this;    // go probing
-  }
 };
 
 template<typename T>
 struct regular_group:soa_group<T>
 {
   auto& at(std::size_t n){return storage[n];}
-
-  regular_group* next(){return static_cast<regular_group*>(super::next());}
 
 private:
   using super=soa_group<T>;
@@ -900,7 +891,7 @@ public:
     return {this->begin(),this->size(),it};
   }
 
-#ifdef NWAYPLUS_STATUS
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
   void status(){}
 #endif
 };
@@ -987,7 +978,7 @@ public:
     return {this->begin(),address_size,it};
   }
 
-#ifdef NWAYPLUS_STATUS
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
   void status()
   {
     int occupied_groups=0,
@@ -1077,7 +1068,7 @@ public:
     return top>this->begin()+address_size_;
   }
 
-#ifdef NWAYPLUS_STATUS
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
   void status()
   {
     int occupied_groups=0,
@@ -1123,7 +1114,7 @@ public:
       <<"avg. chain length: "<<(double)chain_length/occupied_address_groups<<"\n"
       ;
   }
-#endif /* NWAYPLUS_STATUS */
+#endif /* FOA_UNORDERED_NWAYPLUS_STATUS */
 
 private:
   std::size_t  address_size_;
@@ -1134,7 +1125,7 @@ struct regular_allocation
 {
   template<typename T>
   using group_type=regular_group<T>;
-
+  
   static constexpr float mlf=0.875;
 
   template<typename Group,typename Allocator>
@@ -1190,6 +1181,15 @@ struct soa_coalesced_allocation
     soa_group_array<Group,Allocator>>;
 };
 
+template<typename Group,typename=void>
+struct groups_are_linked:std::false_type{};
+
+template<typename Group>
+struct groups_are_linked<
+  Group,
+  std::void_t<decltype(std::declval<Group>().next())>
+>:std::true_type{};
+
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
@@ -1210,6 +1210,7 @@ class foa_unordered_nwayplus_set
       typename alloc_traits:: template rebind_alloc<group>>;
   using group_iterator=typename group_allocator::iterator;
 
+  static constexpr bool linked_groups=groups_are_linked<group>::value;
   static constexpr auto N=group::N;
 
   static auto& control(group_iterator itg)
@@ -1304,7 +1305,7 @@ public:
   template<typename Key>
   iterator find(const Key& x)const
   {    
-#ifdef NWAYPLUS_STATUS
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
     ++num_finds;
     int runlength=1;
 #endif
@@ -1312,49 +1313,65 @@ public:
     auto hash=h(x);
     auto short_hash=hash_split_policy::short_hash(hash);
     auto first=group_for(hash);
-    for(auto itg=first;;){
-      auto [n,found]=find_in_group(x,itg,short_hash);
+
+    if constexpr(linked_groups){
+      for(auto itg=first;;){
+        auto [n,found]=find_in_group(x,itg,short_hash);
+        if(found){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+          successful_find_runlengths+=runlength;
+          successful_find_runs+=1;  
+#endif
+          return {itg,n};
+        }
+
+        auto next=control(itg).next();
+        if(!next){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+          unsuccessful_find_runlengths+=runlength;
+          unsuccessful_find_runs+=1;  
+#endif
+          return end();
+        }
+        else if(itg==next)break; // chain closed, go probing
+        else              itg=next;
+      }
+    }
+    else{ // no linked groups
+      auto [n,found]=find_in_group(x,first,short_hash);
       if(found){
-#ifdef NWAYPLUS_STATUS
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
         successful_find_runlengths+=runlength;
         successful_find_runs+=1;  
 #endif
-        return {itg,n};
+        return {first,n};
       }
-
-#if 0
-      auto next=control(itg).next();
-      if(!next)         return end();
-      else if(itg==next)break; // chain closed, go probing
-      else              itg=next;
-#else
-      if(control(itg).match_empty()){
-#ifdef NWAYPLUS_STATUS
+        
+      if(control(first).match_empty()){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
         unsuccessful_find_runlengths+=runlength;
         unsuccessful_find_runs+=1;  
 #endif
         return end();
       }
-      break;
-#endif
-    };
+    }
 
     for(auto pr=groups.make_prober(first);;pr.next()){
-#ifdef NWAYPLUS_STATUS
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
       ++runlength;
 #endif
         
       auto itg=pr.get();
       auto [n,found]=find_in_group(x,itg,short_hash);
       if(found){
-#ifdef NWAYPLUS_STATUS
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
         successful_find_runlengths+=runlength;
         successful_find_runs+=1;  
 #endif
         return {itg,n};
       }
       if(control(itg).match_empty()){
-#ifdef NWAYPLUS_STATUS
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
         unsuccessful_find_runlengths+=runlength;
         unsuccessful_find_runs+=1;  
 #endif
@@ -1363,7 +1380,7 @@ public:
     }
   }
 
-#ifdef NWAYPLUS_STATUS
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
   void status()
   {
     groups.status();
@@ -1402,7 +1419,7 @@ private:
   {
     auto mask=control(itg).match(short_hash);
     while(mask){
-#ifdef NWAYPLUS_STATUS
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
       ++num_matches;
 #endif
         
@@ -1485,27 +1502,31 @@ private:
   {
     auto first=group_for(hash),
          itg=first;
+    int  mask,n;
 
-#if 0
-    // unchecked_insert only called just after rehashing, so
-    // there are no deleted elements and we can go till end of chain
-    while(control(itg).next()&&itg!=control(itg).next())itg=control(itg).next();
-#endif
-      
-    // if chain's not closed see occupancy, otherwise go probing
-    int mask,n;
+    if constexpr(linked_groups){
+      // unchecked_insert only called just after rehashing, so
+      // there are no deleted elements and we can go till end of chain
+      while(control(itg).next()&&itg!=control(itg).next())itg=control(itg).next();
 
-#if 0
-    if(!control(itg).next()&&(mask=control(itg).match_empty())){
-#else
-    if((mask=control(itg).match_empty_or_deleted())){
-#endif
-      FXA_ASSUME(mask!=0);
-      n=boost::core::countr_zero((unsigned int)mask);
+      // if chain's not closed see occupancy, otherwise go probing
+      if(!control(itg).next()&&(mask=control(itg).match_empty())){
+        FXA_ASSUME(mask!=0);
+        n=boost::core::countr_zero((unsigned int)mask);
+      }
+      else{
+        std::tie(itg,n)=groups.new_group_after(first,itg);
+      }
     }
-    else{
-      std::tie(itg,n)=groups.new_group_after(first,itg);
-    }  
+    else{ // no linked groups
+      if((mask=control(itg).match_empty_or_deleted())){
+        FXA_ASSUME(mask!=0);
+        n=boost::core::countr_zero((unsigned int)mask);
+      }
+      else{
+        std::tie(itg,n)=groups.new_group_after(first,itg);
+      }
+    }
       
     construct_element(std::forward<Value>(x),elements(itg).at(n).data());
     control(itg).set(n,short_hash);
@@ -1534,23 +1555,25 @@ private:
         }
       }        
     };
-      
-    for(auto itg=first;;){
-      auto [n,found]=find_in_group(x,itg,short_hash);
-      if(found)return {{itg,n}};
-      update_ita(itg); 
 
-#if 0
-      auto next=control(itg).next();
-      if(!next)         return {end(),ita,itg};
-      else if(itg==next)break; // chain closed, go probing
-      else              itg=next;
-#else
-      if(control(itg).match_empty())return {end(),ita,itg};
-      break;
-#endif
+   if constexpr(linked_groups){
+      for(auto itg=first;;){
+        auto [n,found]=find_in_group(x,itg,short_hash);
+        if(found)return {{itg,n}};
+        update_ita(itg); 
+
+        auto next=control(itg).next();
+        if(!next)         return {end(),ita,itg};
+        else if(itg==next)break; // chain closed, go probing
+        else              itg=next;
+      }
     }
-
+    else{ // no linked groups
+      auto [n,found]=find_in_group(x,first,short_hash);
+      if(found)return {{first,n}};
+      update_ita(first);
+    }
+   
     for(auto pr=groups.make_prober(first);;pr.next()){
       auto itg=pr.get();
       auto [n,found]=find_in_group(x,itg,short_hash);
@@ -1577,7 +1600,7 @@ private:
   group_allocator groups{size_policy::size(group_size_index),al};
   size_type       ml=max_load();
 
-#ifdef NWAYPLUS_STATUS
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
   mutable long long int successful_find_runlengths=0,
                         unsuccessful_find_runlengths=0,
                         successful_find_runs=0,
