@@ -6,8 +6,8 @@ Proof of concept of closed- and open-addressing unordered associative containers
   * [`fca_simple_unordered_set`, `fca_simple_unordered_map`](#fca_simple_unordered)
 * [Open addressing](#open-addressing)
   * [`foa_unordered_coalesced_set`, `foa_unordered_coalesced_map`](#foa_unordered_coalesced)
-  * [`foa_unordered_nway_set`, `foa_unordered_nway_map`](#foa_unordered_nway)
   * [`foa_unordered_nwayplus_set`, `foa_unordered_nwayplus_map`](#foa_unordered_nwayplus)
+  * [`foa_unordered_nway_set`, `foa_unordered_nway_map`](#foa_unordered_nway)
   * [`foa_unordered_hopscotch_set`, `foa_unordered_hopscotch_map`](#foa_unordered_hopscotch)
   * [`foa_unordered_longhop_set`, `foa_unordered_longhop_map`](#foa_unordered_longhop)
 * [Benchmark results](https://github.com/joaquintides/fca_unordered/actions) for this PoC
@@ -190,33 +190,6 @@ As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered).
 comparison is used to rule out non-matches on lookup without invoking the equality predicate,
 which can potentially speed up the process.
 
-<a name="foa_unordered_nway"></a>
-```cpp
-template<
-  typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
-  typename Allocator=std::allocator<T>,
-  typename SizePolicy=prime_size
->
-class foa_unordered_nway_set;
-
-template<
-  typename Key,typename Value,
-  typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
-  typename Allocator=std::allocator</* equivalent to std::pair<const Key,Value> */>,
-  typename SizePolicy=prime_size
-class foa_unordered_nway_map;
-```
-
-Slots are logically divided in groups of size 16. Slots are probed *only* within
-the target group looking for a reduced 7-bit hash value with vectorized
-byte operations (using [SSE2](https://en.wikipedia.org/wiki/SSE2) when available):
-if the group is full, extra nodes are allocated and kept in a singly linked list,
-where each group has its own list.
-
-**`SizePolicy`**
-
-As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered).
-
 <a name="foa_unordered_nwayplus"></a>
 ```cpp
 template<
@@ -272,6 +245,36 @@ pointer. When the cellar is exhausted, quadratic probing is resorted to.
   level of cellar N-groups).
 * `soa_coalesced_allocation`: As `coalesced_allocation`, but group metadata and
 slots are kept in separate arrays.
+
+<a name="foa_unordered_nway"></a>
+```cpp
+template<
+  typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
+  typename Allocator=std::allocator<T>,
+  typename SizePolicy=prime_size
+>
+class foa_unordered_nway_set;
+
+template<
+  typename Key,typename Value,
+  typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
+  typename Allocator=std::allocator</* equivalent to std::pair<const Key,Value> */>,
+  typename SizePolicy=prime_size
+class foa_unordered_nway_map;
+```
+
+Slots are logically divided in groups of size 16. Slots are probed *only* within
+the target group looking for a reduced 7-bit hash value with vectorized
+byte operations (using [SSE2](https://en.wikipedia.org/wiki/SSE2) when available):
+if the group is full, extra nodes are allocated and kept in a singly linked list,
+where each group has its own list.
+
+This container has been abandoned as it's generally outperformed by
+`foa_unordered_nwayplus_[set|map]`.
+
+**`SizePolicy`**
+
+As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered).
 
 <a name="foa_unordered_hopscotch"></a>
 ```cpp
