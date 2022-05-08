@@ -196,6 +196,7 @@ template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
   typename SizePolicy=prime_size,
+  typename HashSplitPolicy=shift_mod_hash<0>,  
   typename GroupAllocationPolicy=regular_allocation
 >
 class foa_unordered_nwayplus_set 
@@ -205,6 +206,7 @@ template<
   typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
   typename Allocator=std::allocator<map_value_adaptor<Key,Value>>,
   typename SizePolicy=prime_size,
+  typename HashSplitPolicy=shift_mod_hash<0>,  
   typename GroupAllocationPolicy=regular_allocation
 >
 class foa_unordered_nwayplus_map;
@@ -225,6 +227,16 @@ N-way<sup>+</sup> maps are very sensitive to the hash function
 makes policies using Fibonacci hashing (or other bit spreading techniques)
 the only viable alternatives (unless a really good hash function is provided
 in the first place).
+
+**`HashSplitPolicy`**
+
+Controls how hash values are split into a *long* value for bucket assignment
+and a reduced 7-bit *short* value for probing.
+* `shift_mod_hash<N>`: the long value is the original hash right-shifted `N`
+positions; the short value is the original hash modulo 127.
+* `shift_hash<N>`: the long value is the original hash right-shifted `N`
+positions; the short value corresponds to the 7 rightmost bits of the
+original value.
 
 **`GroupAllocationPolicy`**
 * `regular_allocation`: N-groups are probed quadratically.
