@@ -291,6 +291,7 @@ int main()
 
     test<foa_fmod_unordered_nwayplus_map_fnv1a>( "foa_fmod_unordered_nwayplus_map, FNV-1a" );
     test<foa_pow2_fib_unordered_nwayplus_map_fnv1a>( "foa_pow2_fib_unordered_nwayplus_map, FNV-1a" );
+    test<foa_absl_unordered_nwayplus_map_fnv1a>( "foa_absl_unordered_nwayplus_map, FNV-1a" );
     test<foa_fmod_unordered_soa_nwayplus_map_fnv1a>( "foa_fmod_unordered_soa_nwayplus_map, FNV-1a" );
     test<foa_pow2_fib_unordered_soa_nwayplus_map_fnv1a>( "foa_pow2_fib_unordered_soa_nwayplus_map, FNV-1a" );
     test<foa_frng_fib_unordered_soa_nwayplus_map_fnv1a>( "foa_frng_fib_unordered_soa_nwayplus_map, FNV-1a" );
