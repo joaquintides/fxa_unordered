@@ -1408,6 +1408,15 @@ private:
     alloc_traits::destroy(al,p);
   }
 
+  static void prefetch(const void* p)
+  {
+#if defined(BOOST_GCC)||defined(BOOST_CLANG)
+    __builtin_prefetch((const char*)p,0);
+#elif FXA_UNORDERED_SSE2
+    _mm_prefetch((const char*)p,_MM_HINT_NTA);
+#endif    
+  }
+
   group_iterator group_for(std::size_t hash)const
   {
     return groups.at(size_policy::position(hash,group_size_index));
@@ -1417,6 +1426,7 @@ private:
   std::pair<int,bool> find_in_group(
     const Key& x,group_iterator itg,unsigned char short_hash)const
   {
+    prefetch(&elements(itg).at(0));
     auto mask=control(itg).match(short_hash);
     while(mask){
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
