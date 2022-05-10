@@ -1417,6 +1417,14 @@ private:
 #endif    
   }
 
+  static void prefetch_elements(group_iterator itg)
+  {
+    constexpr int cache_line=64;
+    char *p0=(char*)elements(itg).at(0).data(),
+         *p1=(char*)elements(itg).at(0).data()+sizeof(value_type);
+    for(char* p=p0;p<p1;p+=cache_line)prefetch(p);
+  }
+
   group_iterator group_for(std::size_t hash)const
   {
     return groups.at(size_policy::position(hash,group_size_index));
@@ -1426,7 +1434,7 @@ private:
   std::pair<int,bool> find_in_group(
     const Key& x,group_iterator itg,unsigned char short_hash)const
   {
-    prefetch(&elements(itg).at(0));
+    prefetch_elements(itg);
     auto mask=control(itg).match(short_hash);
     while(mask){
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
