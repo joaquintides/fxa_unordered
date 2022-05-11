@@ -231,7 +231,6 @@ int main()
 {
     init_indices();
 
-    test<std_unordered_map>( "std::unordered_map" );
     test<boost_unordered_map>( "boost::unordered_map" );
     test<multi_index_map>( "multi_index_map" );
     test<fca_fmod_unordered_map>( "fca_fmod_unordered_map" );
@@ -248,6 +247,7 @@ int main()
     // test<fca_pow2_unordered_map>( "fca_pow2_unordered_map" );
     
     test<fca_pow2_fib_unordered_map>( "fca_pow2_fib_unordered_map" );
+    test<std_unordered_map>( "std::unordered_map" );
 
     std::cout << "---\n\n";
 

@@ -216,7 +216,6 @@ int main()
 {
     init_indices();
     
-    test<std_unordered_map_fnv1a>( "std::unordered_map, FNV-1a" );
     test<boost_unordered_map_fnv1a>( "boost::unordered_map, FNV-1a" );
     test<multi_index_map_fnv1a>( "multi_index_map, FNV-1a" );
     test<fca_fmod_unordered_map_fnv1a>( "fca_fmod_unordered_map, FNV-1a" );
@@ -228,6 +227,7 @@ int main()
 
     test<fca_pow2_unordered_map_fnv1a>( "fca_pow2_unordered_map, FNV-1a" );
     test<fca_pow2_fib_unordered_map_fnv1a>( "fca_pow2_fib_unordered_map, FNV-1a" );
+    test<std_unordered_map_fnv1a>( "std::unordered_map, FNV-1a" );
 
     std::cout << "---\n\n";
 
