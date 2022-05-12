@@ -861,39 +861,40 @@ public:
 
   struct prober
   {        
-    iterator get()const noexcept{return begin+n;}
+    iterator get()const noexcept{return self->begin()+n;}
 
     void next()noexcept
     {
       for(;;){
-        n=(n+i)&pow2mask;
+        n=(n+i)&self->pow2mask;
         i+=1;
-        if(n<size)break;
+        if(n<self->size())break;
       }
     }
 
   private:
     friend class group_allocator;
 
-    prober(iterator begin,std::size_t size,iterator it):
-      begin{begin},size{size},n{(std::size_t)(it-begin)}
+    prober(const group_allocator* self,iterator it):
+      self{self},n{(std::size_t)(it-self->begin())}
       {next();}
 
-    iterator    begin;
-    std::size_t size,
-                n,
-                i=1,
-                pow2mask=boost::core::bit_ceil(size)-1;
+    const group_allocator* self;
+    std::size_t            n,
+                           i=1;
   };
+  friend class prober;
 
   prober make_prober(iterator it)const
   {
-    return {this->begin(),this->size(),it};
+    return {this,it};
   }
 
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
   void status(){}
 #endif
+
+  std::size_t pow2mask=boost::core::bit_ceil(this->size())-1;
 };
 
 
