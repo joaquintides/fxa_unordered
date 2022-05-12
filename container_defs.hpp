@@ -267,6 +267,13 @@ using foa_fmod_unordered_coalesced_map =
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::prime_fmod_size>;
 
+template<class K, class V, class H=absl::container_internal::hash_default_hash<K>>
+using foa_absl_unordered_coalesced_map =
+  foa_unordered_coalesced_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::pow2_size>;
+
 template<class K, class V, class H=boost::hash<K>>
 using foa_fmod_hcached_unordered_coalesced_map =
   foa_unordered_coalesced_map<
@@ -578,6 +585,9 @@ template<class K, class V> using fca_fmod_bcached_unordered_embedded_bucket_map_
 
 template<class K, class V> using foa_fmod_unordered_coalesced_map_fnv1a =
   foa_fmod_unordered_coalesced_map<K, V, fnv1a_hash>;
+
+template<class K, class V> using foa_absl_unordered_coalesced_map_fnv1a =
+  foa_absl_unordered_coalesced_map<K, V, fnv1a_hash>;
 
 template<class K, class V> using foa_fmod_hcached_unordered_coalesced_map_fnv1a =
   foa_fmod_hcached_unordered_coalesced_map<K, V, fnv1a_hash>;

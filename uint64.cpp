@@ -302,6 +302,7 @@ int main()
 #endif
 
     test<foa_fmod_unordered_coalesced_map>( "foa_fmod_unordered_coalesced_map" );
+    test<foa_absl_unordered_coalesced_map>( "foa_absl_unordered_coalesced_map" );
     test<foa_fmod_hcached_unordered_coalesced_map>( "foa_fmod_hcached_unordered_coalesced_map" );
 
 #ifdef BENCHMARK_EVERYTHING    
