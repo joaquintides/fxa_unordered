@@ -17,17 +17,8 @@
 
 using namespace std::chrono_literals;
 
-static void print_time( std::chrono::steady_clock::time_point & t1, char const* label, std::uint64_t s, std::size_t size )
-{
-    auto t2 = std::chrono::steady_clock::now();
-
-    std::cout << label << ": " << ( t2 - t1 ) / 1ms << " ms (s=" << s << ", size=" << size << ")\n";
-
-    t1 = t2;
-}
-
 constexpr unsigned N = 2'000'000;
-constexpr int K = 10;
+constexpr int K = 14;
 
 static std::vector< std::uint64_t > indices1, indices2, indices3;
 
@@ -59,80 +50,139 @@ static void init_indices()
     }
 }
 
-template<class Map> void BOOST_NOINLINE test_insert( Map& map, std::chrono::steady_clock::time_point & t1 )
+using duration = std::chrono::steady_clock::duration;
+using size_type = std::size_t;
+
+struct insert_benchmark {
+    duration consecutive;
+    duration random;
+    duration shifted;
+    size_type sizes[3];
+};
+
+struct lookup_benchmark {
+    duration consecutive;
+    duration random;
+    duration shifted;
+    size_type sizes[3];
+};
+
+struct iteration_benchmark {
+    duration iterate_erase_odd;
+    size_type size;
+};
+
+struct erase_benchmark {
+    duration consecutive;
+    duration random;
+    duration shifted;
+    size_type sizes[3];
+};
+
+template<class Map> BOOST_NOINLINE auto test_insert( Map& map ) -> insert_benchmark
 {
+    auto timings = insert_benchmark{};
+
+    auto t2 = std::chrono::steady_clock::now();
+    auto t1 = std::chrono::steady_clock::now();
+
     for( unsigned i = 1; i <= N; ++i )
     {
         map.insert( { indices1[ i ], i } );
     }
 
-    print_time( t1, "Consecutive insert",  0, map.size() );
+    t2 = std::chrono::steady_clock::now();
+    timings.consecutive = (t2 - t1);
+    timings.sizes[0] = map.size();
+    t1 = t2;
 
     for( unsigned i = 1; i <= N; ++i )
     {
         map.insert( { indices2[ i ], i } );
     }
 
-    print_time( t1, "Random insert",  0, map.size() );
+    t2 = std::chrono::steady_clock::now();
+    timings.random = (t2 - t1);
+    timings.sizes[1] = map.size();
+    t1 = t2;
 
     for( unsigned i = 1; i <= N; ++i )
     {
         map.insert( { indices3[ i ], i } );
     }
 
-    print_time( t1, "Consecutive shifted insert",  0, map.size() );
+    t2 = std::chrono::steady_clock::now();
+    timings.shifted = (t2 - t1);
+    timings.sizes[2] = map.size();
+    t1 = t2;
 
-    std::cout << std::endl;
+    return timings;
 }
 
-template<class Map> void BOOST_NOINLINE test_lookup( Map& map, std::chrono::steady_clock::time_point & t1 )
+template<class Map> lookup_benchmark BOOST_NOINLINE test_lookup( Map& map )
 {
-    std::uint64_t s;
-    
-    s = 0;
+    auto timings = lookup_benchmark{};
 
+    auto t2 = std::chrono::steady_clock::now();
+    auto t1 = std::chrono::steady_clock::now();
+
+    volatile std::uint64_t s;
+
+    s = 0;
     for( int j = 0; j < K; ++j )
     {
         for( unsigned i = 1; i <= N * 2; ++i )
         {
             auto it = map.find( indices1[ i ] );
-            if( it != map.end() ) s += it->second;
+            if( it != map.end() ) s = it->second;
         }
     }
 
-    print_time( t1, "Consecutive lookup",  s, map.size() );
+    t2 = std::chrono::steady_clock::now();
+    timings.consecutive = (t2 - t1);
+    timings.sizes[0] = map.size();
+    t1 = t2;
 
     s = 0;
-
     for( int j = 0; j < K; ++j )
     {
         for( unsigned i = 1; i <= N * 2; ++i )
         {
             auto it = map.find( indices2[ i ] );
-            if( it != map.end() ) s += it->second;
+            if( it != map.end() ) s = it->second;
         }
     }
 
-    print_time( t1, "Random lookup",  s, map.size() );
+    t2 = std::chrono::steady_clock::now();
+    timings.random = (t2 - t1);
+    timings.sizes[1] = map.size();
+    t1 = t2;
 
     s = 0;
-
     for( int j = 0; j < K; ++j )
     {
         for( unsigned i = 1; i <= N * 2; ++i )
         {
             auto it = map.find( indices3[ i ] );
-            if( it != map.end() ) s += it->second;
+            if( it != map.end() ) s = it->second;
         }
     }
 
-    print_time( t1, "Consecutive shifted lookup",  s, map.size() );
+    t2 = std::chrono::steady_clock::now();
+    timings.shifted = (t2 - t1);
+    timings.sizes[2] = map.size();
+    t1 = t2;
 
-    std::cout << std::endl;
+    return timings;
 }
 
-template<class Map> void BOOST_NOINLINE test_iteration( Map& map, std::chrono::steady_clock::time_point & t1 )
+template<class Map> BOOST_NOINLINE auto test_iteration( Map& map ) -> iteration_benchmark
 {
+    auto timings = iteration_benchmark{};
+
+    auto t2 = std::chrono::steady_clock::now();
+    auto t1 = std::chrono::steady_clock::now();
+
     auto it = map.begin();
 
     while( it != map.end() )
@@ -154,19 +204,29 @@ template<class Map> void BOOST_NOINLINE test_iteration( Map& map, std::chrono::s
         }
     }
 
-    print_time( t1, "Iterate and erase odd elements",  0, map.size() );
+    t2 = std::chrono::steady_clock::now();
+    timings.iterate_erase_odd = (t2 - t1);
+    timings.size = map.size();
 
-    std::cout << std::endl;
+    return timings;
 }
 
-template<class Map> void BOOST_NOINLINE test_erase( Map& map, std::chrono::steady_clock::time_point & t1 )
+template<class Map> BOOST_NOINLINE auto test_erase( Map& map ) -> erase_benchmark
 {
+    auto timings = erase_benchmark{};
+
+    auto t2 = std::chrono::steady_clock::now();
+    auto t1 = std::chrono::steady_clock::now();
+
     for( unsigned i = 1; i <= N; ++i )
     {
         map.erase( indices1[ i ] );
     }
 
-    print_time( t1, "Consecutive erase",  0, map.size() );
+    t2 = std::chrono::steady_clock::now();
+    timings.consecutive = (t2 - t1);
+    timings.sizes[0] = map.size();
+    t1 = t2;
 
     {
         boost::detail::splitmix64 rng;
@@ -177,19 +237,23 @@ template<class Map> void BOOST_NOINLINE test_erase( Map& map, std::chrono::stead
         }
     }
 
-    print_time( t1, "Random erase",  0, map.size() );
+    t2 = std::chrono::steady_clock::now();
+    timings.random = (t2 - t1);
+    timings.sizes[1] = map.size();
+    t1 = t2;
 
     for( unsigned i = 1; i <= N; ++i )
     {
         map.erase( indices3[ i ] );
     }
 
-    print_time( t1, "Consecutive shifted erase",  0, map.size() );
+    t2 = std::chrono::steady_clock::now();
+    timings.shifted = (t2 - t1);
+    timings.sizes[2] = map.size();
+    t1 = t2;
 
-    std::cout << std::endl;
+    return timings;
 }
-
-//
 
 struct record
 {
@@ -201,33 +265,147 @@ struct record
 
 static std::vector<record> times;
 
+template <class Timing>
+auto get_total(Timing const& timings) -> duration {
+    return timings.consecutive + timings.random + timings.shifted;
+}
+
+template <class Timing>
+auto get_average(std::vector<Timing> timings) -> Timing {
+    std::sort(timings.begin(), timings.end(), [](auto& b1, auto& b2) {
+        return get_total(b1) < get_total(b2);
+    });
+
+    timings.pop_back();
+    timings.pop_back();
+
+    timings.erase(timings.begin());
+    timings.erase(timings.begin());
+
+    Timing out;
+    out.consecutive = duration::zero();
+    out.random = duration::zero();
+    out.shifted = duration::zero();
+
+    for (auto& timing : timings) {
+        out.consecutive += timing.consecutive;
+        out.random += timing.random;
+        out.shifted += timing.shifted;
+    }
+
+    out.consecutive /= timings.size();
+    out.random /= timings.size();
+    out.shifted /= timings.size();
+
+    out.sizes[0] = timings.front().sizes[0];
+    out.sizes[1] = timings.front().sizes[1];
+    out.sizes[2] = timings.front().sizes[2];
+
+    return out;
+}
+
+static iteration_benchmark get_average_iterator(std::vector<iteration_benchmark> timings) {
+    std::sort(timings.begin(), timings.end(), [](auto& b1, auto& b2) {
+        return b1.iterate_erase_odd < b2.iterate_erase_odd;
+    });
+
+    timings.pop_back();
+    timings.pop_back();
+
+    timings.erase(timings.begin());
+    timings.erase(timings.begin());
+
+    iteration_benchmark out;
+    out.iterate_erase_odd = duration::zero();
+
+    for (auto& timing : timings) {
+        out.iterate_erase_odd += timing.iterate_erase_odd;
+    }
+
+    out.iterate_erase_odd /= timings.size();
+    out.size = timings.front().size;
+    return out;
+}
+
+template <class ...Ts>
+auto get_total_time(iteration_benchmark b, Ts... benches) -> duration {
+    return b.iterate_erase_odd + ((benches.consecutive + benches.random + benches.shifted) + ...);
+}
+
 template<template<class...> class Map> void BOOST_NOINLINE test( char const* label )
 {
     std::cout << label << ":\n\n";
 
-    s_alloc_bytes = 0;
-    s_alloc_count = 0;
-    
-    Map<std::uint64_t, std::uint64_t> map;
+    auto insert_timings = std::vector<insert_benchmark>();
+    auto lookup_timings = std::vector<lookup_benchmark>();
+    auto lookup_timings2 = std::vector<lookup_benchmark>();
+    auto iteration_timings = std::vector<iteration_benchmark>();
+    auto erase_timings = std::vector<erase_benchmark>();
 
-    auto t0 = std::chrono::steady_clock::now();
-    auto t1 = t0;
+    record rec;
+    rec.label_ = label;
 
-    test_insert( map, t1 );
+    for (int i = 0; i < K; ++i) {
+        s_alloc_bytes = 0;
+        s_alloc_count = 0;
+        
+        Map<std::uint64_t, std::uint64_t> map;
 
-    std::cout << "Memory: " << s_alloc_bytes << " bytes in " << s_alloc_count << " allocations\n\n";
-    record rec = { label, 0, s_alloc_bytes, s_alloc_count };
+        insert_timings.push_back( test_insert( map ) );
 
-    test_lookup( map, t1 );
-    test_iteration( map, t1 );
-    test_lookup( map, t1 );
-    test_erase( map, t1 );
+        if (i == (K - 1)) {
+            rec.bytes_ = s_alloc_bytes;
+            rec.count_ = s_alloc_count;
+        }
 
-    auto tN = std::chrono::steady_clock::now();
-    std::cout << "Total: " << ( tN - t0 ) / 1ms << " ms\n\n";
+        lookup_timings.push_back( test_lookup( map ) );
+        iteration_timings.push_back( test_iteration( map ) );
+        lookup_timings2.push_back( test_lookup( map ) );
+        erase_timings.push_back( test_erase( map ) );
+    }
 
-    rec.time_ = ( tN - t0 ) / 1ms;
-    times.push_back( rec );
+    auto insert_timing = get_average(std::move(insert_timings));
+    auto lookup_timing = get_average(std::move(lookup_timings));
+    auto lookup_timing2 = get_average(std::move(lookup_timings2));
+    auto erase_timing = get_average(std::move(erase_timings));
+    auto iteration_timing = get_average_iterator(std::move(iteration_timings));
+    auto total_time = get_total_time(iteration_timing, insert_timing, lookup_timing, lookup_timing2, erase_timing);
+
+    rec.time_ = total_time / 1ms;
+    times.push_back(rec);
+
+    std::cout << "Consecutive insert: " << insert_timing.consecutive / 1ms << "ms (size=" << insert_timing.sizes[0] << ")\n";
+    std::cout << "Random insert: " << insert_timing.random / 1ms << "ms (size=" << insert_timing.sizes[1] << ")\n";
+    std::cout << "Consecutive shifted insert: " << insert_timing.shifted / 1ms << "ms (size=" << insert_timing.sizes[2] << ")\n";
+
+    std::cout << "\n";
+
+    std::cout << "Memory: " << rec.bytes_ << " bytes in " << rec.count_ << " allocations\n\n";
+
+    std::cout << "Consecutive lookup: " << lookup_timing.consecutive / 1ms << "ms (size=" << lookup_timing.sizes[0] << ")\n";
+    std::cout << "Random lookup: " << lookup_timing.random / 1ms << "ms (size=" << lookup_timing.sizes[1] << ")\n";
+    std::cout << "Consecutive shifted lookup: " << lookup_timing.shifted / 1ms << "ms (size=" << lookup_timing.sizes[2] << ")\n";
+
+    std::cout << "\n";
+
+    std::cout << "Iterate and erase odd elements: " << iteration_timing.iterate_erase_odd / 1ms << "ms (size=" << iteration_timing.size << ")\n";
+
+    std::cout << "\n";
+
+    std::cout << "Consecutive lookup: " << lookup_timing2.consecutive / 1ms << "ms (size=" << lookup_timing2.sizes[0] << ")\n";
+    std::cout << "Random lookup: " << lookup_timing2.random / 1ms << "ms (size=" << lookup_timing2.sizes[1] << ")\n";
+    std::cout << "Consecutive shifted lookup: " << lookup_timing2.shifted / 1ms << "ms (size=" << lookup_timing2.sizes[2] << ")\n";
+
+    std::cout << "\n";
+
+    std::cout << "Consecutive erase: " << erase_timing.consecutive / 1ms << "ms (size=" << erase_timing.sizes[0] << ")\n";
+    std::cout << "Random erase: " << erase_timing.random / 1ms << "ms (size=" << erase_timing.sizes[1] << ")\n";
+    std::cout << "Consecutive shifted erase: " << erase_timing.shifted / 1ms << "ms (size=" << erase_timing.sizes[2] << ")\n";
+
+    std::cout << "\n";
+    std::cout << "Total: " << total_time / 1ms << "ms\n";
+
+    std::cout << std::endl;
 }
 
 #if ((SIZE_MAX>>16)>>16)==0 
