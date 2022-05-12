@@ -851,7 +851,8 @@ public:
 
   std::pair<iterator,int> new_group_after(iterator first,iterator /*it*/)
   {
-    for(auto pr=make_prober(first);;pr.next()){
+    for(auto pr=make_prober(first);;){
+      pr.next();
       if(auto mask=control(pr.get()).match_empty_or_deleted()){
         FXA_ASSUME(mask!=0);
         return {pr.get(),boost::core::countr_zero((unsigned int)mask)};
@@ -876,8 +877,7 @@ public:
     friend class group_allocator;
 
     prober(const group_allocator* self,iterator it):
-      self{self},n{(std::size_t)(it-self->begin())}
-      {next();}
+      self{self},n{(std::size_t)(it-self->begin())}{}
 
     const group_allocator* self;
     std::size_t            n,
@@ -923,7 +923,8 @@ public:
 
   std::pair<iterator,int> new_group_after(iterator first,iterator /*it*/)
   {
-    for(auto pr=make_prober(first);;pr.next()){
+    for(auto pr=make_prober(first);;){
+      pr.next();
       if(auto mask=control(pr.get()).match_empty_or_deleted()){
         FXA_ASSUME(mask!=0);
         return {pr.get(),boost::core::countr_zero((unsigned int)mask)};
@@ -1307,7 +1308,7 @@ public:
   iterator find(const Key& x)const
   {    
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
-    ++num_finds;
+    ++num_finds; // TODO: this shouldn't go when !linked_groups
     int runlength=1;
 #endif
 
@@ -1338,26 +1339,10 @@ public:
         else              itg=next;
       }
     }
-    else{ // no linked groups
-      auto [n,found]=find_in_group(x,first,short_hash);
-      if(found){
-#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
-        successful_find_runlengths+=runlength;
-        successful_find_runs+=1;  
-#endif
-        return {first,n};
-      }
+      
+    for(auto pr=groups.make_prober(first);;){
+      if constexpr(linked_groups)pr.next();
         
-      if(control(first).match_empty()){
-#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
-        unsuccessful_find_runlengths+=runlength;
-        unsuccessful_find_runs+=1;  
-#endif
-        return end();
-      }
-    }
-
-    for(auto pr=groups.make_prober(first);;pr.next()){
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
       ++runlength;
 #endif
@@ -1378,6 +1363,8 @@ public:
 #endif
         return end();
       }
+
+      if constexpr(!linked_groups)pr.next();
     }
   }
 
@@ -1593,7 +1580,8 @@ private:
       update_ita(first);
     }
    
-    for(auto pr=groups.make_prober(first);;pr.next()){
+    for(auto pr=groups.make_prober(first);;){
+      pr.next();
       auto itg=pr.get();
       auto [n,found]=find_in_group(x,itg,short_hash);
       if(found)return {{itg,n}};
