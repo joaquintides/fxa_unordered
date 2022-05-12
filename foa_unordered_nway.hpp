@@ -1422,8 +1422,8 @@ private:
   std::pair<int,bool> find_in_group(
     const Key& x,group_iterator itg,unsigned char short_hash)const
   {
-    prefetch_elements(itg);
     auto mask=control(itg).match(short_hash);
+    if(mask)prefetch_elements(itg);
     while(mask){
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
       ++num_matches;
