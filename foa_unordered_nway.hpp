@@ -1440,26 +1440,58 @@ private:
   template<typename Value>
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
-    auto hash=h(x);
-    auto short_hash=hash_split_policy::short_hash(hash);
-    auto first=group_for(hash);
-    auto [it,ita,last]=find_match_available_last(x,first,short_hash);
-    if(it!=end())return {it,false};
+    if constexpr(linked_groups){
+      auto hash=h(x);
+      auto short_hash=hash_split_policy::short_hash(hash);
+      auto first=group_for(hash);
+      auto [it,ita,last]=find_match_available_last(x,first,short_hash);
+      if(it!=end())return {it,false};
 
-    if(BOOST_UNLIKELY(size_+1>ml)){
-      rehash(size_+1);
-      return {unchecked_insert(std::forward<Value>(x),hash,short_hash),true};
-    }
+      if(BOOST_UNLIKELY(size_+1>ml)){
+        rehash(size_+1);
+        return {unchecked_insert(std::forward<Value>(x),hash,short_hash),true};
+      }
 
-    auto& [itga,na]=ita;
-    if(!itga){
-      assert(last);
-      std::tie(itga,na)=groups.new_group_after(first,last);
+      auto& [itga,na]=ita;
+      if(!itga){
+        assert(last);
+        std::tie(itga,na)=groups.new_group_after(first,last);
+      }
+      construct_element(std::forward<Value>(x),elements(itga).at(na).data());  
+      control(itga).set(na,short_hash);
+      ++size_;
+      return {ita,true};
     }
-    construct_element(std::forward<Value>(x),elements(itga).at(na).data());  
-    control(itga).set(na,short_hash);
-    ++size_;
-    return {ita,true};
+    else{ // no linked groups
+      auto hash=h(x);
+      auto short_hash=hash_split_policy::short_hash(hash);
+      auto first=group_for(hash);
+
+      for(auto pr=groups.make_prober(first);;pr.next()){     
+        auto itg=pr.get();
+        auto [n,found]=find_in_group(x,itg,short_hash);
+        if(found)return {{itg,n},false};
+        if(control(itg).match_empty())break;
+      }
+
+      if(BOOST_UNLIKELY(size_+1>ml)){
+        rehash(size_+1);
+        return {unchecked_insert(std::forward<Value>(x),hash,short_hash),true};
+      }
+
+      for(auto pr=groups.make_prober(first);;pr.next()){
+        auto itg=pr.get();
+        int mask=control(itg).match_empty_or_deleted();
+        if(mask){
+          int n=boost::core::countr_zero((unsigned int)mask); 
+          construct_element(
+              std::forward<Value>(x),elements(itg).at(n).data());  
+          control(itg).set(n,short_hash);
+          ++size_;
+          return {{itg,n},true};
+        }
+      }
+    }
   }
 
   void rehash(size_type new_size)
