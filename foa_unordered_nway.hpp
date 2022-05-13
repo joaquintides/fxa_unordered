@@ -1463,14 +1463,18 @@ private:
       return {ita,true};
     }
     else{ // no linked groups
-      auto hash=h(x);
-      auto short_hash=hash_split_policy::short_hash(hash);
-      auto first=group_for(hash);
+      auto           hash=h(x);
+      auto           short_hash=hash_split_policy::short_hash(hash);
+      auto           first=group_for(hash);
+      group_iterator itga;
+      int            maska=0;
+      auto           pr=groups.make_prober(first);
 
-      for(auto pr=groups.make_prober(first);;pr.next()){     
+      for(;;pr.next()){     
         auto itg=pr.get();
         auto [n,found]=find_in_group(x,itg,short_hash);
         if(found)return {{itg,n},false};
+        if(!maska&&(maska=control(itg).match_empty_or_deleted()))itga=itg;
         if(control(itg).match_empty())break;
       }
 
@@ -1479,18 +1483,22 @@ private:
         return {unchecked_insert(std::forward<Value>(x),hash,short_hash),true};
       }
 
-      for(auto pr=groups.make_prober(first);;pr.next()){
-        auto itg=pr.get();
-        int mask=control(itg).match_empty_or_deleted();
-        if(mask){
-          int n=boost::core::countr_zero((unsigned int)mask); 
-          construct_element(
-              std::forward<Value>(x),elements(itg).at(n).data());  
-          control(itg).set(n,short_hash);
-          ++size_;
-          return {{itg,n},true};
+      if(!maska){
+        for(;;){
+          pr.next();
+          auto itg=pr.get();
+          if((maska=control(itg).match_empty_or_deleted())){
+            itga=itg;
+            break;
+          }
         }
       }
+      int n=boost::core::countr_zero((unsigned int)maska); 
+      construct_element(
+        std::forward<Value>(x),elements(itga).at(n).data());  
+      control(itga).set(n,short_hash);
+      ++size_;
+      return {{itga,n},true};    
     }
   }
 
