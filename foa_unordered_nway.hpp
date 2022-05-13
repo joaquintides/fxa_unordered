@@ -1401,7 +1401,7 @@ private:
 #if defined(BOOST_GCC)||defined(BOOST_CLANG)
     __builtin_prefetch((const char*)p,0);
 #elif defined(FXA_UNORDERED_SSE2)
-    //_mm_prefetch((const char*)p,_MM_HINT_NTA);
+    _mm_prefetch((const char*)p,_MM_HINT_T0);
 #endif    
   }
 
@@ -1409,7 +1409,7 @@ private:
   {
     constexpr int cache_line=64;
     char *p0=(char*)elements(itg).at(0).data(),
-         *p1=(char*)elements(itg).at(0).data()+sizeof(value_type);
+         *p1=p0+sizeof(value_type);
     for(char* p=p0;p<p1;p+=cache_line)prefetch(p);
   }
 
