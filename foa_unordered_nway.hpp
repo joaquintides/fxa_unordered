@@ -1574,19 +1574,17 @@ private:
         else              itg=next;
       }
     }
-    else{ // no linked groups
-      auto [n,found]=find_in_group(x,first,short_hash);
-      if(found)return {{first,n}};
-      update_ita(first);
-    }
    
     for(auto pr=groups.make_prober(first);;){
-      pr.next();
+      if constexpr(linked_groups)pr.next();
+        
       auto itg=pr.get();
       auto [n,found]=find_in_group(x,itg,short_hash);
       if(found)return {{itg,n}};
       update_ita(itg); 
       if(control(itg).match_empty())return {end(),ita}; // ita must be non-null
+        
+      if constexpr(!linked_groups)pr.next();
     }
   }
 
