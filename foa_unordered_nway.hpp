@@ -1401,7 +1401,7 @@ private:
 #if defined(BOOST_GCC)||defined(BOOST_CLANG)
     __builtin_prefetch((const char*)p,0);
 #elif defined(FXA_UNORDERED_SSE2)
-    _mm_prefetch((const char*)p,_MM_HINT_NTA);
+    //_mm_prefetch((const char*)p,_MM_HINT_NTA);
 #endif    
   }
 
