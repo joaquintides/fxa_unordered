@@ -1211,8 +1211,8 @@ class foa_unordered_nwayplus_set
       group,
       typename alloc_traits:: template rebind_alloc<group>>;
   using group_iterator=typename group_allocator::iterator;
+  using linked_groups=groups_are_linked<group>;
 
-  static constexpr bool linked_groups=groups_are_linked<group>::value;
   static constexpr auto N=group::N;
 
   static auto& control(group_iterator itg)
@@ -1305,67 +1305,9 @@ public:
   }
   
   template<typename Key>
-  BOOST_FORCEINLINE iterator find(const Key& x)const
-  {    
-#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
-    ++num_finds; // TODO: this shouldn't go when !linked_groups
-    int runlength=1;
-#endif
-
-    auto hash=h(x);
-    auto short_hash=hash_split_policy::short_hash(hash);
-    auto first=group_for(hash);
-
-    if constexpr(linked_groups){
-      for(auto itg=first;;){
-        auto [n,found]=find_in_group(x,itg,short_hash);
-        if(found){
-#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
-          successful_find_runlengths+=runlength;
-          successful_find_runs+=1;  
-#endif
-          return {itg,n};
-        }
-
-        auto next=control(itg).next();
-        if(!next){
-#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
-          unsuccessful_find_runlengths+=runlength;
-          unsuccessful_find_runs+=1;  
-#endif
-          return end();
-        }
-        else if(itg==next)break; // chain closed, go probing
-        else              itg=next;
-      }
-    }
-      
-    for(auto pr=groups.make_prober(first);;){
-      if constexpr(linked_groups)pr.next();
-        
-#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
-      ++runlength;
-#endif
-        
-      auto itg=pr.get();
-      auto [n,found]=find_in_group(x,itg,short_hash);
-      if(found){
-#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
-        successful_find_runlengths+=runlength;
-        successful_find_runs+=1;  
-#endif
-        return {itg,n};
-      }
-      if(control(itg).match_empty()){
-#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
-        unsuccessful_find_runlengths+=runlength;
-        unsuccessful_find_runs+=1;  
-#endif
-        return end();
-      }
-
-      if constexpr(!linked_groups)pr.next();
-    }
+  iterator find(const Key& x)const
+  {
+    return find_impl(x,linked_groups());
   }
 
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
@@ -1437,10 +1379,108 @@ private:
     return {0,false};
   }
 
+  template<typename Key>
+  iterator find_impl(const Key& x,std::true_type /* linked groups */)const
+  {    
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+    ++num_finds; // TODO: this shouldn't go when !linked_groups
+    int runlength=1;
+#endif
+
+    auto hash=h(x);
+    auto short_hash=hash_split_policy::short_hash(hash);
+    auto first=group_for(hash);
+
+    for(auto itg=first;;){
+      auto [n,found]=find_in_group(x,itg,short_hash);
+      if(found){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+        successful_find_runlengths+=runlength;
+        successful_find_runs+=1;  
+#endif
+        return {itg,n};
+      }
+
+      auto next=control(itg).next();
+      if(!next){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+        unsuccessful_find_runlengths+=runlength;
+        unsuccessful_find_runs+=1;  
+#endif
+        return end();
+      }
+      else if(itg==next)break; // chain closed, go probing
+      else              itg=next;
+    }
+      
+    for(auto pr=groups.make_prober(first);;){
+      pr.next();
+        
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+      ++runlength;
+#endif
+        
+      auto itg=pr.get();
+      auto [n,found]=find_in_group(x,itg,short_hash);
+      if(found){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+        successful_find_runlengths+=runlength;
+        successful_find_runs+=1;  
+#endif
+        return {itg,n};
+      }
+      if(control(itg).match_empty()){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+        unsuccessful_find_runlengths+=runlength;
+        unsuccessful_find_runs+=1;  
+#endif
+        return end();
+      }
+    }
+  }
+
+  template<typename Key>
+  iterator find_impl(const Key& x,std::false_type /* linked groups */)const
+  {    
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+    ++num_finds; // TODO: this shouldn't go when !linked_groups
+    int runlength=1;
+#endif
+
+    auto hash=h(x);
+    auto short_hash=hash_split_policy::short_hash(hash);
+    auto first=group_for(hash);
+
+    for(auto pr=groups.make_prober(first);;){        
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+      ++runlength;
+#endif
+        
+      auto itg=pr.get();
+      auto [n,found]=find_in_group(x,itg,short_hash);
+      if(found){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+        successful_find_runlengths+=runlength;
+        successful_find_runs+=1;  
+#endif
+        return {itg,n};
+      }
+      if(control(itg).match_empty()){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+        unsuccessful_find_runlengths+=runlength;
+        unsuccessful_find_runs+=1;  
+#endif
+        return end();
+      }
+
+      pr.next();
+    }
+  }
+
   template<typename Value>
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
-    if constexpr(linked_groups){
+    if constexpr(linked_groups::value){
       auto hash=h(x);
       auto short_hash=hash_split_policy::short_hash(hash);
       auto first=group_for(hash);
@@ -1550,7 +1590,7 @@ private:
          itg=first;
     int  mask,n;
 
-    if constexpr(linked_groups){
+    if constexpr(linked_groups::value){
       // unchecked_insert only called just after rehashing, so
       // there are no deleted elements and we can go till end of chain
       while(control(itg).next()&&itg!=control(itg).next())itg=control(itg).next();
@@ -1602,7 +1642,7 @@ private:
       }        
     };
 
-   if constexpr(linked_groups){
+   if constexpr(linked_groups::value){
       for(auto itg=first;;){
         auto [n,found]=find_in_group(x,itg,short_hash);
         if(found)return {{itg,n}};
@@ -1616,7 +1656,7 @@ private:
     }
    
     for(auto pr=groups.make_prober(first);;){
-      if constexpr(linked_groups)pr.next();
+      if constexpr(linked_groups::value)pr.next();
         
       auto itg=pr.get();
       auto [n,found]=find_in_group(x,itg,short_hash);
@@ -1624,7 +1664,7 @@ private:
       update_ita(itg); 
       if(control(itg).match_empty())return {end(),ita}; // ita must be non-null
         
-      if constexpr(!linked_groups)pr.next();
+      if constexpr(!linked_groups::value)pr.next();
     }
   }
 
