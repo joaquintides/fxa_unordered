@@ -1305,7 +1305,7 @@ public:
   }
   
   template<typename Key>
-  iterator find(const Key& x)const
+  BOOST_FORCEINLINE iterator find(const Key& x)const
   {    
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
     ++num_finds; // TODO: this shouldn't go when !linked_groups
