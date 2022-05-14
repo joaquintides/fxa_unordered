@@ -862,32 +862,35 @@ public:
 
   struct prober
   {        
-    iterator get()const noexcept{return self->begin()+n;}
+    iterator get()const noexcept{return begin+n;}
 
     void next()noexcept
     {
       for(;;){
-        n=(n+i)&self->pow2mask;
+        n=(n+i)&pow2mask;
         i+=1;
-        if(n<self->size())break;
+        if(n<size)break;
       }
     }
 
   private:
     friend class group_allocator;
 
-    prober(const group_allocator* self,iterator it):
-      self{self},n{(std::size_t)(it-self->begin())}{}
+    prober(iterator begin,iterator it,std::size_t size,std::size_t pow2mask):
+      begin{begin},size{size},pow2mask{pow2mask},
+      n{(std::size_t)(it-begin)}
+    {}
 
-    const group_allocator* self;
-    std::size_t            n,
-                           i=1;
+    iterator    begin;
+    std::size_t size,
+                pow2mask,
+                n,
+                i=1;
   };
-  friend class prober;
 
   prober make_prober(iterator it)const
   {
-    return {this,it};
+    return {this->begin(),it,this->size(),pow2mask};
   }
 
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
