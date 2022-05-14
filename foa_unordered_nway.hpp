@@ -1186,11 +1186,11 @@ struct soa_coalesced_allocation
 template<typename Group,typename=void>
 struct groups_are_linked:std::false_type{};
 
-template<typename Group>
-struct groups_are_linked<
-  Group,
-  std::void_t<decltype(std::declval<Group>().next())>
->:std::true_type{};
+//template<typename Group>
+//struct groups_are_linked<
+//  Group,
+//  std::void_t<decltype(std::declval<Group>().next())>
+//>:std::true_type{};
 
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
