@@ -524,46 +524,46 @@ struct group_base
 
 #ifdef FXA_UNORDERED_SSE2
 
-  void set(std::size_t pos,unsigned char hash)
+  inline void set(std::size_t pos,unsigned char hash)
   {
     reinterpret_cast<unsigned char*>(&mask)[pos]=hash&0x7Fu;
   }
 
-  void set_sentinel()
+  inline void set_sentinel()
   {
     reinterpret_cast<unsigned char*>(&mask)[N-1]=sentinel_;
   }
 
-  void reset(std::size_t pos)
+  inline void reset(std::size_t pos)
   {
     assert(pos<N);
     reinterpret_cast<unsigned char*>(&mask)[pos]=deleted_;
   }
 
-  int match(unsigned char hash)const
+  inline int match(unsigned char hash)const
   {
     auto m=_mm_set1_epi8(hash&0x7Fu);
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
   }
 
-  int match_empty()const
+  inline int match_empty()const
   {
     auto m=_mm_set1_epi8(empty_);
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
   }
 
-  int match_empty_or_deleted()const
+  inline int match_empty_or_deleted()const
   {
     auto m=_mm_set1_epi8(sentinel_);
     return _mm_movemask_epi8(_mm_cmpgt_epi8_fixed(m,mask));    
   }
 
-  int match_occupied()const
+  inline int match_occupied()const
   {
     return (~match_empty_or_deleted())&0xFFFFul;
   }
 
-  int match_really_occupied()const // excluding sentinel
+  inline int match_really_occupied()const // excluding sentinel
   {
     return (~_mm_movemask_epi8(mask))&0xFFFFul;
   }
@@ -575,7 +575,7 @@ private:
                           sentinel_=-1;
 
   //ripped from Abseil raw_hash_set.h
-  static __m128i _mm_cmpgt_epi8_fixed(__m128i a, __m128i b) {
+  static inline __m128i _mm_cmpgt_epi8_fixed(__m128i a, __m128i b) {
 #if defined(__GNUC__) && !defined(__clang__)
     if (std::is_unsigned<char>::value) {
       const __m128i mask = _mm_set1_epi8(0x80);
@@ -590,48 +590,48 @@ private:
 
 #else
 
-  void set(std::size_t pos,unsigned char hash)
+  inline void set(std::size_t pos,unsigned char hash)
   {
     set_impl(pos,hash&0x7Fu);
   }
 
-  void set_sentinel()
+  inline void set_sentinel()
   {
     uint64_ops::set(himask,N-1,sentinel_);
   }
 
-  void reset(std::size_t pos)
+  inline void reset(std::size_t pos)
   {
     uint64_ops::set(himask,pos,deleted_);
   }
 
-  int match(unsigned char hash)const
+  inline int match(unsigned char hash)const
   {
     return match_impl(hash&0x7Fu);
   }
 
-  int match_empty()const
+  inline int match_empty()const
   {
     return
       (himask & uint64_t(0x0000FFFF00000000ull))>>32&
       (himask & uint64_t(0xFFFF000000000000ull))>>48;
   }
 
-  int match_empty_or_deleted()const
+  inline int match_empty_or_deleted()const
   {
     return
       (himask & uint64_t(0x00000000FFFF0000ull))>>16&
       (himask & uint64_t(0xFFFF000000000000ull))>>48;
   }
 
-  int match_occupied()const
+  inline int match_occupied()const
   {
     return // ~match_empty_or_deleted()
       (~himask | uint64_t(0xFFFFFFFF0000FFFFull))>>16|
       (~himask | uint64_t(0x0000FFFFFFFFFFFFull))>>48;
   }
 
-  int match_really_occupied()const // excluding sentinel
+  inline int match_really_occupied()const // excluding sentinel
   {
     return
       (~himask & uint64_t(0xFFFF000000000000ull))>>48;
@@ -642,13 +642,13 @@ private:
                        deleted_= 0xA, // 1010
                        sentinel_=0x8; // 1000
 
-  void set_impl(std::size_t pos,unsigned char m)
+  inline void set_impl(std::size_t pos,unsigned char m)
   {
     uint64_ops::set(lowmask,pos,m&0xFu);
     uint64_ops::set(himask,pos,m>>4);
   }
   
-  int match_impl(unsigned char m)const
+  inline int match_impl(unsigned char m)const
   {
     return uint64_ops::match(lowmask,m&0xFu)&
            uint64_ops::match(himask,m>>4);
