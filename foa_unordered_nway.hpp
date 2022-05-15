@@ -1351,7 +1351,7 @@ private:
   {
     constexpr int cache_line=64;
     char *p0=(char*)elements(itg).at(0).data(),
-         *p1=p0+sizeof(value_type);
+         *p1=p0+sizeof(value_type)*N;
     for(char* p=p0;p<p1;p+=cache_line)prefetch(p);
   }
 
