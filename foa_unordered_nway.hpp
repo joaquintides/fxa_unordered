@@ -1349,10 +1349,12 @@ private:
 
   static void prefetch_elements(group_iterator itg)
   {
+#if 0
     constexpr int cache_line=64;
     char *p0=(char*)elements(itg).at(0).data(),
          *p1=p0+sizeof(value_type)*N/2;
     for(char* p=p0;p<p1;p+=cache_line)prefetch(p);
+#endif
   }
 
   group_iterator group_for(std::size_t hash)const
