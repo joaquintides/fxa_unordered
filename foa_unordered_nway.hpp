@@ -1447,35 +1447,12 @@ private:
     int runlength=1;
 #endif
 
-    auto hash=h(x);
-    auto short_hash=hash_split_policy::short_hash(hash);
-    auto first=group_for(hash);
-
-    auto [n,found]=find_in_group(x,first,short_hash);
-    if(found){
-#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
-      successful_find_runlengths+=runlength;
-      successful_find_runs+=1;  
-#endif
-      return {first,n};
-    }
-    if(control(first).match_empty()){
-#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
-      unsuccessful_find_runlengths+=runlength;
-      unsuccessful_find_runs+=1;  
-#endif
-      return end();
-    }
-    
-
-    for(auto pr=groups.make_prober(first);;){        
-      pr.next();
-        
-#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
-      ++runlength;
-#endif
-        
-      auto itg=pr.get();
+    auto        hash=h(x);
+    auto        short_hash=hash_split_policy::short_hash(hash);
+    auto        pos=size_policy::position(hash,group_size_index);
+    std::size_t step=1;
+    for(;;){
+      auto itg=groups.at(pos);
       auto [n,found]=find_in_group(x,itg,short_hash);
       if(found){
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
@@ -1490,6 +1467,12 @@ private:
         unsuccessful_find_runs+=1;  
 #endif
         return end();
+      }
+
+      for(;;){
+        pos=(pos+step)&groups.pow2mask;
+        step+=1;
+        if(pos<groups.size())break;
       }
     }
   }
