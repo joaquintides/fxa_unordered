@@ -1453,14 +1453,25 @@ private:
     std::size_t step=1;
     for(;;){
       auto itg=groups.at(pos);
-      auto [n,found]=find_in_group(x,itg,short_hash);
-      if(found){
+      auto mask=control(itg).match(short_hash);
+      if(mask)prefetch_elements(itg);
+      while(mask){
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
-        successful_find_runlengths+=runlength;
-        successful_find_runs+=1;  
+        ++num_matches;
 #endif
-        return {itg,n};
+        
+        FXA_ASSUME(mask!=0);
+        auto n=boost::core::countr_zero((unsigned int)mask);
+        if(BOOST_LIKELY(pred(x,elements(itg).at(n).value()))){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+          successful_find_runlengths+=runlength;
+          successful_find_runs+=1;  
+#endif
+          return {itg,n};
+        }
+        mask&=mask-1;
       }
+        
       if(control(itg).match_empty()){
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
         unsuccessful_find_runlengths+=runlength;
