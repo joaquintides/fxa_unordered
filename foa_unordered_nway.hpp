@@ -1443,7 +1443,7 @@ private:
   iterator find_impl(const Key& x,std::false_type /* linked groups */)const
   {    
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
-    ++num_finds; // TODO: this shouldn't go when !linked_groups
+    ++num_finds;
     int runlength=1;
 #endif
 
@@ -1451,7 +1451,26 @@ private:
     auto short_hash=hash_split_policy::short_hash(hash);
     auto first=group_for(hash);
 
+    auto [n,found]=find_in_group(x,first,short_hash);
+    if(found){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+      successful_find_runlengths+=runlength;
+      successful_find_runs+=1;  
+#endif
+      return {first,n};
+    }
+    if(control(first).match_empty()){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+      unsuccessful_find_runlengths+=runlength;
+      unsuccessful_find_runs+=1;  
+#endif
+      return end();
+    }
+    
+
     for(auto pr=groups.make_prober(first);;){        
+      pr.next();
+        
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
       ++runlength;
 #endif
@@ -1472,8 +1491,6 @@ private:
 #endif
         return end();
       }
-
-      pr.next();
     }
   }
 
