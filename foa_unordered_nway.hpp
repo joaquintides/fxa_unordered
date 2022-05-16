@@ -1192,6 +1192,17 @@ struct groups_are_linked<
   std::void_t<decltype(std::declval<Group>().next())>
 >:std::true_type{};
 
+template<typename GroupAllocator>
+using has_soa_layout=std::integral_constant<
+  bool,
+  !std::is_same_v<
+    decltype(GroupAllocator::control(
+      std::declval<typename GroupAllocator::iterator>())),
+    decltype(GroupAllocator::elements(
+      std::declval<typename GroupAllocator::iterator>()))
+  >
+>;
+
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
@@ -1212,6 +1223,7 @@ class foa_unordered_nwayplus_set
       typename alloc_traits:: template rebind_alloc<group>>;
   using group_iterator=typename group_allocator::iterator;
   using linked_groups=groups_are_linked<group>;
+  using soa_layout=has_soa_layout<group_allocator>;
 
   static constexpr auto N=group::N;
 
@@ -1349,12 +1361,13 @@ private:
 
   static void prefetch_elements(group_iterator itg)
   {
-#if 0
     constexpr int cache_line=64;
     char *p0=(char*)elements(itg).at(0).data(),
          *p1=p0+sizeof(value_type)*N/2;
+    if constexpr(!soa_layout::value){
+      p0+=cache_line-N;
+    }
     for(char* p=p0;p<p1;p+=cache_line)prefetch(p);
-#endif
   }
 
   group_iterator group_for(std::size_t hash)const
