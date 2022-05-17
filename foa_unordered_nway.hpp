@@ -1455,7 +1455,8 @@ private:
   }
 
   template<typename Key>
-  iterator find_impl(const Key& x,std::false_type /* linked groups */)const
+  BOOST_FORCEINLINE iterator find_impl(
+    const Key& x,std::false_type /* linked groups */)const
   {    
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
     ++num_finds;
