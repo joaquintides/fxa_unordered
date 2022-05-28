@@ -672,18 +672,18 @@ struct group15_base:private group_base
 {
   static constexpr int N=15;
 
-  group15_base(){occupied_count()=0;}
+  group15_base(){empty_count()=N;}
 
   inline void set(std::size_t pos,unsigned char hash)
   {
     super::set(pos,hash);
-    ++occupied_count();
+    --empty_count();
   }
 
   inline void set_sentinel()
   {
     reinterpret_cast<unsigned char*>(&this->mask)[N-1]=super::sentinel_;
-    ++occupied_count();
+    --empty_count();
   }
 
   inline void reset(std::size_t pos)
@@ -696,9 +696,9 @@ struct group15_base:private group_base
     return super::match(hash)&0x7FFF;
   }
 
-  inline bool check_empty()const
+  inline auto check_empty()const
   {
-    return occupied_count()<N;  
+    return empty_count();  
   }
 
   inline int match_empty()const
@@ -724,12 +724,12 @@ struct group15_base:private group_base
 private:
   using super=group_base;
 
-  unsigned char& occupied_count()
+  unsigned char& empty_count()
   {
     return reinterpret_cast<unsigned char*>(&this->mask)[15];
   }
 
-  unsigned char occupied_count()const
+  unsigned char empty_count()const
   {
     return reinterpret_cast<const unsigned char*>(&this->mask)[15];
   }
