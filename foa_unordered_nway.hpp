@@ -546,6 +546,11 @@ struct group_base
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
   }
 
+  inline int check_empty()const
+  {
+    return match_empty();  
+  }
+
   inline int match_empty()const
   {
     auto m=_mm_set1_epi8(empty_);
@@ -568,7 +573,7 @@ struct group_base
     return (~_mm_movemask_epi8(mask))&0xFFFFul;
   }
 
-private:
+protected:
   // exact values as per Abseil rationale
   static constexpr int8_t empty_=-128,
                           deleted_=-2,
@@ -608,6 +613,11 @@ private:
   inline int match(unsigned char hash)const
   {
     return match_impl(hash&0x7Fu);
+  }
+
+  inline int check_empty()const
+  {
+    return match_empty();  
   }
 
   inline int match_empty()const
@@ -658,6 +668,73 @@ private:
 #endif /* FXA_UNORDERED_SSE2 */
 };
 
+struct group15_base:private group_base
+{
+  static constexpr int N=15;
+
+  group15_base(){occupied_count()=0;}
+
+  inline void set(std::size_t pos,unsigned char hash)
+  {
+    super::set(pos,hash);
+    ++occupied_count();
+  }
+
+  inline void set_sentinel()
+  {
+    reinterpret_cast<unsigned char*>(&this->mask)[N-1]=super::sentinel_;
+    ++occupied_count();
+  }
+
+  inline void reset(std::size_t pos)
+  {
+    super::reset(pos);
+  }
+
+  inline int match(unsigned char hash)const
+  {
+    return super::match(hash)&0x7FFF;
+  }
+
+  inline bool check_empty()const
+  {
+    return occupied_count()<N;  
+  }
+
+  inline int match_empty()const
+  {
+    return super::match_empty()&0x7FFF;
+  }
+
+  inline int match_empty_or_deleted()const
+  {
+    return super::match_empty_or_deleted()&0x7FFF;
+  }
+
+  inline int match_occupied()const
+  {
+    return super::match_occupied()&0x7FFF;
+  }
+
+  inline int match_really_occupied()const // excluding sentinel
+  {
+    return super::match_really_occupied()&0x7FFF;
+  }
+
+private:
+  using super=group_base;
+
+  unsigned char& occupied_count()
+  {
+    return reinterpret_cast<unsigned char*>(&this->mask)[15];
+  }
+
+  unsigned char occupied_count()const
+  {
+    return reinterpret_cast<const unsigned char*>(&this->mask)[15];
+  }
+};
+
 template<typename T>
 struct element
 {
@@ -668,24 +745,24 @@ private:
   std::aligned_storage_t<sizeof(T),alignof(T)> storage;
 };
 
-template<typename T>
-struct soa_group:group_base
+template<typename T,typename GroupBase>
+struct soa_group:GroupBase
 {
   using element_type=element<T>;
 };
 
-template<typename T>
-struct regular_group:soa_group<T>
+template<typename T,typename GroupBase>
+struct regular_group:soa_group<T,GroupBase>
 {
   auto& at(std::size_t n){return storage[n];}
 
 private:
-  using super=soa_group<T>;
+  using super=soa_group<T,GroupBase>;
   typename super::element_type storage[super::N];
 };
 
-template<typename T>
-struct soa_coalesced_group:soa_group<T>
+template<typename T,typename GroupBase>
+struct soa_coalesced_group:soa_group<T,GroupBase>
 {
   soa_coalesced_group*& next(){return next_;}
 
@@ -693,8 +770,8 @@ private:
   soa_coalesced_group *next_=nullptr;
 };
 
-template<typename T>
-struct coalesced_group:regular_group<T>
+template<typename T,typename GroupBase>
+struct coalesced_group:regular_group<T,GroupBase>
 {
   coalesced_group*& next(){return next_;}
 
@@ -1126,7 +1203,7 @@ private:
 struct regular_allocation
 {
   template<typename T>
-  using group_type=regular_group<T>;
+  using group_type=regular_group<T,group_base>;
   
   static constexpr float mlf=0.875;
 
@@ -1138,7 +1215,7 @@ struct regular_allocation
 struct pyramid_allocation
 {
   template<typename T>
-  using group_type=regular_group<T>;
+  using group_type=regular_group<T,group_base>;
 
   static constexpr float mlf=1.0;
 
@@ -1150,7 +1227,19 @@ struct pyramid_allocation
 struct soa_allocation
 {
   template<typename T>
-  using group_type=soa_group<T>;
+  using group_type=soa_group<T,group_base>;
+
+  static constexpr float mlf=0.875;
+
+  template<typename Group,typename Allocator>
+  using allocator_type=group_allocator<
+    soa_group_array<Group,Allocator>>;
+};
+
+struct soa15_allocation
+{
+  template<typename T>
+  using group_type=soa_group<T,group15_base>;
 
   static constexpr float mlf=0.875;
 
@@ -1162,7 +1251,7 @@ struct soa_allocation
 struct coalesced_allocation
 {
   template<typename T>
-  using group_type=coalesced_group<T>;
+  using group_type=coalesced_group<T,group_base>;
 
   static constexpr float mlf=1.0;
 
@@ -1174,7 +1263,7 @@ struct coalesced_allocation
 struct soa_coalesced_allocation
 {
   template<typename T>
-  using group_type=soa_coalesced_group<T>;
+  using group_type=soa_coalesced_group<T,group_base>;
 
   static constexpr float mlf=1.0;
 
@@ -1444,7 +1533,7 @@ private:
 #endif
         return {itg,n};
       }
-      if(control(itg).match_empty()){
+      if(control(itg).check_empty()){
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
         unsuccessful_find_runlengths+=runlength;
         unsuccessful_find_runs+=1;  
@@ -1488,7 +1577,7 @@ private:
         mask&=mask-1;
       }
         
-      if(control(itg).match_empty()){
+      if(control(itg).check_empty()){
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
         unsuccessful_find_runlengths+=runlength;
         unsuccessful_find_runs+=1;  
@@ -1542,7 +1631,7 @@ private:
         auto [n,found]=find_in_group(x,itg,short_hash);
         if(found)return {{itg,n},false};
         if(!maska&&(maska=control(itg).match_empty_or_deleted()))itga=itg;
-        if(control(itg).match_empty())break;
+        if(control(itg).check_empty())break;
       }
 
       if(BOOST_UNLIKELY(size_+1>ml)){
