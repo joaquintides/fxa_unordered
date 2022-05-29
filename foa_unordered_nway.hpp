@@ -1778,7 +1778,7 @@ private:
       auto [n,found]=find_in_group(x,itg,short_hash);
       if(found)return {{itg,n}};
       update_ita(itg); 
-      if(control(itg).match_empty())return {end(),ita}; // ita must be non-null
+      if(control(itg).check_empty())return {end(),ita}; // ita must be non-null
         
       if constexpr(!linked_groups::value)pr.next();
     }
