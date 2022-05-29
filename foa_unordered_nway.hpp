@@ -676,8 +676,10 @@ struct group15_base:private group_base
 
   inline void set(std::size_t pos,unsigned char hash)
   {
+    empty_count()-=
+      (reinterpret_cast<int8_t*>(&this->mask)[pos]==super::empty_);
+    assert(empty_count()<=N);
     super::set(pos,hash);
-    --empty_count();
   }
 
   inline void set_sentinel()
