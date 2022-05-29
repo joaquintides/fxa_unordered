@@ -695,8 +695,7 @@ struct group15_base:private group_base
 
   inline int match(unsigned char hash)const
   {
-    // no need to mask with 0x7FFF as empty_count MSB is always 0
-    return super::match(hash);
+    return super::match(hash)&0x7FFF;
   }
 
   inline auto check_empty()const
