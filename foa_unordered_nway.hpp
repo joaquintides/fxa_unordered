@@ -1456,7 +1456,7 @@ private:
     char *p0=(char*)elements(itg).at(0).data(),
          *p1=p0+sizeof(value_type)*N/2;
     if constexpr(!soa_layout::value){
-      p0+=cache_line-N;
+      p0+=cache_line;
     }
     for(char* p=p0;p<p1;p+=cache_line)prefetch(p);
   }
