@@ -1471,7 +1471,7 @@ private:
     const Key& x,group_iterator itg,unsigned char short_hash)const
   {
     auto mask=control(itg).match(short_hash);
-    //if(mask)prefetch_elements(itg);
+    if(mask)prefetch_elements(itg);
     while(mask){
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
       ++num_matches;
