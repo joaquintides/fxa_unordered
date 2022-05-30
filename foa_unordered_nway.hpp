@@ -1555,7 +1555,7 @@ private:
   {    
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
     ++num_finds;
-    int runlength=1;
+    int runlength=0;
 #endif
 
     auto        hash=h(x);
@@ -1563,6 +1563,9 @@ private:
     auto        pos=size_policy::position(hash,group_size_index);
     std::size_t step=1;
     for(;;){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+      ++runlength;
+#endif
       auto itg=groups.at(pos);
       auto mask=control(itg).match(short_hash);
       if(mask)prefetch_elements(itg);
