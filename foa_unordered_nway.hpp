@@ -708,8 +708,7 @@ struct group15_base:private group_base
 
   inline int match_empty()const
   {
-    // no need to mask with 0x7FFF as nonempty_count MSB is always 1
-    return super::match_empty();
+    return super::match_empty()&0x7FFF;
   }
 
   inline int match_empty_or_deleted()const
@@ -719,7 +718,8 @@ struct group15_base:private group_base
 
   inline int match_occupied()const
   {
-    return super::match_occupied()&0x7FFF;
+    // no need to mask with 0x7FFF as nonempty_count MSB is always 1
+    return super::match_occupied();
   }
 
   inline int match_really_occupied()const // excluding sentinel
