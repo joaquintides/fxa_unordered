@@ -672,20 +672,22 @@ struct group15_base:private group_base
 {
   static constexpr int N=15;
 
-  group15_base(){empty_count()=N;}
+  group15_base()
+  {
+    nonempty_count()=0x10u; // set MSB to 1
+  }
 
   inline void set(std::size_t pos,unsigned char hash)
   {
-    empty_count()-=
+    nonempty_count()+=
       (reinterpret_cast<int8_t*>(&this->mask)[pos]==super::empty_);
-    assert(empty_count()<=N);
     super::set(pos,hash);
   }
 
   inline void set_sentinel()
   {
     reinterpret_cast<unsigned char*>(&this->mask)[N-1]=super::sentinel_;
-    --empty_count();
+    ++nonempty_count();
   }
 
   inline void reset(std::size_t pos)
@@ -695,17 +697,19 @@ struct group15_base:private group_base
 
   inline int match(unsigned char hash)const
   {
-    return super::match(hash)&0x7FFF;
+    // no need to mask with 0x7FFF as nonempty_count MSB is always 1
+    return super::match(hash);
   }
 
   inline auto check_empty()const
   {
-    return empty_count();  
+    return nonempty_count()!=(N|0x10u);  
   }
 
   inline int match_empty()const
   {
-    return super::match_empty()&0x7FFF;
+    // no need to mask with 0x7FFF as nonempty_count MSB is always 1
+    return super::match_empty();
   }
 
   inline int match_empty_or_deleted()const
@@ -726,12 +730,12 @@ struct group15_base:private group_base
 private:
   using super=group_base;
 
-  unsigned char& empty_count()
+  unsigned char& nonempty_count()
   {
     return reinterpret_cast<unsigned char*>(&this->mask)[15];
   }
 
-  unsigned char empty_count()const
+  unsigned char nonempty_count()const
   {
     return reinterpret_cast<const unsigned char*>(&this->mask)[15];
   }
