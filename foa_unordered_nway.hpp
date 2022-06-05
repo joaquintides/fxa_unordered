@@ -675,7 +675,7 @@ struct group15_base:private group_base
 
   group15_base()
   {
-    this->himask=0x10u; // set MSB to 1
+    nonempty_count()=0x10u; // set MSB to 1
   }
 
   inline void set(std::size_t pos,unsigned char hash)
