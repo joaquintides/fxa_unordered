@@ -145,7 +145,7 @@ struct nway_group
 
   void set(std::size_t pos,std::size_t hash)
   {
-    assert(pos<N&&n<N);
+    assert(pos<N);
     uint64_ops::set(lowmask,pos,hash&0xFu);
     uint64_ops::set(himask,pos,0x8u | ((hash&0x70u)>>8));
   }
@@ -158,7 +158,6 @@ struct nway_group
 
   int match(std::size_t hash)const
   {
-    assert(n<N);
     return uint64_ops::match(lowmask,hash&0xFu)&
            uint64_ops::match(himask,0x8u | ((hash&0x70u)>>8));
   }
@@ -647,7 +646,7 @@ protected:
       (~himask & uint64_t(0xFFFF000000000000ull))>>48;
   }
 
-private:
+protected:
   static constexpr int empty_=   0xE, // 1110
                        deleted_= 0xA, // 1010
                        sentinel_=0x8; // 1000
@@ -672,9 +671,11 @@ struct group15_base:private group_base
 {
   static constexpr int N=15;
 
+#ifdef FXA_UNORDERED_SSE2
+
   group15_base()
   {
-    nonempty_count()=0x10u; // set MSB to 1
+    this->himask=0x10u; // set MSB to 1
   }
 
   inline void set(std::size_t pos,unsigned char hash)
@@ -739,6 +740,77 @@ private:
   {
     return reinterpret_cast<const unsigned char*>(&this->mask)[15];
   }
+
+#else
+
+  inline void set(std::size_t pos,unsigned char hash)
+  {
+    set_nonempty_count(
+      nonempty_count()+((super::match_empty()&(1<<pos))!=0));
+    super::set(pos,hash);
+  }
+
+  inline void set_sentinel()
+  {
+    set_nonempty_count(nonempty_count()+1);
+    uint64_ops::set(this->himask,N-1,this->sentinel_);
+  }
+
+  inline void reset(std::size_t pos)
+  {
+    super::reset(pos);
+  }
+
+  inline int match(unsigned char hash)const
+  {
+    // no need to mask with 0x7FFF as nonempty_count MSB is always 1
+    return super::match(hash);
+  }
+
+  inline auto check_empty()const
+  {
+    return nonempty_count()!=N;  
+  }
+
+  inline int match_empty()const
+  {
+    return super::match_empty()&0x7FFF;
+  }
+
+  inline int match_empty_or_deleted()const
+  {
+    return super::match_empty_or_deleted()&0x7FFF;
+  }
+
+  inline int match_occupied()const
+  {
+    // no need to mask with 0x7FFF as nonempty_count MSB is always 1
+    return super::match_occupied();
+  }
+
+  inline int match_really_occupied()const // excluding sentinel
+  {
+    return super::match_really_occupied()&0x7FFF;
+  }
+
+private:
+  using super=group_base;
+
+  void set_nonempty_count(unsigned char m)
+  {
+    uint64_ops::set(this->lowmask,N,m);
+  }
+
+  unsigned char nonempty_count()const
+  {
+    return 
+      (this->lowmask & 0x0000000000008000ull)>>15|
+      (this->lowmask & 0x0000000080000000ull)>>30|
+      (this->lowmask & 0x0000800000000000ull)>>45|
+      (this->lowmask & 0x8000000000000000ull)>>60;
+  }
+
+#endif /* FXA_UNORDERED_SSE2 */
 };
 
 template<typename T>
