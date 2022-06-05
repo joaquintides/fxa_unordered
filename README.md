@@ -243,6 +243,9 @@ original value.
 *  `soa_allocation`: N-group metadata and the associated slots
 are kept in separate arrays to improve cache locality. Quadratic probing
 is used.
+*  `soa15_allocation`: Similar to `soa_allocation` but N is 15 instead of 16:
+this leaves an available metadata byte that is used to cache the number of
+non-empty slots in the group, which can speed up lookup operations. 
 * `coalesced_allocation`: Borrowing ideas from coalesced hashing, a portion
 of the array (the cellar) is kept out of hash-based positioning and
 used when a regular N-group is full; N-groups are then linked via a `next`
