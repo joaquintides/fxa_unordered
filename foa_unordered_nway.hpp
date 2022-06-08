@@ -9,7 +9,7 @@
  
 #ifndef FOA_UNORDERED_NWAY_HPP
 #define FOA_UNORDERED_NWAY_HPP
-
+ 
 #include <boost/config.hpp>
 #include <boost/container_hash/hash.hpp>
 #include <boost/core/bit.hpp>
