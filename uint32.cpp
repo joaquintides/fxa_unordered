@@ -312,7 +312,9 @@ int main()
     test<foa_frng_fib_unordered_soa_nwayplus_map>( "foa_frng_fib_unordered_soa_nwayplus_map" );
     test<foa_frng_fib_unordered_soa15_nwayplus_map>( "foa_frng_fib_unordered_soa15_nwayplus_map" );
     test<foa_absl_unordered_soa_nwayplus_map>( "foa_absl_unordered_soa_nwayplus_map" );
+    test<foa_absl_unordered_intersoa_nwayplus_map>( "foa_absl_unordered_intersoa_nwayplus_map" );
     test<foa_absl_unordered_soa15_nwayplus_map>( "foa_absl_unordered_soa15_nwayplus_map" );
+    test<foa_absl_unordered_intersoa15_nwayplus_map>( "foa_absl_unordered_intersoa15_nwayplus_map" );
 
 #ifdef BENCHMARK_EVERYTHING    
     test<foa_pow2_fib_unordered_coalesced_nwayplus_map>( "foa_pow2_fib_unordered_coalesced_nwayplus_map" );

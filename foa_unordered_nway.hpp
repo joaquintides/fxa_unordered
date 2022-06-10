@@ -675,7 +675,7 @@ struct group15_base:private group_base
 
   group15_base()
   {
-    nonempty_count()=0x10u; // set MSB to 1
+    nonempty_count()=0x80u; // set MSB to 1
   }
 
   inline void set(std::size_t pos,unsigned char hash)
@@ -982,6 +982,112 @@ private:
   std::vector<elements_type,elements_allocator_type> e;
 };
 
+template<typename Group,typename Allocator>
+class intersoa_group_array
+{
+public:
+  static constexpr auto N=Group::N;
+
+private:
+  using element_type=typename Group::element_type;
+
+  struct elements_type
+  {
+    auto& at(std::size_t n){return pe[n*stride];}
+
+    element_type* pe;
+    std::size_t   stride;
+  };
+
+public:
+  class iterator:public boost::iterator_facade<
+    iterator,const Group,boost::random_access_traversal_tag>
+  {
+    using super=boost::iterator_facade<
+      iterator,const Group,boost::random_access_traversal_tag>;
+
+  public:
+    iterator()=default;
+
+    using super::operator=;
+    iterator& operator=(Group* pg)noexcept
+    {
+      auto diff=pg-this->pg;
+      this->pg=pg;
+      this->pe+=diff;
+      return *this;
+    }
+
+    operator Group*()const noexcept{return pg;}
+
+    explicit operator bool()const noexcept{return pg;}
+    bool operator!()const noexcept{return !pg;}
+
+  private:
+    friend class intersoa_group_array;
+    friend class boost::iterator_core_access;
+
+    iterator(Group *pg,element_type* pe,std::size_t stride):
+      pg{pg},pe{pe},stride{stride}{}
+
+    bool equal(Group* pg)const noexcept{return this->pg==pg;}
+    bool equal(const iterator& x)const noexcept{return pg==x.pg;}
+
+    friend bool operator==(const iterator& x,Group* pg)noexcept
+      {return x.equal(pg);}
+    friend bool operator==(Group* pg,const iterator& x)noexcept
+      {return x.equal(pg);}
+    friend bool operator!=(const iterator& x,Group* pg)noexcept
+      {return !x.equal(pg);}
+    friend bool operator!=(Group* pg,const iterator& x)noexcept
+      {return !x.equal(pg);}
+    friend bool operator==(const iterator& x,const iterator& y)noexcept
+      {return x.equal(y);}
+    friend bool operator!=(const iterator& x,const iterator& y)noexcept
+      {return !x.equal(y);}
+
+    const auto& dereference()const noexcept{return *pg;} // not really used
+    void increment()noexcept{++pg;++pe;}
+    void decrement()noexcept{--pg;--pe;}
+    void advance(std::ptrdiff_t i)noexcept{pg+=i;pe+=i;}
+    std::ptrdiff_t distance_to(const iterator& x)const{return x.pg-pg;}
+
+    Group         *pg=nullptr;
+    element_type  *pe;
+    std::size_t   stride;
+  };
+  friend class iterator;
+
+  intersoa_group_array(std::size_t n,const Allocator& al):
+    v{n,al},e{n*N,al}{}
+  intersoa_group_array(intersoa_group_array&&)=default;
+  intersoa_group_array& operator=(intersoa_group_array&&)=default;
+
+  static auto& control(iterator it){return *it.pg;}
+  static elements_type elements(iterator it){return {it.pe,it.stride};}
+  
+  iterator begin()const{return at(0);}
+  iterator end()const{return at(size());}
+
+  iterator at(std::size_t n)const
+  {
+    return {
+      const_cast<Group*>(v.data()+n),
+      const_cast<element_type*>(e.data()+n),
+      v.size()
+    };
+  }
+
+  std::size_t size()const{return v.size();}
+
+private:
+  using element_allocator_type=typename std::allocator_traits<Allocator>::
+    template rebind_alloc<element_type>;
+
+  std::vector<Group,Allocator>                     v;
+  std::vector<element_type,element_allocator_type> e;
+};
+
 template<typename GroupArray>
 class group_allocator:public GroupArray
 {
@@ -1038,7 +1144,7 @@ public:
     std::size_t            n,
                            i=1;
   };
-  friend class prober;
+  friend struct prober;
 
   prober make_prober(iterator it)const
   {
@@ -1326,6 +1432,30 @@ struct soa15_allocation
     soa_group_array<Group,Allocator>>;
 };
 
+struct intersoa_allocation
+{
+  template<typename T>
+  using group_type=soa_group<T,group_base>;
+
+  static constexpr float mlf=0.875;
+
+  template<typename Group,typename Allocator>
+  using allocator_type=group_allocator<
+    intersoa_group_array<Group,Allocator>>;
+};
+
+struct intersoa15_allocation
+{
+  template<typename T>
+  using group_type=soa_group<T,group15_base>;
+
+  static constexpr float mlf=0.875;
+
+  template<typename Group,typename Allocator>
+  using allocator_type=group_allocator<
+    intersoa_group_array<Group,Allocator>>;
+};
+
 struct coalesced_allocation
 {
   template<typename T>
@@ -1370,6 +1500,12 @@ using has_soa_layout=std::integral_constant<
   >
 >;
 
+template<typename GroupAllocator>
+struct has_intersoa_layout:std::false_type{};
+
+template<typename... Ts>
+struct has_intersoa_layout<group_allocator<intersoa_group_array<Ts...>>>:std::true_type{};
+
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
@@ -1391,12 +1527,15 @@ class foa_unordered_nwayplus_set
   using group_iterator=typename group_allocator::iterator;
   using linked_groups=groups_are_linked<group>;
   using soa_layout=has_soa_layout<group_allocator>;
+  using intersoa_layout=has_intersoa_layout<group_allocator>;
 
   static constexpr auto N=group::N;
 
-  static auto& control(group_iterator itg)
+  static auto control(group_iterator itg)
+    ->decltype(group_allocator::control(itg))
     {return group_allocator::control(itg);}
-  static auto& elements(group_iterator itg)
+  static auto elements(group_iterator itg)
+    ->decltype(group_allocator::elements(itg))
     {return group_allocator::elements(itg);}
 
 public:
@@ -1528,13 +1667,18 @@ private:
 
   static void prefetch_elements(group_iterator itg)
   {
-    constexpr int cache_line=64;
-    char *p0=(char*)elements(itg).at(0).data(),
-         *p1=p0+sizeof(value_type)*N/2;
-    if constexpr(!soa_layout::value){
-      p0+=cache_line;
+    if constexpr(intersoa_layout::value){
+      for(int n=0;n<N/2;++n)prefetch(&elements(itg).at(n));
     }
-    for(char* p=p0;p<p1;p+=cache_line)prefetch(p);
+    else{
+      constexpr int cache_line=64;
+      char *p0=(char*)elements(itg).at(0).data(),
+           *p1=p0+sizeof(value_type)*N/2;
+      if constexpr(!soa_layout::value){
+        p0+=cache_line;
+      }
+      for(char* p=p0;p<p1;p+=cache_line)prefetch(p);
+    }
   }
 
   group_iterator group_for(std::size_t hash)const
