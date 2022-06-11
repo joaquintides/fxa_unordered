@@ -704,7 +704,7 @@ struct group15_base:private group_base
 
   inline auto check_empty()const
   {
-    return nonempty_count()!=(N|0x10u);  
+    return nonempty_count()!=(N|0x80u);  
   }
 
   inline int match_empty()const
