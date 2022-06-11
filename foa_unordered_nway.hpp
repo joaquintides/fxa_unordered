@@ -1668,7 +1668,7 @@ private:
   static void prefetch_elements(group_iterator itg)
   {
     if constexpr(intersoa_layout::value){
-      for(int n=0;n<N/2;++n)prefetch(&elements(itg).at(n));
+      //for(int n=0;n<N/2;++n)prefetch(&elements(itg).at(n));
     }
     else{
       constexpr int cache_line=64;
