@@ -1581,6 +1581,8 @@ public:
   using iterator=const_iterator;
 
   foa_unordered_nwayplus_set()=default;
+  foa_unordered_nwayplus_set(const foa_unordered_nwayplus_set&)=default;
+  foa_unordered_nwayplus_set(foa_unordered_nwayplus_set&&)=default;
 
   ~foa_unordered_nwayplus_set()
   {
