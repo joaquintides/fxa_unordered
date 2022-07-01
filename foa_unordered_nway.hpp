@@ -1716,8 +1716,9 @@ private:
 #endif
 
     auto hash=h(x);
+    auto long_hash=hash_split_policy::long_hash(hash);
     auto short_hash=hash_split_policy::short_hash(hash);
-    auto first=group_for(hash);
+    auto first=group_for(long_hash);
 
     for(auto itg=first;;){
       auto [n,found]=find_in_group(x,itg,short_hash);
@@ -1777,8 +1778,9 @@ private:
 #endif
 
     auto        hash=h(x);
+    auto        long_hash=hash_split_policy::long_hash(hash);
     auto        short_hash=hash_split_policy::short_hash(hash);
-    auto        pos=size_policy::position(hash,group_size_index);
+    auto        pos=size_policy::position(long_hash,group_size_index);
     std::size_t step=1;
     for(;;){
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
@@ -1825,8 +1827,9 @@ private:
   {
     if constexpr(linked_groups::value){
       auto hash=h(x);
+      auto long_hash=hash_split_policy::long_hash(hash);
       auto short_hash=hash_split_policy::short_hash(hash);
-      auto first=group_for(hash);
+      auto first=group_for(long_hash);
       auto [it,ita,last]=find_match_available_last(x,first,short_hash);
       if(it!=end())return {it,false};
 
@@ -1847,8 +1850,9 @@ private:
     }
     else{ // no linked groups
       auto           hash=h(x);
+      auto           long_hash=hash_split_policy::long_hash(hash);
       auto           short_hash=hash_split_policy::short_hash(hash);
-      auto           first=group_for(hash);
+      auto           first=group_for(long_hash);
       group_iterator itga;
       int            maska=0;
       auto           pr=groups.make_prober(first);
@@ -1922,14 +1926,15 @@ private:
   {
     auto hash=h(x);
     return unchecked_insert(
-      std::forward<Value>(x),hash,hash_split_policy::short_hash(hash));
+      std::forward<Value>(x),
+      hash_split_policy::long_hash(hash),hash_split_policy::short_hash(hash));
   }
 
   template<typename Value>
   iterator unchecked_insert(
-    Value&& x,std::size_t hash,unsigned char short_hash)
+    Value&& x,std::size_t long_hash,unsigned char short_hash)
   {
-    auto first=group_for(hash),
+    auto first=group_for(long_hash),
          itg=first;
     int  mask,n;
 
