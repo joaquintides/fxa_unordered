@@ -1835,7 +1835,7 @@ private:
 
       if(BOOST_UNLIKELY(size_+1>ml)){
         rehash(size_+1);
-        return {unchecked_insert(std::forward<Value>(x),hash,short_hash),true};
+        return {unchecked_insert(std::forward<Value>(x),long_hash,short_hash),true};
       }
 
       auto& [itga,na]=ita;
@@ -1867,7 +1867,7 @@ private:
 
       if(BOOST_UNLIKELY(size_+1>ml)){
         rehash(size_+1);
-        return {unchecked_insert(std::forward<Value>(x),hash,short_hash),true};
+        return {unchecked_insert(std::forward<Value>(x),long_hash,short_hash),true};
       }
 
       if(!maska){
