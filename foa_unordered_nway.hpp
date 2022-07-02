@@ -679,8 +679,7 @@ struct group15_base:private group_base
 
   inline void set(std::size_t pos,unsigned char hash)
   {
-    nonempty_count()+=
-      (reinterpret_cast<int8_t*>(&this->mask)[pos]==super::empty_);
+    nonempty_count()+=(pos!=(nonempty_count()&0x0Fu));
     super::set(pos,hash);
   }
 
