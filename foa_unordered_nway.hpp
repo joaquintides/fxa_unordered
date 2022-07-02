@@ -1854,17 +1854,19 @@ private:
       auto           hash=h(x);
       auto           long_hash=hash_split_policy::long_hash(hash);
       auto           short_hash=hash_split_policy::short_hash(hash);
-      auto           first=group_for(long_hash);
-      group_iterator itga;
-      int            maska=0;
-      auto           pr=groups.make_prober(first);
-
-      for(;;pr.next()){     
-        auto itg=pr.get();
+      auto           pos0=size_policy::position(long_hash,group_size_index),
+                     pos=pos0;
+      std::size_t    step=1;
+      for(;;){     
+        auto itg=groups.at(pos);
         auto [n,found]=find_in_group(x,itg,short_hash);
         if(found)return {{itg,n},false};
-        if(!maska&&(maska=control(itg).match_empty_or_deleted()))itga=itg;
         if(control(itg).check_empty())break;
+        for(;;){
+          pos=(pos+step)&groups.pow2mask;
+          step+=1;
+          if(pos<groups.size())break;
+        }
       }
 
       if(BOOST_UNLIKELY(size_+1>ml)){
@@ -1872,22 +1874,26 @@ private:
         return {unchecked_insert(std::forward<Value>(x),long_hash,short_hash),true};
       }
 
-      if(!maska){
+      pos=pos0;
+      step=1;
+      for(;;){     
+        auto itg=groups.at(pos);
+        auto mask=control(itg).match_empty_or_deleted();
+        if(mask){
+          FXA_ASSUME(mask!=0);
+          int n=boost::core::countr_zero((unsigned int)mask); 
+          construct_element(
+            std::forward<Value>(x),elements(itg).at(n).data());  
+          control(itg).set(n,short_hash);
+          ++size_;
+          return {{itg,n},true};    
+        }
         for(;;){
-          pr.next();
-          auto itg=pr.get();
-          if((maska=control(itg).match_empty_or_deleted())){
-            itga=itg;
-            break;
-          }
+          pos=(pos+step)&groups.pow2mask;
+          step+=1;
+          if(pos<groups.size())break;
         }
       }
-      int n=boost::core::countr_zero((unsigned int)maska); 
-      construct_element(
-        std::forward<Value>(x),elements(itga).at(n).data());  
-      control(itga).set(n,short_hash);
-      ++size_;
-      return {{itga,n},true};    
     }
   }
 
