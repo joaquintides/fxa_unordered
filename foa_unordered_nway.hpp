@@ -668,66 +668,67 @@ protected:
 };
 
 #ifdef FXA_UNORDERED_SSE2
-struct group15_base:private group_base
+struct group15_base
 {
   static constexpr int N=15;
 
-  group15_base()
-  {
-    nonempty_count()=0x80u; // set MSB to 1
-  }
-
   inline void set(std::size_t pos,unsigned char hash)
   {
-    nonempty_count()+=(pos!=(nonempty_count()&0x0Fu));
-    super::set(pos,hash);
+    nonempty_count()+=(pos!=nonempty_count());
+    reinterpret_cast<unsigned char*>(&mask)[pos]=adjust_hash(hash);
   }
 
   inline void set_sentinel()
   {
-    reinterpret_cast<unsigned char*>(&this->mask)[N-1]=super::sentinel_;
-    ++nonempty_count();
+    reinterpret_cast<unsigned char*>(&this->mask)[N-1]=1u;
   }
 
   inline void reset(std::size_t pos)
   {
-    super::reset(pos);
+    assert(pos<N);
+    reinterpret_cast<unsigned char*>(&mask)[pos]=0u;
   }
 
   inline int match(unsigned char hash)const
   {
-    // no need to mask with 0x7FFF as nonempty_count MSB is always 1
-    return super::match(hash);
+    auto m=_mm_set1_epi8(adjust_hash(hash));
+    return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m))&0x7FFF;
   }
 
   inline auto check_empty()const
   {
-    return nonempty_count()!=(N|0x80u);  
+    return nonempty_count()!=N;  
   }
 
   inline int match_empty()const
   {
-    return super::match_empty()&0x7FFF;
+    // TODO: likely superfluous
+    return (1<<nonempty_count())&((1<<N)-1);
   }
 
   inline int match_empty_or_deleted()const
   {
-    return super::match_empty_or_deleted()&0x7FFF;
+    auto m=_mm_set1_epi8(0);
+    return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m))&0x7FFF;
   }
 
   inline int match_occupied()const
   {
-    // no need to mask with 0x7FFF as nonempty_count MSB is always 1
-    return super::match_occupied();
+    return (~match_empty_or_deleted())&0x7FFF;
   }
 
   inline int match_really_occupied()const // excluding sentinel
   {
-    return super::match_really_occupied()&0x7FFF;
+    return match_occupied()&((1<<nonempty_count())-1);
   }
 
 private:
   using super=group_base;
+
+  static unsigned char adjust_hash(unsigned char hash)
+  {
+    return hash|(hash==0);
+  }
 
   unsigned char& nonempty_count()
   {
@@ -739,6 +740,7 @@ private:
     return reinterpret_cast<const unsigned char*>(&this->mask)[15];
   }
 
+  __m128i mask=_mm_set1_epi8(0);
 };
 #else
 struct group15_base:private group_base
