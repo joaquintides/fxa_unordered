@@ -667,11 +667,10 @@ protected:
 #endif /* FXA_UNORDERED_SSE2 */
 };
 
+#ifdef FXA_UNORDERED_SSE2
 struct group15_base:private group_base
 {
   static constexpr int N=15;
-
-#ifdef FXA_UNORDERED_SSE2
 
   group15_base()
   {
@@ -741,7 +740,11 @@ private:
     return reinterpret_cast<const unsigned char*>(&this->mask)[15];
   }
 
+};
 #else
+struct group15_base:private group_base
+{
+  static constexpr int N=15;
 
   inline void set(std::size_t pos,unsigned char hash)
   {
@@ -809,9 +812,8 @@ private:
       (this->lowmask & 0x0000800000000000ull)>>45|
       (this->lowmask & 0x8000000000000000ull)>>60;
   }
-
-#endif /* FXA_UNORDERED_SSE2 */
 };
+#endif /* FXA_UNORDERED_SSE2 */
 
 template<typename T>
 struct element
