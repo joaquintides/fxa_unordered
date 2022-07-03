@@ -671,16 +671,21 @@ protected:
 struct group15_base
 {
   static constexpr int N=15;
+  
+  group15_base()
+  {
+    reinterpret_cast<unsigned char*>(&mask)[N]=0xF0; // max_nonempty_count==15
+  }
 
   inline void set(std::size_t pos,unsigned char hash)
   {
-    nonempty_count()+=(pos!=nonempty_count());
+    update_nonempty_count(pos);
     reinterpret_cast<unsigned char*>(&mask)[pos]=adjust_hash(hash);
   }
 
   inline void set_sentinel()
   {
-    reinterpret_cast<unsigned char*>(&this->mask)[N-1]=1u;
+    reinterpret_cast<unsigned char*>(&mask)[N]=0xE0; // max_nonempty_count==14
   }
 
   inline void reset(std::size_t pos)
@@ -697,19 +702,19 @@ struct group15_base
 
   inline auto check_empty()const
   {
-    return nonempty_count()!=N;  
+    return nonempty_count()!=max_nonempty_count();  
   }
 
+#if 0 /* not used*/
   inline int match_empty()const
   {
-    // TODO: likely superfluous
     return (1<<nonempty_count())&((1<<N)-1);
   }
+#endif
 
   inline int match_empty_or_deleted()const
   {
-    auto m=_mm_set1_epi8(0);
-    return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m))&0x7FFF;
+    return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,_mm_setzero_si128()))&((1<<max_nonempty_count())-1);
   }
 
   inline int match_occupied()const
@@ -719,25 +724,28 @@ struct group15_base
 
   inline int match_really_occupied()const // excluding sentinel
   {
-    return match_occupied()&((1<<nonempty_count())-1);
+    return (~_mm_movemask_epi8(_mm_cmpeq_epi8(mask,_mm_setzero_si128())))&0x7FFF;
   }
 
 private:
-  using super=group_base;
-
   static unsigned char adjust_hash(unsigned char hash)
   {
     return hash|(hash==0);
   }
 
-  unsigned char& nonempty_count()
-  {
-    return reinterpret_cast<unsigned char*>(&this->mask)[15];
-  }
-
   unsigned char nonempty_count()const
   {
-    return reinterpret_cast<const unsigned char*>(&this->mask)[15];
+    return reinterpret_cast<const unsigned char*>(&mask)[15]&0x0F;
+  }
+
+  unsigned char max_nonempty_count()const
+  {
+    return reinterpret_cast<const unsigned char*>(&mask)[15]>>4;
+  }
+
+  void update_nonempty_count(std::size_t pos)
+  {
+    reinterpret_cast<unsigned char*>(&mask)[15]+=(pos!=nonempty_count());
   }
 
   __m128i mask=_mm_set1_epi8(0);
