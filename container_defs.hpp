@@ -371,7 +371,7 @@ using foa_absl_unordered_soa15_nwayplus_map =
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::low_pow2_size,
-    fxa_unordered::shift_hash<7>,
+    fxa_unordered::shift_hash<8>,
     fxa_unordered::nwayplus::soa15_allocation>;
 
 template<class K, class V, class H=absl::container_internal::hash_default_hash<K>>
