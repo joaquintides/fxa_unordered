@@ -735,17 +735,17 @@ private:
 
   unsigned char nonempty_count()const
   {
-    return reinterpret_cast<const unsigned char*>(&mask)[15]&0x0F;
+    return reinterpret_cast<const unsigned char*>(&mask)[N]&0x0F;
   }
 
   unsigned char max_nonempty_count()const
   {
-    return reinterpret_cast<const unsigned char*>(&mask)[15]>>4;
+    return reinterpret_cast<const unsigned char*>(&mask)[N]>>4;
   }
 
   void update_nonempty_count(std::size_t pos)
   {
-    reinterpret_cast<unsigned char*>(&mask)[15]+=(pos!=nonempty_count());
+    reinterpret_cast<unsigned char*>(&mask)[N]+=(pos==nonempty_count());
   }
 
   __m128i mask=_mm_set1_epi8(0);
