@@ -672,11 +672,6 @@ struct group15_base
 {
   static constexpr int N=15;
   
-  group15_base()
-  {
-    reinterpret_cast<unsigned char*>(&mask)[N]=0xF0; // max_nonempty_count==15
-  }
-
   inline void set(std::size_t pos,unsigned char hash)
   {
     update_nonempty_count(pos);
@@ -685,7 +680,7 @@ struct group15_base
 
   inline void set_sentinel()
   {
-    reinterpret_cast<unsigned char*>(&mask)[N]=0xE0; // max_nonempty_count==14
+    reinterpret_cast<unsigned char*>(&mask)[N]=0x10; // non_empty_count==1
   }
 
   inline void reset(std::size_t pos)
@@ -702,7 +697,7 @@ struct group15_base
 
   inline auto check_empty()const
   {
-    return nonempty_count()!=max_nonempty_count();  
+    return nonempty_count()!=N;  
   }
 
 #if 0 /* not used*/
@@ -714,7 +709,9 @@ struct group15_base
 
   inline int match_empty_or_deleted()const
   {
-    return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,_mm_setzero_si128()))&((1<<max_nonempty_count())-1);
+    auto match=_mm_movemask_epi8(_mm_cmpeq_epi8(mask,_mm_setzero_si128()));
+    if(nonempty_count()==real_nonempty_count())return match&0x7FFF;
+    else                                       return match&0x3FFF;
   }
 
   inline int match_occupied()const
@@ -735,20 +732,20 @@ private:
 
   unsigned char nonempty_count()const
   {
-    return reinterpret_cast<const unsigned char*>(&mask)[N]&0x0F;
+    return reinterpret_cast<const unsigned char*>(&mask)[N]>>4;
   }
 
-  unsigned char max_nonempty_count()const
+  unsigned char real_nonempty_count()const
   {
-    return reinterpret_cast<const unsigned char*>(&mask)[N]>>4;
+    return reinterpret_cast<const unsigned char*>(&mask)[N]&0x0F;
   }
 
   void update_nonempty_count(std::size_t pos)
   {
-    reinterpret_cast<unsigned char*>(&mask)[N]+=(pos==nonempty_count());
+    if(pos==real_nonempty_count())reinterpret_cast<unsigned char*>(&mask)[N]+=0x11;
   }
 
-  __m128i mask=_mm_set1_epi8(0);
+  __m128i mask=_mm_setzero_si128();
 };
 #else
 struct group15_base:private group_base
