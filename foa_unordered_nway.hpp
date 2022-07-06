@@ -674,13 +674,15 @@ struct group15_base
   
   inline void set(std::size_t pos,unsigned char hash)
   {
+    assert(pos<N);
     update_nonempty_count(pos);
     reinterpret_cast<unsigned char*>(&mask)[pos]=adjust_hash(hash);
   }
 
   inline void set_sentinel()
   {
-    reinterpret_cast<unsigned char*>(&mask)[N]=0x10; // non_empty_count==1
+    nonempty_count()=0x01; // odd bit
+    reinterpret_cast<unsigned char*>(&mask)[N-1]=0x01; // occupied
   }
 
   inline void reset(std::size_t pos)
@@ -697,21 +699,18 @@ struct group15_base
 
   inline auto check_empty()const
   {
-    return nonempty_count()!=N;  
+    return nonempty_count()<2*N-1;  
   }
 
 #if 0 /* not used*/
   inline int match_empty()const
   {
-    return (1<<nonempty_count())&((1<<N)-1);
   }
 #endif
 
   inline int match_empty_or_deleted()const
   {
-    auto match=_mm_movemask_epi8(_mm_cmpeq_epi8(mask,_mm_setzero_si128()));
-    if(nonempty_count()==real_nonempty_count())return match&0x7FFF;
-    else                                       return match&0x3FFF;
+    return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,_mm_setzero_si128()))&0x7FFF;
   }
 
   inline int match_occupied()const
@@ -721,28 +720,28 @@ struct group15_base
 
   inline int match_really_occupied()const // excluding sentinel
   {
-    return (~_mm_movemask_epi8(_mm_cmpeq_epi8(mask,_mm_setzero_si128())))&0x7FFF;
+    return (nonempty_count()%2)?match_occupied()&0x3FFF:match_occupied();
   }
 
 private:
   static unsigned char adjust_hash(unsigned char hash)
   {
-    return hash|(hash==0);
+    return hash|(2*(hash<2));
+  }
+
+  unsigned char& nonempty_count()
+  {
+    return reinterpret_cast<unsigned char*>(&mask)[N];
   }
 
   unsigned char nonempty_count()const
   {
-    return reinterpret_cast<const unsigned char*>(&mask)[N]>>4;
-  }
-
-  unsigned char real_nonempty_count()const
-  {
-    return reinterpret_cast<const unsigned char*>(&mask)[N]&0x0F;
+    return reinterpret_cast<const unsigned char*>(&mask)[N];
   }
 
   void update_nonempty_count(std::size_t pos)
   {
-    if(pos==real_nonempty_count())reinterpret_cast<unsigned char*>(&mask)[N]+=0x11;
+    if(pos==nonempty_count()/2)nonempty_count()+=2;
   }
 
   __m128i mask=_mm_setzero_si128();
