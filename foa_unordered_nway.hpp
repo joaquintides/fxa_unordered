@@ -699,7 +699,7 @@ struct group15_base
 
   inline auto check_empty()const
   {
-    return nonempty_count()<2*N-1;  
+    return nonempty_count()<2*N-1;
   }
 
 #if 0 /* not used*/
@@ -1700,16 +1700,18 @@ private:
     const Key& x,group_iterator itg,unsigned char short_hash)const
   {
     auto mask=control(itg).match(short_hash);
-    if(mask)prefetch_elements(itg);
-    while(mask){
+    if(mask){
+      prefetch_elements(itg);
+      do{
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
-      ++num_matches;
+        ++num_matches;
 #endif
         
-      FXA_ASSUME(mask!=0);
-      auto n=boost::core::countr_zero((unsigned int)mask);
-      if(BOOST_LIKELY(pred(x,elements(itg).at(n).value())))return {n,true};
-      mask&=mask-1;
+        FXA_ASSUME(mask!=0);
+        auto n=boost::core::countr_zero((unsigned int)mask);
+        if(BOOST_LIKELY(pred(x,elements(itg).at(n).value())))return {n,true};
+        mask&=mask-1;
+      }while(mask);
     }
     return {0,false};
   }
