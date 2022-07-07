@@ -741,7 +741,7 @@ private:
 
   void update_nonempty_count(std::size_t pos)
   {
-    if(pos==nonempty_count()/2)nonempty_count()+=2;
+    nonempty_count()+=2*(pos==nonempty_count()/2);
   }
 
   __m128i mask=_mm_setzero_si128();
