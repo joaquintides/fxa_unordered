@@ -1796,27 +1796,14 @@ private:
       ++runlength;
 #endif
       auto itg=groups.at(pos);
-      auto mask=control(itg).match(short_hash);
-      if(mask){
-        prefetch_elements(itg);
-        do{
+      auto [n,found]=find_in_group(x,itg,short_hash);
+      if(found){
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
-          ++num_matches;
+        successful_find_runlengths+=runlength;
+        successful_find_runs+=1;  
 #endif
-        
-          FXA_ASSUME(mask!=0);
-          auto n=boost::core::countr_zero((unsigned int)mask);
-          if(BOOST_LIKELY(pred(x,elements(itg).at(n).value()))){
-#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
-            successful_find_runlengths+=runlength;
-            successful_find_runs+=1;  
-#endif
-            return {itg,n};
-          }
-          mask&=mask-1;
-        }while(mask);
+        return {itg,n};
       }
-        
       if(control(itg).check_empty()){
 #ifdef FOA_UNORDERED_NWAYPLUS_STATUS
         unsuccessful_find_runlengths+=runlength;
