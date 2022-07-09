@@ -248,7 +248,10 @@ are kept in separate arrays to improve cache locality. Quadratic probing
 is used.
 *  `soa15_allocation`: Similar to `soa_allocation` but N is 15 instead of 16:
 this leaves an available metadata byte that is used to cache the number of
-non-empty slots in the group, which can speed up lookup operations. 
+non-empty slots in the group, which can speed up lookup operations.
+SSE2 version only: whereas
+`soa_allocation` uses 7 bits for the short hash, `soa15_allocation` uses
+values in the range [2, 255] (7.99 bits). 
 * `coalesced_allocation`: Borrowing ideas from coalesced hashing, a portion
 of the array (the cellar) is kept out of hash-based positioning and
 used when a regular N-group is full; N-groups are then linked via a `next`
