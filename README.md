@@ -54,6 +54,8 @@ low quality hash functions because it ignores the low bits of the hash value.
 * `pow2_size`: Sizes are consecutive powers of two. `position(h)` returns the higher bits of the
 hash value, which, as it happens with `prime_frng_size`, works poorly for low quality hash functions.
 * `pow2_fib_size`: `h` is Fibonacci hashed before calculating the position.
+* `low_pow2_size`: Sizes are consecutive powers of two. `position(h)` returns the lower bits of the
+hash value.
 
 **`BucketArrayPolicy`**
 * `simple_buckets`: The bucket array is a plain vector of node pointers without additional metadata.
