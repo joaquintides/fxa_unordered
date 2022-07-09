@@ -237,8 +237,9 @@ and a reduced 7-bit *short* value for probing.
 * `shift_mod_hash<N>`: the long value is the original hash right-shifted `N`
 positions; the short value is the original hash modulo 127.
 * `shift_hash<N>`: the long value is the original hash right-shifted `N`
-positions; the short value corresponds to the 7 rightmost bits of the
-original value.
+positions; the short value uses the `N` rightmost bits of the
+original value (which can be further adjusted/transformed by the
+`GroupAllocationPolicy` selected).
 
 **`GroupAllocationPolicy`**
 * `regular_allocation`: N-groups are probed quadratically.
