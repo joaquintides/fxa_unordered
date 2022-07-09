@@ -351,6 +351,62 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - name: dedicated-server
+            compiler: cl
+            architecture: x64
+            sourcefile: string.cpp
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            outputfile: benchmark.exe
+            os: [self-hosted, Windows, X64]
+          - name: dedicated-server
+            compiler: cl
+            architecture: x64
+            sourcefile: string_view.cpp
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            outputfile: benchmark.exe
+            os: [self-hosted, Windows, X64]
+          - name: dedicated-server
+            compiler: cl
+            architecture: x64
+            sourcefile: uint32.cpp
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            outputfile: benchmark.exe
+            os: [self-hosted, Windows, X64]
+          - name: dedicated-server
+            compiler: cl
+            architecture: x64
+            sourcefile: uint64.cpp
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            outputfile: benchmark.exe
+            os: [self-hosted, Windows, X64]
+          - name: dedicated-server
+            compiler: cl
+            architecture: x86
+            sourcefile: string.cpp
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            outputfile: benchmark.exe
+            os: [self-hosted, Windows, X64]
+          - name: dedicated-server
+            compiler: cl
+            architecture: x86
+            sourcefile: string_view.cpp
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            outputfile: benchmark.exe
+            os: [self-hosted, Windows, X64]
+          - name: dedicated-server
+            compiler: cl
+            architecture: x86
+            sourcefile: uint32.cpp
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            outputfile: benchmark.exe
+            os: [self-hosted, Windows, X64]
+          - name: dedicated-server
+            compiler: cl
+            architecture: x86
+            sourcefile: uint64.cpp
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            outputfile: benchmark.exe
+            os: [self-hosted, Windows, X64]
           - compiler: cl
             architecture: x64
             sourcefile: string.cpp
@@ -408,13 +464,30 @@ jobs:
       - name: Install Boost
         shell: cmd
         run: |
-          cd %GITHUB_WORKSPACE%
-          git clone https://github.com/boostorg/boost.git boost-root
-          cd boost-root
-          git checkout boost-1.78.0
-          git submodule update --init
-          cmd /c bootstrap.bat
-          .\b2.exe -d0 headers
+          @ECHO ON
+          setlocal enabledelayedexpansion
+          if "${{matrix.name}}" == "dedicated-server" (
+              SET BOOST_BRANCH=boost-1.78.0
+              cd %userprofile%
+              if not exist boost-root/ (
+                  git clone -b !BOOST_BRANCH! https://github.com/boostorg/boost.git boost-root --depth 1
+                  cd boost-root
+                  git submodule update --init --depth 1
+                  cmd /c bootstrap.bat
+                  .\b2.exe -d0 headers
+                  cd ..
+              )
+              REM Manually remove boost-root if modifying BOOST_BRANCH or rebuilding boost-root.
+          ) else (
+              cd %GITHUB_WORKSPACE%
+              git clone https://github.com/boostorg/boost.git boost-root
+              cd boost-root
+              git checkout boost-1.78.0
+              git submodule update --init
+              cmd /c bootstrap.bat
+              .\b2.exe -d0 headers
+          )
+
       - name: Install Abseil
         shell: cmd
         run: |
@@ -428,9 +501,18 @@ jobs:
       - name: Compile
         shell: cmd
         run: |
+          @ECHO ON
+          setlocal enabledelayedexpansion
           cd %GITHUB_WORKSPACE%
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{matrix.architecture}}
-          set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\boost-root
+          if "${{matrix.name}}" == "dedicated-server" (
+              set BOOST_ROOT=%userprofile%\boost-root
+              call "C:\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" ${{matrix.architecture}}
+          ) else (
+              set BOOST_ROOT=%GITHUB_WORKSPACE%\boost-root
+              call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{matrix.architecture}}
+          )
+
+          set INCLUDE=%INCLUDE%;!BOOST_ROOT!
           set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\abseil-root
           set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\fastrange-root
           echo %INCLUDE%

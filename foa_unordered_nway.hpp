@@ -9,13 +9,14 @@
  
 #ifndef FOA_UNORDERED_NWAY_HPP
 #define FOA_UNORDERED_NWAY_HPP
-
+ 
 #include <boost/config.hpp>
 #include <boost/container_hash/hash.hpp>
 #include <boost/core/bit.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <cassert>
 #include <climits>
+#include <cmath>
 #include <cstdint>
 #include <functional>
 #include <limits>
@@ -144,7 +145,7 @@ struct nway_group
 
   void set(std::size_t pos,std::size_t hash)
   {
-    assert(pos<N&&n<N);
+    assert(pos<N);
     uint64_ops::set(lowmask,pos,hash&0xFu);
     uint64_ops::set(himask,pos,0x8u | ((hash&0x70u)>>8));
   }
@@ -157,7 +158,6 @@ struct nway_group
 
   int match(std::size_t hash)const
   {
-    assert(n<N);
     return uint64_ops::match(lowmask,hash&0xFu)&
            uint64_ops::match(himask,0x8u | ((hash&0x70u)>>8));
   }
@@ -523,58 +523,63 @@ struct group_base
 
 #ifdef FXA_UNORDERED_SSE2
 
-  void set(std::size_t pos,std::size_t hash)
+  inline void set(std::size_t pos,unsigned char hash)
   {
     reinterpret_cast<unsigned char*>(&mask)[pos]=hash&0x7Fu;
   }
 
-  void set_sentinel()
+  inline void set_sentinel()
   {
     reinterpret_cast<unsigned char*>(&mask)[N-1]=sentinel_;
   }
 
-  void reset(std::size_t pos)
+  inline void reset(std::size_t pos)
   {
     assert(pos<N);
     reinterpret_cast<unsigned char*>(&mask)[pos]=deleted_;
   }
 
-  int match(std::size_t hash)const
+  inline int match(unsigned char hash)const
   {
     auto m=_mm_set1_epi8(hash&0x7Fu);
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
   }
 
-  int match_empty()const
+  inline int check_empty()const
+  {
+    return match_empty();  
+  }
+
+  inline int match_empty()const
   {
     auto m=_mm_set1_epi8(empty_);
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
   }
 
-  int match_empty_or_deleted()const
+  inline int match_empty_or_deleted()const
   {
     auto m=_mm_set1_epi8(sentinel_);
     return _mm_movemask_epi8(_mm_cmpgt_epi8_fixed(m,mask));    
   }
 
-  int match_occupied()const
+  inline int match_occupied()const
   {
     return (~match_empty_or_deleted())&0xFFFFul;
   }
 
-  int match_really_occupied()const // excluding sentinel
+  inline int match_really_occupied()const // excluding sentinel
   {
     return (~_mm_movemask_epi8(mask))&0xFFFFul;
   }
 
-private:
+protected:
   // exact values as per Abseil rationale
   static constexpr int8_t empty_=-128,
                           deleted_=-2,
                           sentinel_=-1;
 
   //ripped from Abseil raw_hash_set.h
-  static __m128i _mm_cmpgt_epi8_fixed(__m128i a, __m128i b) {
+  static inline __m128i _mm_cmpgt_epi8_fixed(__m128i a, __m128i b) {
 #if defined(__GNUC__) && !defined(__clang__)
     if (std::is_unsigned<char>::value) {
       const __m128i mask = _mm_set1_epi8(0x80);
@@ -589,65 +594,70 @@ private:
 
 #else
 
-  void set(std::size_t pos,std::size_t hash)
+  inline void set(std::size_t pos,unsigned char hash)
   {
     set_impl(pos,hash&0x7Fu);
   }
 
-  void set_sentinel()
+  inline void set_sentinel()
   {
     uint64_ops::set(himask,N-1,sentinel_);
   }
 
-  void reset(std::size_t pos)
+  inline void reset(std::size_t pos)
   {
     uint64_ops::set(himask,pos,deleted_);
   }
 
-  int match(std::size_t hash)const
+  inline int match(unsigned char hash)const
   {
     return match_impl(hash&0x7Fu);
   }
 
-  int match_empty()const
+  inline int check_empty()const
+  {
+    return match_empty();  
+  }
+
+  inline int match_empty()const
   {
     return
       (himask & uint64_t(0x0000FFFF00000000ull))>>32&
       (himask & uint64_t(0xFFFF000000000000ull))>>48;
   }
 
-  int match_empty_or_deleted()const
+  inline int match_empty_or_deleted()const
   {
     return
       (himask & uint64_t(0x00000000FFFF0000ull))>>16&
       (himask & uint64_t(0xFFFF000000000000ull))>>48;
   }
 
-  int match_occupied()const
+  inline int match_occupied()const
   {
     return // ~match_empty_or_deleted()
       (~himask | uint64_t(0xFFFFFFFF0000FFFFull))>>16|
       (~himask | uint64_t(0x0000FFFFFFFFFFFFull))>>48;
   }
 
-  int match_really_occupied()const // excluding sentinel
+  inline int match_really_occupied()const // excluding sentinel
   {
     return
       (~himask & uint64_t(0xFFFF000000000000ull))>>48;
   }
 
-private:
+protected:
   static constexpr int empty_=   0xE, // 1110
                        deleted_= 0xA, // 1010
                        sentinel_=0x8; // 1000
 
-  void set_impl(std::size_t pos,unsigned char m)
+  inline void set_impl(std::size_t pos,unsigned char m)
   {
     uint64_ops::set(lowmask,pos,m&0xFu);
     uint64_ops::set(himask,pos,m>>4);
   }
   
-  int match_impl(unsigned char m)const
+  inline int match_impl(unsigned char m)const
   {
     return uint64_ops::match(lowmask,m&0xFu)&
            uint64_ops::match(himask,m>>4);
@@ -656,6 +666,159 @@ private:
   uint64_t lowmask=0,himask=0xFFFFFFFFFFFF0000ull;
 #endif /* FXA_UNORDERED_SSE2 */
 };
+
+#ifdef FXA_UNORDERED_SSE2
+struct group15_base
+{
+  static constexpr int N=15;
+  
+  inline void set(std::size_t pos,unsigned char hash)
+  {
+    assert(pos<N);
+    update_nonempty_count(pos);
+    reinterpret_cast<unsigned char*>(&mask)[pos]=adjust_hash(hash);
+  }
+
+  inline void set_sentinel()
+  {
+    nonempty_count()=0x01; // odd bit
+    reinterpret_cast<unsigned char*>(&mask)[N-1]=0x01; // occupied
+  }
+
+  inline void reset(std::size_t pos)
+  {
+    assert(pos<N);
+    reinterpret_cast<unsigned char*>(&mask)[pos]=0u;
+  }
+
+  inline int match(unsigned char hash)const
+  {
+    auto m=_mm_set1_epi8(adjust_hash(hash));
+    return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m))&0x7FFF;
+  }
+
+  inline auto check_empty()const
+  {
+    return nonempty_count()<2*N-1;
+  }
+
+#if 0 /* not used*/
+  inline int match_empty()const
+  {
+  }
+#endif
+
+  inline int match_empty_or_deleted()const
+  {
+    return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,_mm_setzero_si128()))&0x7FFF;
+  }
+
+  inline int match_occupied()const
+  {
+    return (~match_empty_or_deleted())&0x7FFF;
+  }
+
+  inline int match_really_occupied()const // excluding sentinel
+  {
+    return (nonempty_count()%2)?match_occupied()&0x3FFF:match_occupied();
+  }
+
+private:
+  static unsigned char adjust_hash(unsigned char hash)
+  {
+    return hash|(2*(hash<2));
+  }
+
+  unsigned char& nonempty_count()
+  {
+    return reinterpret_cast<unsigned char*>(&mask)[N];
+  }
+
+  unsigned char nonempty_count()const
+  {
+    return reinterpret_cast<const unsigned char*>(&mask)[N];
+  }
+
+  void update_nonempty_count(std::size_t pos)
+  {
+    nonempty_count()+=2*(pos==nonempty_count()/2);
+  }
+
+  __m128i mask=_mm_setzero_si128();
+};
+#else
+struct group15_base:private group_base
+{
+  static constexpr int N=15;
+
+  inline void set(std::size_t pos,unsigned char hash)
+  {
+    set_nonempty_count(
+      nonempty_count()+((super::match_empty()&(1<<pos))!=0));
+    super::set(pos,hash);
+  }
+
+  inline void set_sentinel()
+  {
+    set_nonempty_count(nonempty_count()+1);
+    uint64_ops::set(this->himask,N-1,this->sentinel_);
+  }
+
+  inline void reset(std::size_t pos)
+  {
+    super::reset(pos);
+  }
+
+  inline int match(unsigned char hash)const
+  {
+    // no need to mask with 0x7FFF as nonempty_count MSB is always 1
+    return super::match(hash);
+  }
+
+  inline auto check_empty()const
+  {
+    return nonempty_count()!=N;  
+  }
+
+  inline int match_empty()const
+  {
+    return super::match_empty()&0x7FFF;
+  }
+
+  inline int match_empty_or_deleted()const
+  {
+    return super::match_empty_or_deleted()&0x7FFF;
+  }
+
+  inline int match_occupied()const
+  {
+    // no need to mask with 0x7FFF as nonempty_count MSB is always 1
+    return super::match_occupied();
+  }
+
+  inline int match_really_occupied()const // excluding sentinel
+  {
+    return super::match_really_occupied()&0x7FFF;
+  }
+
+private:
+  using super=group_base;
+
+  void set_nonempty_count(unsigned char m)
+  {
+    uint64_ops::set(this->lowmask,N,m);
+  }
+
+  unsigned char nonempty_count()const
+  {
+    return 
+      (this->lowmask & 0x0000000000008000ull)>>15|
+      (this->lowmask & 0x0000000080000000ull)>>30|
+      (this->lowmask & 0x0000800000000000ull)>>45|
+      (this->lowmask & 0x8000000000000000ull)>>60;
+  }
+};
+#endif /* FXA_UNORDERED_SSE2 */
 
 template<typename T>
 struct element
@@ -667,33 +830,24 @@ private:
   std::aligned_storage_t<sizeof(T),alignof(T)> storage;
 };
 
-template<typename T>
-struct soa_group:group_base
+template<typename T,typename GroupBase>
+struct soa_group:GroupBase
 {
   using element_type=element<T>;
-
-  soa_group* next()
-  {
-    // this strange API is used for coalesced extension
-    if(this->match_empty())return nullptr; // look no further
-    else                   return this;    // go probing
-  }
 };
 
-template<typename T>
-struct regular_group:soa_group<T>
+template<typename T,typename GroupBase>
+struct regular_group:soa_group<T,GroupBase>
 {
   auto& at(std::size_t n){return storage[n];}
 
-  regular_group* next(){return static_cast<regular_group*>(super::next());}
-
 private:
-  using super=soa_group<T>;
+  using super=soa_group<T,GroupBase>;
   typename super::element_type storage[super::N];
 };
 
-template<typename T>
-struct soa_coalesced_group:soa_group<T>
+template<typename T,typename GroupBase>
+struct soa_coalesced_group:soa_group<T,GroupBase>
 {
   soa_coalesced_group*& next(){return next_;}
 
@@ -701,8 +855,8 @@ private:
   soa_coalesced_group *next_=nullptr;
 };
 
-template<typename T>
-struct coalesced_group:regular_group<T>
+template<typename T,typename GroupBase>
+struct coalesced_group:regular_group<T,GroupBase>
 {
   coalesced_group*& next(){return next_;}
 
@@ -835,6 +989,112 @@ private:
   std::vector<elements_type,elements_allocator_type> e;
 };
 
+template<typename Group,typename Allocator>
+class intersoa_group_array
+{
+public:
+  static constexpr auto N=Group::N;
+
+private:
+  using element_type=typename Group::element_type;
+
+  struct elements_type
+  {
+    auto& at(std::size_t n){return pe[n*stride];}
+
+    element_type* pe;
+    std::size_t   stride;
+  };
+
+public:
+  class iterator:public boost::iterator_facade<
+    iterator,const Group,boost::random_access_traversal_tag>
+  {
+    using super=boost::iterator_facade<
+      iterator,const Group,boost::random_access_traversal_tag>;
+
+  public:
+    iterator()=default;
+
+    using super::operator=;
+    iterator& operator=(Group* pg)noexcept
+    {
+      auto diff=pg-this->pg;
+      this->pg=pg;
+      this->pe+=diff;
+      return *this;
+    }
+
+    operator Group*()const noexcept{return pg;}
+
+    explicit operator bool()const noexcept{return pg;}
+    bool operator!()const noexcept{return !pg;}
+
+  private:
+    friend class intersoa_group_array;
+    friend class boost::iterator_core_access;
+
+    iterator(Group *pg,element_type* pe,std::size_t stride):
+      pg{pg},pe{pe},stride{stride}{}
+
+    bool equal(Group* pg)const noexcept{return this->pg==pg;}
+    bool equal(const iterator& x)const noexcept{return pg==x.pg;}
+
+    friend bool operator==(const iterator& x,Group* pg)noexcept
+      {return x.equal(pg);}
+    friend bool operator==(Group* pg,const iterator& x)noexcept
+      {return x.equal(pg);}
+    friend bool operator!=(const iterator& x,Group* pg)noexcept
+      {return !x.equal(pg);}
+    friend bool operator!=(Group* pg,const iterator& x)noexcept
+      {return !x.equal(pg);}
+    friend bool operator==(const iterator& x,const iterator& y)noexcept
+      {return x.equal(y);}
+    friend bool operator!=(const iterator& x,const iterator& y)noexcept
+      {return !x.equal(y);}
+
+    const auto& dereference()const noexcept{return *pg;} // not really used
+    void increment()noexcept{++pg;++pe;}
+    void decrement()noexcept{--pg;--pe;}
+    void advance(std::ptrdiff_t i)noexcept{pg+=i;pe+=i;}
+    std::ptrdiff_t distance_to(const iterator& x)const{return x.pg-pg;}
+
+    Group         *pg=nullptr;
+    element_type  *pe;
+    std::size_t   stride;
+  };
+  friend class iterator;
+
+  intersoa_group_array(std::size_t n,const Allocator& al):
+    v{n,al},e{n*N,al}{}
+  intersoa_group_array(intersoa_group_array&&)=default;
+  intersoa_group_array& operator=(intersoa_group_array&&)=default;
+
+  static auto& control(iterator it){return *it.pg;}
+  static elements_type elements(iterator it){return {it.pe,it.stride};}
+  
+  iterator begin()const{return at(0);}
+  iterator end()const{return at(size());}
+
+  iterator at(std::size_t n)const
+  {
+    return {
+      const_cast<Group*>(v.data()+n),
+      const_cast<element_type*>(e.data()+n),
+      v.size()
+    };
+  }
+
+  std::size_t size()const{return v.size();}
+
+private:
+  using element_allocator_type=typename std::allocator_traits<Allocator>::
+    template rebind_alloc<element_type>;
+
+  std::vector<Group,Allocator>                     v;
+  std::vector<element_type,element_allocator_type> e;
+};
+
 template<typename GroupArray>
 class group_allocator:public GroupArray
 {
@@ -859,7 +1119,80 @@ public:
 
   std::pair<iterator,int> new_group_after(iterator first,iterator /*it*/)
   {
-    for(auto pr=make_prober(first);;pr.next()){
+    for(auto pr=make_prober(first);;){
+      pr.next();
+      if(auto mask=control(pr.get()).match_empty_or_deleted()){
+        FXA_ASSUME(mask!=0);
+        return {pr.get(),boost::core::countr_zero((unsigned int)mask)};
+      }
+    }
+  }
+
+  struct prober
+  {        
+    iterator get()const noexcept{return self->begin()+n;}
+
+    void next()noexcept
+    {
+      for(;;){
+        n=(n+i)&self->pow2mask;
+        i+=1;
+        if(n<self->size())break;
+      }
+    }
+
+  private:
+    friend class group_allocator;
+
+    prober(const group_allocator* self,iterator it):
+      self{self},n{(std::size_t)(it-self->begin())}{}
+
+    const group_allocator* self;
+    std::size_t            n,
+                           i=1;
+  };
+  friend struct prober;
+
+  prober make_prober(iterator it)const
+  {
+    return {this,it};
+  }
+
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+  void status(){}
+#endif
+
+  std::size_t pow2mask=boost::core::bit_ceil(this->size())-1;
+};
+
+
+template<typename GroupArray>
+class pyramid_allocator:public GroupArray
+{
+public:
+  using GroupArray::N;
+  using iterator=typename GroupArray::iterator;
+
+  template<typename Allocator>
+  pyramid_allocator(std::size_t n,const Allocator& al):
+    GroupArray{std::size_t(std::ceil(n/0.875)),al},
+    address_size{n}
+  {
+    control(this->end()-1).set_sentinel();
+  }
+
+  pyramid_allocator(pyramid_allocator&&)=default;
+  pyramid_allocator& operator=(pyramid_allocator&& x)=default;
+
+  using GroupArray::control;
+
+  // only in moved-from state when rehashing
+  bool empty()const{return !this->size();}
+
+  std::pair<iterator,int> new_group_after(iterator first,iterator /*it*/)
+  {
+    for(auto pr=make_prober(first);;){
+      pr.next();
       if(auto mask=control(pr.get()).match_empty_or_deleted()){
         FXA_ASSUME(mask!=0);
         return {pr.get(),boost::core::countr_zero((unsigned int)mask)};
@@ -873,35 +1206,88 @@ public:
 
     void next()noexcept
     {
+      if(delta){
+        n=base+delta+(n-base)/8;
+        base+=delta;
+        delta/=8;
+        return;
+      }
       for(;;){
-        n=(n+i)&pow2mask;
+        n0=(n0+i)&pow2mask;
         i+=1;
-        if(n<size)break;
+        if(n0<size){
+          n=n0;
+          return;
+        }
       }
     }
 
   private:
-    friend class group_allocator;
+    friend class pyramid_allocator;
 
     prober(iterator begin,std::size_t size,iterator it):
-      begin{begin},size{size},n{(std::size_t)(it-begin)}
-      {next();}
+      begin{begin},size{size},
+      n0{(std::size_t)(it-begin)}
+    {
+      assert(n0<size);
+      next();
+    }
 
     iterator    begin;
     std::size_t size,
-                n,
+                n0,
+                n=n0,
+                delta=size,
+                base=0,
                 i=1,
                 pow2mask=boost::core::bit_ceil(size)-1;
   };
 
   prober make_prober(iterator it)const
   {
-    return {this->begin(),this->size(),it};
+    return {this->begin(),address_size,it};
   }
 
-#ifdef NWAYPLUS_STATUS
-  void status(){}
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+  void status()
+  {
+    int occupied_groups=0,
+        occupied_address_groups=0,
+        occupied_cellar_groups=0,
+        free_groups=0;
+    long long int occupancy_used_address=0,
+                  occupancy_used_cellar=0;
+    for(auto it=this->begin(),last=this->end();it!=last;++it){
+      if(control(it).match_occupied()){
+        ++occupied_groups;
+        if(it<this->begin()+address_size){
+          ++occupied_address_groups;
+          occupancy_used_address+=boost::core::popcount((unsigned int)
+            control(it).match_occupied());
+        }
+        else{            
+          ++occupied_cellar_groups;
+          occupancy_used_cellar+=boost::core::popcount((unsigned int)
+            control(it).match_occupied());
+        }
+      }
+      else ++free_groups;
+    }
+    std::cout<<"\n"
+      <<"size: "<<this->size()<<"\n"
+      <<"address size: "<<address_size<<"\n"
+      <<"occupied groups: "<<occupied_groups<<"\n"
+      <<"occupied address groups: "<<occupied_address_groups<<"\n"
+      <<"occupied cellar groups: "<<occupied_cellar_groups<<"\n"     
+      <<"free groups: "<<free_groups<<"\n"
+      <<"occup. used address: "<<(double)occupancy_used_address/occupied_address_groups<<"\n"
+      <<"occup. used cellar: "<<(double)occupancy_used_cellar/occupied_cellar_groups<<"\n"
+      ;
+  }
 #endif
+
+private:
+  std::size_t address_size;
 };
 
 template<typename GroupArray>
@@ -952,7 +1338,7 @@ public:
     return top>this->begin()+address_size_;
   }
 
-#ifdef NWAYPLUS_STATUS
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
   void status()
   {
     int occupied_groups=0,
@@ -998,7 +1384,7 @@ public:
       <<"avg. chain length: "<<(double)chain_length/occupied_address_groups<<"\n"
       ;
   }
-#endif /* NWAYPLUS_STATUS */
+#endif /* FOA_UNORDERED_NWAYPLUS_STATUS */
 
 private:
   std::size_t  address_size_;
@@ -1008,8 +1394,8 @@ private:
 struct regular_allocation
 {
   template<typename T>
-  using group_type=regular_group<T>;
-
+  using group_type=regular_group<T,group_base>;
+  
   static constexpr float mlf=0.875;
 
   template<typename Group,typename Allocator>
@@ -1017,10 +1403,22 @@ struct regular_allocation
     group_array<Group,Allocator>>;
 };
 
+struct pyramid_allocation
+{
+  template<typename T>
+  using group_type=regular_group<T,group_base>;
+
+  static constexpr float mlf=1.0;
+
+  template<typename Group,typename Allocator>
+  using allocator_type=pyramid_allocator<
+    group_array<Group,Allocator>>;
+};
+
 struct soa_allocation
 {
   template<typename T>
-  using group_type=soa_group<T>;
+  using group_type=soa_group<T,group_base>;
 
   static constexpr float mlf=0.875;
 
@@ -1029,10 +1427,46 @@ struct soa_allocation
     soa_group_array<Group,Allocator>>;
 };
 
+struct soa15_allocation
+{
+  template<typename T>
+  using group_type=soa_group<T,group15_base>;
+
+  static constexpr float mlf=0.875;
+
+  template<typename Group,typename Allocator>
+  using allocator_type=group_allocator<
+    soa_group_array<Group,Allocator>>;
+};
+
+struct intersoa_allocation
+{
+  template<typename T>
+  using group_type=soa_group<T,group_base>;
+
+  static constexpr float mlf=0.875;
+
+  template<typename Group,typename Allocator>
+  using allocator_type=group_allocator<
+    intersoa_group_array<Group,Allocator>>;
+};
+
+struct intersoa15_allocation
+{
+  template<typename T>
+  using group_type=soa_group<T,group15_base>;
+
+  static constexpr float mlf=0.875;
+
+  template<typename Group,typename Allocator>
+  using allocator_type=group_allocator<
+    intersoa_group_array<Group,Allocator>>;
+};
+
 struct coalesced_allocation
 {
   template<typename T>
-  using group_type=coalesced_group<T>;
+  using group_type=coalesced_group<T,group_base>;
 
   static constexpr float mlf=1.0;
 
@@ -1044,7 +1478,7 @@ struct coalesced_allocation
 struct soa_coalesced_allocation
 {
   template<typename T>
-  using group_type=soa_coalesced_group<T>;
+  using group_type=soa_coalesced_group<T,group_base>;
 
   static constexpr float mlf=1.0;
 
@@ -1053,11 +1487,37 @@ struct soa_coalesced_allocation
     soa_group_array<Group,Allocator>>;
 };
 
+template<typename Group,typename=void>
+struct groups_are_linked:std::false_type{};
+
+template<typename Group>
+struct groups_are_linked<
+  Group,
+  std::void_t<decltype(std::declval<Group>().next())>
+>:std::true_type{};
+
+template<typename GroupAllocator>
+using has_soa_layout=std::integral_constant<
+  bool,
+  !std::is_same_v<
+    decltype(GroupAllocator::control(
+      std::declval<typename GroupAllocator::iterator>())),
+    decltype(GroupAllocator::elements(
+      std::declval<typename GroupAllocator::iterator>()))
+  >
+>;
+
+template<typename GroupAllocator>
+struct has_intersoa_layout:std::false_type{};
+
+template<typename... Ts>
+struct has_intersoa_layout<group_allocator<intersoa_group_array<Ts...>>>:std::true_type{};
+
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
   typename SizePolicy=prime_size,
-  typename HashSplitPolicy=shift_hash<3>,
+  typename HashSplitPolicy=shift_mod_hash<0>,
   typename GroupAllocationPolicy=regular_allocation
 >
 class foa_unordered_nwayplus_set 
@@ -1072,12 +1532,17 @@ class foa_unordered_nwayplus_set
       group,
       typename alloc_traits:: template rebind_alloc<group>>;
   using group_iterator=typename group_allocator::iterator;
+  using linked_groups=groups_are_linked<group>;
+  using soa_layout=has_soa_layout<group_allocator>;
+  using intersoa_layout=has_intersoa_layout<group_allocator>;
 
   static constexpr auto N=group::N;
 
-  static auto& control(group_iterator itg)
+  static auto control(group_iterator itg)
+    ->decltype(group_allocator::control(itg))
     {return group_allocator::control(itg);}
-  static auto& elements(group_iterator itg)
+  static auto elements(group_iterator itg)
+    ->decltype(group_allocator::elements(itg))
     {return group_allocator::elements(itg);}
 
 public:
@@ -1123,6 +1588,8 @@ public:
   using iterator=const_iterator;
 
   foa_unordered_nwayplus_set()=default;
+  foa_unordered_nwayplus_set(const foa_unordered_nwayplus_set&)=default;
+  foa_unordered_nwayplus_set(foa_unordered_nwayplus_set&&)=default;
 
   ~foa_unordered_nwayplus_set()
   {
@@ -1167,28 +1634,19 @@ public:
   template<typename Key>
   iterator find(const Key& x)const
   {
-    auto hash=h(x);
-    auto first=group_for(hash);
-    for(auto itg=first;;){
-      auto [n,found]=find_in_group(x,itg,hash);
-      if(found)return {itg,n};
-
-      auto next=control(itg).next();
-      if(!next)         return end();
-      else if(itg==next)break; // chain closed, go probing
-      else              itg=next;
-    };
-
-    for(auto pr=groups.make_prober(first);;pr.next()){
-      auto itg=pr.get();
-      auto [n,found]=find_in_group(x,itg,hash);
-      if(found)return {itg,n};
-      if(control(itg).match_empty())return end();
-    }
+    return find_impl(x,linked_groups());
   }
 
-#ifdef NWAYPLUS_STATUS
-  void status(){groups.status();}
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+  void status()
+  {
+    groups.status();
+    std::cout
+      <<"succesful avg. runlength: "<<float(successful_find_runlengths)/successful_find_runs<<"\n"
+      <<"unsuccesful avg. runlength: "<<float(unsuccessful_find_runlengths)/unsuccessful_find_runs<<"\n"
+      <<"avg. matches per find: "<<float(num_matches)/num_finds<<"\n"
+      ;
+  }
 #endif
 
 private:
@@ -1207,48 +1665,232 @@ private:
     alloc_traits::destroy(al,p);
   }
 
+  static void prefetch(const void* p)
+  {
+#if defined(BOOST_GCC)||defined(BOOST_CLANG)
+    __builtin_prefetch((const char*)p,0);
+#elif defined(FXA_UNORDERED_SSE2)
+    _mm_prefetch((const char*)p,_MM_HINT_T0);
+#endif    
+  }
+
+  static void prefetch_elements(group_iterator itg)
+  {
+    if constexpr(intersoa_layout::value){
+      //for(int n=0;n<N/2;++n)prefetch(&elements(itg).at(n));
+    }
+    else{
+      constexpr int cache_line=64;
+      char *p0=(char*)elements(itg).at(0).data(),
+           *p1=p0+sizeof(value_type)*N/2;
+      if constexpr(!soa_layout::value){
+        p0+=cache_line;
+      }
+      for(char* p=p0;p<p1;p+=cache_line)prefetch(p);
+    }
+  }
+
   group_iterator group_for(std::size_t hash)const
   {
-    return groups.at(
-      size_policy::position(hash_split_policy::long_hash(hash),size_index)/N);
+    return groups.at(size_policy::position(hash,group_size_index));
   }
 
   template<typename Key>
   std::pair<int,bool> find_in_group(
-    const Key& x,group_iterator itg,std::size_t hash)const
+    const Key& x,group_iterator itg,unsigned char short_hash)const
   {
-    auto mask=control(itg).match(hash_split_policy::short_hash(hash));
-    while(mask){
-      FXA_ASSUME(mask!=0);
-      auto n=boost::core::countr_zero((unsigned int)mask);
-      if(BOOST_LIKELY(pred(x,elements(itg).at(n).value())))return {n,true};
-      mask&=mask-1;
+    auto mask=control(itg).match(short_hash);
+    if(mask){
+      prefetch_elements(itg);
+      do{
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+        ++num_matches;
+#endif
+        
+        FXA_ASSUME(mask!=0);
+        auto n=boost::core::countr_zero((unsigned int)mask);
+        if(BOOST_LIKELY(pred(x,elements(itg).at(n).value())))return {n,true};
+        mask&=mask-1;
+      }while(mask);
     }
     return {0,false};
+  }
+
+  template<typename Key>
+  iterator find_impl(const Key& x,std::true_type /* linked groups */)const
+  {    
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+    ++num_finds; // TODO: this shouldn't go when !linked_groups
+    int runlength=1;
+#endif
+
+    auto hash=h(x);
+    auto long_hash=hash_split_policy::long_hash(hash);
+    auto short_hash=hash_split_policy::short_hash(hash);
+    auto first=group_for(long_hash);
+
+    for(auto itg=first;;){
+      auto [n,found]=find_in_group(x,itg,short_hash);
+      if(found){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+        successful_find_runlengths+=runlength;
+        successful_find_runs+=1;  
+#endif
+        return {itg,n};
+      }
+
+      auto next=control(itg).next();
+      if(!next){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+        unsuccessful_find_runlengths+=runlength;
+        unsuccessful_find_runs+=1;  
+#endif
+        return end();
+      }
+      else if(itg==next)break; // chain closed, go probing
+      else              itg=next;
+    }
+      
+    for(auto pr=groups.make_prober(first);;){
+      pr.next();
+        
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+      ++runlength;
+#endif
+        
+      auto itg=pr.get();
+      auto [n,found]=find_in_group(x,itg,short_hash);
+      if(found){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+        successful_find_runlengths+=runlength;
+        successful_find_runs+=1;  
+#endif
+        return {itg,n};
+      }
+      if(control(itg).check_empty()){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+        unsuccessful_find_runlengths+=runlength;
+        unsuccessful_find_runs+=1;  
+#endif
+        return end();
+      }
+    }
+  }
+
+  template<typename Key>
+  iterator find_impl(
+    const Key& x,std::false_type /* linked groups */)const
+  {    
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+    ++num_finds;
+    int runlength=0;
+#endif
+
+    auto        hash=h(x);
+    auto        long_hash=hash_split_policy::long_hash(hash);
+    auto        short_hash=hash_split_policy::short_hash(hash);
+    auto        pos=size_policy::position(long_hash,group_size_index);
+    std::size_t step=1;
+    for(;;){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+      ++runlength;
+#endif
+      auto itg=groups.at(pos);
+      auto [n,found]=find_in_group(x,itg,short_hash);
+      if(found){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+        successful_find_runlengths+=runlength;
+        successful_find_runs+=1;  
+#endif
+        return {itg,n};
+      }
+      if(control(itg).check_empty()){
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+        unsuccessful_find_runlengths+=runlength;
+        unsuccessful_find_runs+=1;  
+#endif
+        return end();
+      }
+
+      for(;;){
+        pos=(pos+step)&groups.pow2mask;
+        step+=1;
+        if(pos<groups.size())break;
+      }
+    }
   }
 
   template<typename Value>
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
-    auto hash=h(x);
-    auto first=group_for(hash);
-    auto [it,ita,last]=find_match_available_last(x,first,hash);
-    if(it!=end())return {it,false};
+    if constexpr(linked_groups::value){
+      auto hash=h(x);
+      auto long_hash=hash_split_policy::long_hash(hash);
+      auto short_hash=hash_split_policy::short_hash(hash);
+      auto first=group_for(long_hash);
+      auto [it,ita,last]=find_match_available_last(x,first,short_hash);
+      if(it!=end())return {it,false};
 
-    if(BOOST_UNLIKELY(size_+1>ml)){
-      rehash(size_+1);
-      return {unchecked_insert(std::forward<Value>(x),hash),true};
-    }
+      if(BOOST_UNLIKELY(size_+1>ml)){
+        rehash(size_+1);
+        return {unchecked_insert(std::forward<Value>(x),long_hash,short_hash),true};
+      }
 
-    auto& [itga,na]=ita;
-    if(!itga){
-      assert(last);
-      std::tie(itga,na)=groups.new_group_after(first,last);
+      auto& [itga,na]=ita;
+      if(!itga){
+        assert(last);
+        std::tie(itga,na)=groups.new_group_after(first,last);
+      }
+      construct_element(std::forward<Value>(x),elements(itga).at(na).data());  
+      control(itga).set(na,short_hash);
+      ++size_;
+      return {ita,true};
     }
-    construct_element(std::forward<Value>(x),elements(itga).at(na).data());  
-    control(itga).set(na,hash_split_policy::short_hash(hash));
-    ++size_;
-    return {ita,true};
+    else{ // no linked groups
+      auto           hash=h(x);
+      auto           long_hash=hash_split_policy::long_hash(hash);
+      auto           short_hash=hash_split_policy::short_hash(hash);
+      auto           pos0=size_policy::position(long_hash,group_size_index),
+                     pos=pos0;
+      std::size_t    step=1;
+      for(;;){     
+        auto itg=groups.at(pos);
+        auto [n,found]=find_in_group(x,itg,short_hash);
+        if(found)return {{itg,n},false};
+        if(control(itg).check_empty())break;
+        for(;;){
+          pos=(pos+step)&groups.pow2mask;
+          step+=1;
+          if(pos<groups.size())break;
+        }
+      }
+
+      if(BOOST_UNLIKELY(size_+1>ml)){
+        rehash(size_+1);
+        return {unchecked_insert(std::forward<Value>(x),long_hash,short_hash),true};
+      }
+
+      pos=pos0;
+      step=1;
+      for(;;){     
+        auto itg=groups.at(pos);
+        auto mask=control(itg).match_empty_or_deleted();
+        if(mask){
+          FXA_ASSUME(mask!=0);
+          int n=boost::core::countr_zero((unsigned int)mask); 
+          construct_element(
+            std::forward<Value>(x),elements(itg).at(n).data());  
+          control(itg).set(n,short_hash);
+          ++size_;
+          return {{itg,n},true};    
+        }
+        for(;;){
+          pos=(pos+step)&groups.pow2mask;
+          step+=1;
+          if(pos<groups.size())break;
+        }
+      }
+    }
   }
 
   void rehash(size_type new_size)
@@ -1278,7 +1920,7 @@ private:
       size_-=num_tx;
       throw;
     }
-    size_index=new_container.size_index;
+    group_size_index=new_container.group_size_index;
     groups=std::move(new_container.groups);
     ml=max_load();   
   }
@@ -1286,31 +1928,46 @@ private:
   template<typename Value>
   iterator unchecked_insert(Value&& x)
   {
-    return unchecked_insert(std::forward<Value>(x),h(x));
+    auto hash=h(x);
+    return unchecked_insert(
+      std::forward<Value>(x),
+      hash_split_policy::long_hash(hash),hash_split_policy::short_hash(hash));
   }
 
   template<typename Value>
-  iterator unchecked_insert(Value&& x,std::size_t hash)
+  iterator unchecked_insert(
+    Value&& x,std::size_t long_hash,unsigned char short_hash)
   {
-    auto first=group_for(hash),
+    auto first=group_for(long_hash),
          itg=first;
+    int  mask,n;
 
-    // unchecked_insert only called just after rehashing, so
-    // there are no deleted elements and we can go till end of chain
-    while(control(itg).next()&&itg!=control(itg).next())itg=control(itg).next();
+    if constexpr(linked_groups::value){
+      // unchecked_insert only called just after rehashing, so
+      // there are no deleted elements and we can go till end of chain
+      while(control(itg).next()&&itg!=control(itg).next())itg=control(itg).next();
 
-    // if chain's not closed see occupancy, otherwise go probing
-    int mask,n;
-    if(!control(itg).next()&&(mask=control(itg).match_empty())){
-      FXA_ASSUME(mask!=0);
-      n=boost::core::countr_zero((unsigned int)mask);
+      // if chain's not closed see occupancy, otherwise go probing
+      if(!control(itg).next()&&(mask=control(itg).match_empty())){
+        FXA_ASSUME(mask!=0);
+        n=boost::core::countr_zero((unsigned int)mask);
+      }
+      else{
+        std::tie(itg,n)=groups.new_group_after(first,itg);
+      }
     }
-    else{
-      std::tie(itg,n)=groups.new_group_after(first,itg);
-    }  
+    else{ // no linked groups
+      if((mask=control(itg).match_empty_or_deleted())){
+        FXA_ASSUME(mask!=0);
+        n=boost::core::countr_zero((unsigned int)mask);
+      }
+      else{
+        std::tie(itg,n)=groups.new_group_after(first,itg);
+      }
+    }
       
     construct_element(std::forward<Value>(x),elements(itg).at(n).data());
-    control(itg).set(n,hash_split_policy::short_hash(hash));
+    control(itg).set(n,short_hash);
     ++size_;
     return {itg,n};
   }
@@ -1324,7 +1981,7 @@ private:
   template<typename Key>
   find_match_available_last_return_type
   find_match_available_last(
-    const Key& x,group_iterator first,std::size_t hash)const
+    const Key& x,group_iterator first,unsigned char short_hash)const
   {
     iterator ita;
     auto     update_ita=[&](group_iterator itg)
@@ -1336,30 +1993,36 @@ private:
         }
       }        
     };
-      
-    for(auto itg=first;;){
-      auto [n,found]=find_in_group(x,itg,hash);
-      if(found)return {{itg,n}};
-      update_ita(itg); 
-        
-      auto next=control(itg).next();
-      if(!next)         return {end(),ita,itg};
-      else if(itg==next)break; // chain closed, go probing
-      else              itg=next;
-    }
 
-    for(auto pr=groups.make_prober(first);;pr.next()){
+   if constexpr(linked_groups::value){
+      for(auto itg=first;;){
+        auto [n,found]=find_in_group(x,itg,short_hash);
+        if(found)return {{itg,n}};
+        update_ita(itg); 
+
+        auto next=control(itg).next();
+        if(!next)         return {end(),ita,itg};
+        else if(itg==next)break; // chain closed, go probing
+        else              itg=next;
+      }
+    }
+   
+    for(auto pr=groups.make_prober(first);;){
+      if constexpr(linked_groups::value)pr.next();
+        
       auto itg=pr.get();
-      auto [n,found]=find_in_group(x,itg,hash);
+      auto [n,found]=find_in_group(x,itg,short_hash);
       if(found)return {{itg,n}};
       update_ita(itg); 
-      if(control(itg).match_empty())return {end(),ita}; // ita must be non-null
+      if(control(itg).check_empty())return {end(),ita}; // ita must be non-null
+        
+      if constexpr(!linked_groups::value)pr.next();
     }
   }
 
   size_type max_load()const
   {
-    float fml=mlf*static_cast<float>(size_policy::size(size_index));
+    float fml=mlf*static_cast<float>(size_policy::size(group_size_index)*N-1);
     auto res=(std::numeric_limits<size_type>::max)();
     if(res>fml)res=static_cast<size_type>(fml);
     return res;
@@ -1370,9 +2033,18 @@ private:
   Allocator       al;
   float           mlf=group_allocation_policy::mlf;
   std::size_t     size_=0;
-  std::size_t     size_index=size_policy::size_index(size_);
-  group_allocator groups{size_policy::size(size_index)/N+1,al};
+  std::size_t     group_size_index=size_policy::size_index(size_/N+1);
+  group_allocator groups{size_policy::size(group_size_index),al};
   size_type       ml=max_load();
+
+#ifdef FOA_UNORDERED_NWAYPLUS_STATUS
+  mutable long long int successful_find_runlengths=0,
+                        unsuccessful_find_runlengths=0,
+                        successful_find_runs=0,
+                        unsuccessful_find_runs=0,
+                        num_matches=0,
+                        num_finds=0;
+#endif
 };
 
 template<
@@ -1380,7 +2052,7 @@ template<
   typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
   typename Allocator=std::allocator<map_value_adaptor<Key,Value>>,
   typename SizePolicy=prime_size,
-  typename HashSplitPolicy=shift_hash<3>,
+  typename HashSplitPolicy=shift_mod_hash<0>,
   typename GroupAllocationPolicy=regular_allocation
 >
 using foa_unordered_nwayplus_map=foa_unordered_nwayplus_set<

@@ -320,6 +320,26 @@ struct pow2_size
   }
 };
 
+struct low_pow2_size
+{
+  static inline std::size_t size_index(std::size_t n)
+  {
+    return n<=32?
+      5:
+      static_cast<std::size_t>(boost::core::bit_width(n-1));
+  }
+
+  static inline std::size_t size(std::size_t size_index)
+  {
+     return std::size_t(1)<<size_index;  
+  }
+    
+  static inline std::size_t position(std::size_t hash,std::size_t size_index)
+  {
+    return hash&(size(size_index)-1);
+  }
+};
+
 struct pow2_fib_size:pow2_size
 {
   static inline std::size_t mix_hash(std::size_t hash)
@@ -338,6 +358,13 @@ struct shift_hash
 {
   static inline std::size_t long_hash(std::size_t hash){return hash>>N;}
   static inline std::size_t short_hash(std::size_t hash){return hash;}
+};
+
+template<unsigned N>
+struct shift_mod_hash
+{
+  static inline std::size_t long_hash(std::size_t hash){return hash>>N;}
+  static inline std::size_t short_hash(std::size_t hash){return hash%127;}
 };
 
 template<class Key,class Value>
