@@ -498,7 +498,10 @@ public:
 private:
   // used only on rehash
   foa_unordered_rc_set(std::size_t n,Allocator al):
-    al{al},size_{n}{}
+    al{al},size_{n}
+  {
+    groups.back().set_sentinel(); // we should wrap groups in its own class for this
+  }
 
   template<typename Value>
   void construct_element(Value&& x,value_type* p)
@@ -622,7 +625,6 @@ private:
     if(nc>fnc)nc=static_cast<std::size_t>(fnc);
 
     foa_unordered_rc_set new_container{nc,al};
-    new_container.groups.back().set_sentinel(); // we should wrap groups in its own class for this
     std::size_t          num_tx=0;
     try{
       for(std::size_t pos=0,last=groups.size();pos!=last;++pos){
