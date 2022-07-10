@@ -330,6 +330,9 @@ int main()
     test<foa_absl_unordered_longhop_map>( "foa_absl_unordered_longhop_map" );
 #endif
 
+    test<foa_absl_unordered_rc16_map>( "foa_absl_unordered_rc16_map" );
+    test<foa_absl_unordered_rc15_map>( "foa_absl_unordered_rc15_map" );
+
 #ifdef HAVE_ABSEIL
     test<absl_node_hash_map>( "absl::node_hash_map" );
     test<absl_flat_hash_map>( "absl::flat_hash_map" );
