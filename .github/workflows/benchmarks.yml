@@ -302,10 +302,12 @@ jobs:
           if [ -n "${{matrix.command}}" ]; then
             set -xe
             export BOOST_BRANCH=develop
+            export BOOST_COMMIT=67c074b249538cf441724f9bbb3929d0f6b4f333
             cd $HOME
             if [ ! -d boost-root ]; then
-              git clone -b $BOOST_BRANCH https://github.com/boostorg/boost.git boost-root --depth 1
+              git clone -b $BOOST_BRANCH https://github.com/boostorg/boost.git boost-root
               cd boost-root
+              git checkout $BOOST_COMMIT
               git submodule update --init --depth 1
               ./bootstrap.sh
               ./b2 headers
@@ -468,10 +470,12 @@ jobs:
           setlocal enabledelayedexpansion
           if "${{matrix.name}}" == "dedicated-server" (
               SET BOOST_BRANCH=develop
+              SET BOOST_COMMIT=67c074b249538cf441724f9bbb3929d0f6b4f333
               cd %userprofile%
               if not exist boost-root/ (
-                  git clone -b !BOOST_BRANCH! https://github.com/boostorg/boost.git boost-root --depth 1
+                  git clone -b !BOOST_BRANCH! https://github.com/boostorg/boost.git boost-root
                   cd boost-root
+                  git checkout !BOOST_COMMIT!
                   git submodule update --init --depth 1
                   cmd /c bootstrap.bat
                   .\b2.exe -d0 headers
