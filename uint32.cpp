@@ -246,8 +246,6 @@ int main()
     test<fca_simple_unordered_map_>( "fca_simple_unordered_map" );
     test<fca_unordered_map_>( "fca_unordered_map" );
     test<fca_switch_unordered_map>( "fca_switch_unordered_map" );
-#endif
-
     test<fca_fmod_unordered_map>( "fca_fmod_unordered_map" );
 
     // frng is spectacularly slow for consecutive uint64 insertion
@@ -263,47 +261,23 @@ int main()
     
     test<fca_pow2_fib_unordered_map>( "fca_pow2_fib_unordered_map" );
     test<fca_fmod_unordered_bucket_map>( "fca_fmod_unordered_bucket_map" );
-
-#ifdef BENCHMARK_EVERYTHING
     test<fca_fmod_bcached_unordered_bucket_map>( "fca_fmod_bcached_unordered_bucket_map" );
     test<fca_fmod_unordered_hybrid_map>( "fca_fmod_unordered_hybrid_map" );
-#endif
-    
     test<fca_fmod_unordered_hybrid_bucket_map>( "fca_fmod_unordered_hybrid_bucket_map" );
-
-#ifdef BENCHMARK_EVERYTHING    
     test<fca_fmod_bcached_unordered_hybrid_bucket_map>( "fca_fmod_bcached_unordered_hybrid_bucket_map" );
     test<fca_fmod_unordered_linear_map>( "fca_fmod_unordered_linear_map" );
-#endif
-    
     test<fca_fmod_unordered_linear_bucket_map>( "fca_fmod_unordered_linear_bucket_map" );
-
-#ifdef BENCHMARK_EVERYTHING    
     test<fca_fmod_bcached_unordered_linear_bucket_map>( "fca_fmod_bcached_unordered_linear_bucket_map" );
     test<fca_fmod_unordered_pool_map>( "fca_fmod_unordered_pool_map" );
-#endif
-    
     test<fca_fmod_unordered_pool_bucket_map>( "fca_fmod_unordered_pool_bucket_map" );
-
-#ifdef BENCHMARK_EVERYTHING    
     test<fca_fmod_bcached_unordered_pool_bucket_map>( "fca_fmod_bcached_unordered_pool_bucket_map" );
     test<fca_fmod_unordered_embedded_map>( "fca_fmod_unordered_embedded_map" );
-#endif
-
     test<fca_fmod_unordered_embedded_bucket_map>( "fca_fmod_unordered_embedded_bucket_map" );
-
-#ifdef BENCHMARK_EVERYTHING    
     test<fca_fmod_bcached_unordered_embedded_bucket_map>( "fca_fmod_bcached_unordered_embedded_bucket_map" );
-#endif
-
     test<foa_fmod_unordered_coalesced_map>( "foa_fmod_unordered_coalesced_map" );
     test<foa_absl_unordered_coalesced_map>( "foa_absl_unordered_coalesced_map" );
     test<foa_fmod_hcached_unordered_coalesced_map>( "foa_fmod_hcached_unordered_coalesced_map" );
-    
-#ifdef BENCHMARK_EVERYTHING    
     test<foa_pow2_fib_unordered_nway_map>( "foa_pow2_fib_unordered_nway_map" );
-#endif
-
     test<foa_fmod_unordered_nwayplus_map>( "foa_fmod_unordered_nwayplus_map" );
     test<foa_pow2_fib_unordered_nwayplus_map>( "foa_pow2_fib_unordered_nwayplus_map" );
     test<foa_absl_unordered_nwayplus_map>( "foa_absl_unordered_nwayplus_map" );
@@ -315,8 +289,6 @@ int main()
     test<foa_absl_unordered_intersoa_nwayplus_map>( "foa_absl_unordered_intersoa_nwayplus_map" );
     test<foa_absl_unordered_soa15_nwayplus_map>( "foa_absl_unordered_soa15_nwayplus_map" );
     test<foa_absl_unordered_intersoa15_nwayplus_map>( "foa_absl_unordered_intersoa15_nwayplus_map" );
-
-#ifdef BENCHMARK_EVERYTHING    
     test<foa_pow2_fib_unordered_coalesced_nwayplus_map>( "foa_pow2_fib_unordered_coalesced_nwayplus_map" );
     test<foa_pow2_fib_unordered_soa_coalesced_nwayplus_map>( "foa_pow2_fib_unordered_soa_coalesced_nwayplus_map" );
     test<foa_frng_fib_unordered_hopscotch_map>( "foa_frng_fib_unordered_hopscotch_map" );

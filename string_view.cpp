@@ -231,65 +231,33 @@ int main()
     test<fca_simple_unordered_map_fnv1a>( "fca_simple_unordered_map, FNV-1a" );
     test<fca_unordered_map_fnv1a>( "fca_unordered_map, FNV-1a" );
     test<fca_switch_unordered_map_fnv1a>( "fca_switch_unordered_map, FNV-1a" );
-#endif
-
     test<fca_fmod_unordered_map_fnv1a>( "fca_fmod_unordered_map, FNV-1a" );
-
-#ifdef BENCHMARK_EVERYTHING
     test<fca_frng_unordered_map_fnv1a>( "fca_frng_unordered_map, FNV-1a" );
-#endif
 
 #if defined(IN_32BIT_ARCHITECTURE)
     test<fca_frng_fib_unordered_map_fnv1a>( "fca_frng_fib_unordered_map, FNV-1a" );
 #endif
 
-#ifdef BENCHMARK_EVERYTHING
     test<fca_pow2_unordered_map_fnv1a>( "fca_pow2_unordered_map, FNV-1a" );
-#endif
-    
     test<fca_pow2_fib_unordered_map_fnv1a>( "fca_pow2_fib_unordered_map, FNV-1a" );
     test<fca_fmod_unordered_bucket_map_fnv1a>( "fca_fmod_unordered_bucket_map, FNV-1a" );
-
-#ifdef BENCHMARK_EVERYTHING
     test<fca_fmod_bcached_unordered_bucket_map_fnv1a>( "fca_fmod_bcached_unordered_bucket_map, FNV-1a" );
     test<fca_fmod_unordered_hybrid_map_fnv1a>( "fca_fmod_unordered_hybrid_map, FNV-1a" );
-#endif
-
     test<fca_fmod_unordered_hybrid_bucket_map_fnv1a>( "fca_fmod_unordered_hybrid_bucket_map, FNV-1a" );
-
-#ifdef BENCHMARK_EVERYTHING
     test<fca_fmod_bcached_unordered_hybrid_bucket_map_fnv1a>( "fca_fmod_bcached_unordered_hybrid_bucket_map_fnv1a, FNV-1a" );
     test<fca_fmod_unordered_linear_map_fnv1a>( "fca_fmod_unordered_linear_map, FNV-1a" );
-#endif
-
     test<fca_fmod_unordered_linear_bucket_map_fnv1a>( "fca_fmod_unordered_linear_bucket_map, FNV-1a" );
-
-#ifdef BENCHMARK_EVERYTHING
     test<fca_fmod_bcached_unordered_linear_bucket_map_fnv1a>( "fca_fmod_bcached_unordered_linear_bucket_map_fnv1a, FNV-1a" );
     test<fca_fmod_unordered_pool_map_fnv1a>( "fca_fmod_unordered_pool_map, FNV-1a" );
-#endif
-
     test<fca_fmod_unordered_pool_bucket_map_fnv1a>( "fca_fmod_unordered_pool_bucket_map, FNV-1a" );
-
-#ifdef BENCHMARK_EVERYTHING
     test<fca_fmod_bcached_unordered_pool_bucket_map_fnv1a>( "fca_fmod_bcached_unordered_pool_bucket_map_fnv1a, FNV-1a" );
     test<fca_fmod_unordered_embedded_map_fnv1a>( "fca_fmod_unordered_embedded_map, FNV-1a" );
-#endif
-    
     test<fca_fmod_unordered_embedded_bucket_map_fnv1a>( "fca_fmod_unordered_embedded_bucket_map, FNV-1a" );
-
-#ifdef BENCHMARK_EVERYTHING
     test<fca_fmod_bcached_unordered_embedded_bucket_map_fnv1a>( "fca_fmod_bcached_unordered_embedded_bucket_map_fnv1a, FNV-1a" );
-#endif
-
     test<foa_fmod_unordered_coalesced_map_fnv1a>( "foa_fmod_unordered_coalesced_map, FNV-1a" );
     test<foa_absl_unordered_coalesced_map_fnv1a>( "foa_absl_unordered_coalesced_map, FNV-1a" );
     test<foa_fmod_hcached_unordered_coalesced_map_fnv1a>( "foa_fmod_hcached_unordered_coalesced_map, FNV-1a" );
-
-#ifdef BENCHMARK_EVERYTHING    
     test<foa_pow2_fib_unordered_nway_map_fnv1a>( "foa_pow2_fib_unordered_nway_map, FNV-1a" );
-#endif
-
     test<foa_fmod_unordered_nwayplus_map_fnv1a>( "foa_fmod_unordered_nwayplus_map, FNV-1a" );
     test<foa_pow2_fib_unordered_nwayplus_map_fnv1a>( "foa_pow2_fib_unordered_nwayplus_map, FNV-1a" );
     test<foa_absl_unordered_nwayplus_map_fnv1a>( "foa_absl_unordered_nwayplus_map, FNV-1a" );
@@ -301,8 +269,6 @@ int main()
     test<foa_absl_unordered_intersoa_nwayplus_map_fnv1a>( "foa_absl_unordered_intersoa_nwayplus_map, FNV-1a" );
     test<foa_absl_unordered_soa15_nwayplus_map_fnv1a>( "foa_absl_unordered_soa15_nwayplus_map, FNV-1a" );
     test<foa_absl_unordered_intersoa15_nwayplus_map_fnv1a>( "foa_absl_unordered_intersoa15_nwayplus_map, FNV-1a" );
-
-#ifdef BENCHMARK_EVERYTHING    
     test<foa_pow2_fib_unordered_coalesced_nwayplus_map_fnv1a>( "foa_pow2_fib_unordered_coalesced_nwayplus_map, FNV-1a" );
     test<foa_pow2_fib_unordered_soa_coalesced_nwayplus_map_fnv1a>( "foa_pow2_fib_unordered_soa_coalesced_nwayplus_map, FNV-1a" );
     test<foa_frng_fib_unordered_hopscotch_map_fnv1a>( "foa_frng_fib_unordered_hopscotch_map, FNV-1a" );
