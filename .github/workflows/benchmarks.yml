@@ -301,7 +301,7 @@ jobs:
         run: |
           if [ -n "${{matrix.command}}" ]; then
             set -xe
-            export BOOST_BRANCH=boost-1.78.0
+            export BOOST_BRANCH=develop
             cd $HOME
             if [ ! -d boost-root ]; then
               git clone -b $BOOST_BRANCH https://github.com/boostorg/boost.git boost-root --depth 1
@@ -318,7 +318,7 @@ jobs:
             cd $GITHUB_WORKSPACE
             git clone https://github.com/boostorg/boost.git boost-root
             cd boost-root
-            git checkout boost-1.78.0
+            git checkout develop
             git submodule update --init
             ./bootstrap.sh
             ./b2 -d0 headers
@@ -467,7 +467,7 @@ jobs:
           @ECHO ON
           setlocal enabledelayedexpansion
           if "${{matrix.name}}" == "dedicated-server" (
-              SET BOOST_BRANCH=boost-1.78.0
+              SET BOOST_BRANCH=develop
               cd %userprofile%
               if not exist boost-root/ (
                   git clone -b !BOOST_BRANCH! https://github.com/boostorg/boost.git boost-root --depth 1
@@ -482,7 +482,7 @@ jobs:
               cd %GITHUB_WORKSPACE%
               git clone https://github.com/boostorg/boost.git boost-root
               cd boost-root
-              git checkout boost-1.78.0
+              git checkout develop
               git submodule update --init
               cmd /c bootstrap.bat
               .\b2.exe -d0 headers
