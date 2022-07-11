@@ -516,7 +516,7 @@ jobs:
               call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{matrix.architecture}}
           )
 
-          set INCLUDE=%INCLUDE%;!BOOST_ROOT!
+          set INCLUDE=%INCLUDE%;%BOOST_ROOT%
           set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\abseil-root
           set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\fastrange-root
           echo %INCLUDE%
