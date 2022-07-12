@@ -120,11 +120,8 @@ struct wyhash_hash
 {
   std::size_t operator()(const T& x) const
   {
-    return ::wyhash(&x,sizeof(T),0,secret);
+    return ::wyhash(&x, sizeof(T), 0, ::_wyp);
   }
-
-private:
-  static constexpr uint64_t secret[]={0x3423fu, 0xabb028u, 0x2229ab4bu, 0xfff000123u};
 };
 
 // fxa_unordered variations
