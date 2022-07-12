@@ -118,7 +118,7 @@ struct var13_hash
 template<class T>
 struct wyhash_hash
 {
-  std::size_t operator()(const T& x)
+  std::size_t operator()(const T& x) const
   {
     return ::wyhash(&x,sizeof(T),0,&secret);
   }
