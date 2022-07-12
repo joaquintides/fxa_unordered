@@ -93,7 +93,26 @@ template<class K, class V> using multi_index_map = multi_index_container<
   ::allocator< pair<K, V> >
 >;
 
-// alternative size policies / bucket arrays for fca_unordered
+// var13 mixer
+
+template<class T>
+struct var13_hash
+{
+  std::size_t operator()(const T& x) const
+  {
+    boost::uint64_t z = boost::hash<T>()(x);
+
+    z ^= z >> 30;
+    z *= ( boost::uint64_t(0xbf58476du) << 32 ) + 0x1ce4e5b9u;
+    z ^= z >> 27;
+    z *= ( boost::uint64_t(0x94d049bbu) << 32 ) + 0x133111ebu;
+    z ^= z >> 31;
+
+    return (std::size_t)z; // good results only in 64 bits
+  }
+};
+
+// fxa_unordered variations
 
 template<class K, class V, class H=boost::hash<K>>
 using fca_switch_unordered_map =
@@ -439,6 +458,20 @@ using foa_absl_unordered_rc16_map =
 
 template<class K, class V, class H=absl::container_internal::hash_default_hash<K>>
 using foa_absl_unordered_rc15_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group15>;
+
+template<class K, class V, class H=var13_hash<K>>
+using foa_var13_unordered_rc16_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group16>;
+
+template<class K, class V, class H=var13_hash<K>>
+using foa_var13_unordered_rc15_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,

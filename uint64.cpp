@@ -305,6 +305,11 @@ int main()
     test<foa_absl_unordered_rc16_map>( "foa_absl_unordered_rc16_map" );
     test<foa_absl_unordered_rc15_map>( "foa_absl_unordered_rc15_map" );
 
+#if !defined(IN_32BIT_ARCHITECTURE)
+    test<foa_var13_unordered_rc16_map>( "foa_var13_unordered_rc16_map" );
+    test<foa_var13_unordered_rc15_map>( "foa_var13_unordered_rc15_map" );
+#endif
+
 #ifdef HAVE_ABSEIL
     test<absl_node_hash_map>( "absl::node_hash_map" );
     test<absl_flat_hash_map>( "absl::flat_hash_map" );
