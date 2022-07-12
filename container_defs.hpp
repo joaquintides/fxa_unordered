@@ -25,6 +25,7 @@
 #include "foa_unordered_hopscotch.hpp"
 #include "foa_unordered_longhop.hpp"
 #include "foa_unordered_rc.hpp"
+#include "wyhash.h"
 #ifdef HAVE_ABSEIL
 # include "absl/container/node_hash_map.h"
 # include "absl/container/flat_hash_map.h"
@@ -110,6 +111,20 @@ struct var13_hash
 
     return (std::size_t)z; // good results only in 64 bits
   }
+};
+
+// wyhash
+
+template<class T>
+struct wyhash_hash
+{
+  std::size_t operator()(const T& x)
+  {
+    return ::wyhash(&x,sizeof(T),0,&secret);
+  }
+
+private:
+  uint64_t secret[]={0x3423fu, 0xabb028u, 0x2229ab4bu, 0xfff000123u};
 };
 
 // fxa_unordered variations
@@ -494,6 +509,20 @@ using foa_lowvar13_unordered_rc15_map =
     fxa_unordered::rc::group15,
     fxa_unordered::low_pow2_size,
     fxa_unordered::shift_hash<8>>;
+
+template<class K, class V, class H=wyhash_hash<T>>
+using foa_wyhash_unordered_rc16_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group16>;
+
+template<class K, class V, class H=wyhash_hash<T>>
+using foa_wyhash_unordered_rc15_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group15>;
 
 // fnv1a_hash
 

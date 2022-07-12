@@ -310,6 +310,8 @@ int main()
     test<foa_var13_unordered_rc15_map>( "foa_var13_unordered_rc15_map" );
     test<foa_lowvar13_unordered_rc16_map>( "foa_lowvar13_unordered_rc16_map" );
     test<foa_lowvar13_unordered_rc15_map>( "foa_lowvar13_unordered_rc15_map" );
+    test<foa_wyhash_unordered_rc16_map>( "foa_wyhash_unordered_rc16_map" );
+    test<foa_wyhash_unordered_rc15_map>( "foa_wyhash_unordered_rc15_map" );
 #endif
 
 #ifdef HAVE_ABSEIL
