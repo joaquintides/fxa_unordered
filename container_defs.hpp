@@ -120,7 +120,7 @@ struct wyhash_hash
 {
   std::size_t operator()(const T& x) const
   {
-    return ::wyhash(&x,sizeof(T),0,&secret);
+    return ::wyhash(&x,sizeof(T),0,secret);
   }
 
 private:
