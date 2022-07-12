@@ -510,14 +510,14 @@ using foa_lowvar13_unordered_rc15_map =
     fxa_unordered::low_pow2_size,
     fxa_unordered::shift_hash<8>>;
 
-template<class K, class V, class H=wyhash_hash<T>>
+template<class K, class V, class H=wyhash_hash<K>>
 using foa_wyhash_unordered_rc16_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::rc::group16>;
 
-template<class K, class V, class H=wyhash_hash<T>>
+template<class K, class V, class H=wyhash_hash<K>>
 using foa_wyhash_unordered_rc15_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
