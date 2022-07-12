@@ -471,11 +471,29 @@ using foa_var13_unordered_rc16_map =
     fxa_unordered::rc::group16>;
 
 template<class K, class V, class H=var13_hash<K>>
+using foa_lowvar13_unordered_rc16_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group16,
+    fxa_unordered::low_pow2_size,
+    fxa_unordered::shift_hash<7>>;
+
+template<class K, class V, class H=var13_hash<K>>
 using foa_var13_unordered_rc15_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::rc::group15>;
+
+template<class K, class V, class H=var13_hash<K>>
+using foa_lowvar13_unordered_rc15_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group15,
+    fxa_unordered::low_pow2_size,
+    fxa_unordered::shift_hash<8>>;
 
 // fnv1a_hash
 
