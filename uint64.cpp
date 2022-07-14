@@ -306,10 +306,8 @@ int main()
     test<foa_absl_unordered_rc15_map>( "foa_absl_unordered_rc15_map" );
 
 #if !defined(IN_32BIT_ARCHITECTURE)
-    test<foa_var13_unordered_rc16_map>( "foa_var13_unordered_rc16_map" );
-    test<foa_var13_unordered_rc15_map>( "foa_var13_unordered_rc15_map" );
-    test<foa_lowvar13_unordered_rc16_map>( "foa_lowvar13_unordered_rc16_map" );
-    test<foa_lowvar13_unordered_rc15_map>( "foa_lowvar13_unordered_rc15_map" );
+    test<foa_mxm_unordered_rc16_map>( "foa_mxm_unordered_rc16_map" );
+    test<foa_mxm_unordered_rc15_map>( "foa_mxm_unordered_rc15_map" );
     test<foa_xmx_unordered_rc16_map>( "foa_xmx_unordered_rc16_map" );
     test<foa_xmx_unordered_rc15_map>( "foa_xmx_unordered_rc15_map" );
 #endif
