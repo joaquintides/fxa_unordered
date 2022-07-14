@@ -122,7 +122,7 @@ struct xmx_hash
     boost::uint64_t z = boost::hash<T>()(x);
 
     z ^= z >> 23;
-	  z *= 0zff51afd7ed558ccdull;
+	  z *= 0xff51afd7ed558ccdull;
 	  z ^= z >> 23;
 
     return (std::size_t)z; // good results only in 64 bits
