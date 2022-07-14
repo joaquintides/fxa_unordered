@@ -25,7 +25,6 @@
 #include "foa_unordered_hopscotch.hpp"
 #include "foa_unordered_longhop.hpp"
 #include "foa_unordered_rc.hpp"
-#include "wyhash.h"
 #ifdef HAVE_ABSEIL
 # include "absl/container/node_hash_map.h"
 # include "absl/container/flat_hash_map.h"
@@ -113,14 +112,20 @@ struct var13_hash
   }
 };
 
-// wyhash
+// xmx
 
 template<class T>
-struct wyhash_hash
+struct xmx_hash
 {
   std::size_t operator()(const T& x) const
   {
-    return ::wyhash(&x, sizeof(T), 0, ::_wyp);
+    boost::uint64_t z = boost::hash<T>()(x);
+
+    z ^= z >> 23;
+	  z *= 0zff51afd7ed558ccdull;
+	  z ^= z >> 23;
+
+    return (std::size_t)z; // good results only in 64 bits
   }
 };
 
@@ -507,15 +512,15 @@ using foa_lowvar13_unordered_rc15_map =
     fxa_unordered::low_pow2_size,
     fxa_unordered::shift_hash<8>>;
 
-template<class K, class V, class H=wyhash_hash<K>>
-using foa_wyhash_unordered_rc16_map =
+template<class K, class V, class H=xmx_hash<K>>
+using foa_xmx_unordered_rc16_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::rc::group16>;
 
-template<class K, class V, class H=wyhash_hash<K>>
-using foa_wyhash_unordered_rc15_map =
+template<class K, class V, class H=xmx_hash<K>>
+using foa_xmx_unordered_rc15_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
