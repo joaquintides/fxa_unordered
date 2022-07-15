@@ -346,6 +346,23 @@ private:
   std::aligned_storage_t<sizeof(T),alignof(T)> storage;
 };
 
+struct pow2_prober
+{
+  pow2_prober(std::size_t pos,std::size_t size):
+    pos{pos},pow2mask{size-1}{}
+
+  std::size_t get()const{return pos;}
+
+  void next()
+  {
+    pos=(pos+step)&pow2mask;
+    step+=1;
+  }
+
+private:
+  std::size_t pos,step=0,pow2mask;
+};
+
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
@@ -559,19 +576,16 @@ private:
   iterator find_impl(const Key& x)const
   {    
     auto        hash=h(x);
-    auto        pos=position_for(hash_split_policy::long_hash(hash));
+    auto        pos0=position_for(hash_split_policy::long_hash(hash));
     auto        short_hash=hash_split_policy::short_hash(hash);
-    std::size_t step=1;
-    for(;;){
+    for(pow2_prober pb(pos0,groups.size());;pb.next()){
+      auto pos=pb.get();
       if(auto pe=find_in_group(x,pos,short_hash)){
         return {groups.data()+pos,std::size_t(pe-(elements.data()+pos*N)),pe};
       }
       if(groups[pos].check_empty()){
         return end();
       }
-
-      pos=(pos+step)&(groups.size()-1);
-      step+=1;
     }
   }
 
@@ -580,18 +594,14 @@ private:
   {
     auto        hash=h(x);
     auto        long_hash=hash_split_policy::long_hash(hash);
-    auto        pos0=position_for(long_hash),
-                pos=pos0;
+    auto        pos0=position_for(long_hash);
     auto        short_hash=hash_split_policy::short_hash(hash);
-    std::size_t step=1;
-    for(;;){     
+    for(pow2_prober pb(pos0,groups.size());;pb.next()){
+      auto pos=pb.get();
       if(auto pe=find_in_group(x,pos,short_hash)){
         return {{groups.data()+pos,std::size_t(pe-(elements.data()+pos*N)),pe},false};
       }
       if(groups[pos].check_empty())break;
-
-      pos=(pos+step)&(groups.size()-1);
-      step+=1;
     }
 
     if(BOOST_UNLIKELY(size_+1>ml)){
@@ -599,9 +609,8 @@ private:
       return {unchecked_insert(std::forward<Value>(x),long_hash,short_hash),true};
     }
 
-    pos=pos0;
-    step=1;
-    for(;;){
+    for(pow2_prober pb(pos0,groups.size());;pb.next()){
+      auto pos=pb.get();
       auto pg=groups.data()+pos;
       if(auto mask=pg->match_empty_or_deleted()){
         FXA_ASSUME(mask!=0);
@@ -612,9 +621,6 @@ private:
         ++size_;
         return {{pg,std::size_t(n),pe},true};    
       }
-
-      pos=(pos+step)&(groups.size()-1);
-      step+=1;
     }
   }
 
@@ -665,26 +671,20 @@ private:
   iterator unchecked_insert(
     Value&& x,std::size_t long_hash,unsigned char short_hash)
   {
-    auto        pos=position_for(long_hash);
-    int         n;
-    std::size_t step=1;
-    for(;;){     
+    auto        pos0=position_for(long_hash);
+    for(pow2_prober pb(pos0,groups.size());;pb.next()){
+      auto pos=pb.get();
       if(auto mask=groups[pos].match_empty_or_deleted()){
         FXA_ASSUME(mask!=0);
-        n=boost::core::countr_zero((unsigned int)mask);
-        break;
+        int n=boost::core::countr_zero((unsigned int)mask);
+        auto pg=groups.data()+pos;
+        auto pe=elements.data()+pos*N+n;
+        construct_element(std::forward<Value>(x),pe->data());
+        pg->set(n,short_hash);
+        ++size_;
+        return {pg,std::size_t(n),pe};
       }
-
-      pos=(pos+step)&(groups.size()-1);
-      step+=1;
     }
-
-    auto pg=groups.data()+pos;
-    auto pe=elements.data()+pos*N+n;
-    construct_element(std::forward<Value>(x),pe->data());
-    pg->set(n,short_hash);
-    ++size_;
-    return {pg,std::size_t(n),pe};
   }
 
   size_type max_load()const
