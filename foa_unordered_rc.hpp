@@ -576,9 +576,11 @@ private:
   iterator find_impl(const Key& x)const
   {    
     auto        hash=h(x);
-    auto        pos0=position_for(hash_split_policy::long_hash(hash));
+    auto        pos0=;
     auto        short_hash=hash_split_policy::short_hash(hash);
-    for(pow2_prober pb(pos0,groups.size());;pb.next()){
+    for(pow2_prober pb(
+         position_for(hash_split_policy::long_hash(hash)),
+         groups.size());;pb.next()){
       auto pos=pb.get();
       if(auto pe=find_in_group(x,pos,short_hash)){
         return {groups.data()+pos,std::size_t(pe-(elements.data()+pos*N)),pe};
