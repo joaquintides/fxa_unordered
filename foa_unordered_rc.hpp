@@ -360,7 +360,7 @@ struct pow2_prober
   }
 
 private:
-  std::size_t pos,step=0,pow2mask;
+  std::size_t pos,step=1,pow2mask;
 };
 
 template<
