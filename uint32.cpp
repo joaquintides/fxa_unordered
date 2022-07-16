@@ -328,7 +328,7 @@ int main()
     {
         std::cout << std::setw(label_witdh) << (x.label_ + ": ") <<
         std::setw( 5 ) << x.time_ << " ms, " <<
-        std::setw( 6 ) << (double)x.time_ * x.bytes_ / 1'048'576 / 1'000 << " us*MB, " <<
+        std::setw( 7 ) << (double)x.time_ * x.bytes_ / 1'048'576 / 1'000 << " us*MB, " <<
         std::setw( 9 ) << x.bytes_ << " bytes in " << x.count_ << " allocations\n";
     }
 
