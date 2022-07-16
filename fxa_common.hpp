@@ -367,6 +367,21 @@ struct shift_mod_hash
   static inline std::size_t short_hash(std::size_t hash){return hash%Mod;}
 };
 
+struct xm_hash
+{
+  static inline std::size_t long_hash(std::size_t hash){return hash;}
+
+  static inline std::size_t short_hash(std::size_t hash)
+  {
+    boost::uint64_t z = hash;
+
+    z ^= z >> 23;
+    z *= 0xff51afd7ed558ccdull;
+
+    return (std::size_t)(hash>>(sizeof(boost::uint64_t)*8-8));
+  }
+};
+
 template<class Key,class Value>
 struct map_value_adaptor
 {

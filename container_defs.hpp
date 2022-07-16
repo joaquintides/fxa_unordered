@@ -517,6 +517,26 @@ using foa_fmod_unordered_rc15_map =
     fxa_unordered::rc::nonpow2_prober,
     fxa_unordered::shift_mod_hash<0,257>>;
 
+template<class K, class V, class H=boost::hash<K>>
+using foa_fmodxm_unordered_rc16_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group16,
+    fxa_unordered::prime_fmod_size,
+    fxa_unordered::rc::nonpow2_prober,
+    fxa_unordered::xm_hash>;
+
+template<class K, class V, class H=boost::hash<K>>
+using foa_fmodxm_unordered_rc15_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group15,
+    fxa_unordered::prime_fmod_size,
+    fxa_unordered::rc::nonpow2_prober,
+    fxa_unordered::xm_hash>;
+
 template<class K, class V, class H=absl::container_internal::hash_default_hash<K>>
 using foa_absl_unordered_rc16_map =
   foa_unordered_rc_map<
@@ -845,6 +865,12 @@ template<class K, class V> using foa_fmod_unordered_rc16_map_fnv1a =
 
 template<class K, class V> using foa_fmod_unordered_rc15_map_fnv1a =
   foa_fmod_unordered_rc15_map<K, V, fnv1a_hash>;
+
+template<class K, class V> using foa_fmodxm_unordered_rc16_map_fnv1a =
+  foa_fmodxm_unordered_rc16_map<K, V, fnv1a_hash>;
+
+template<class K, class V> using foa_fmodxm_unordered_rc15_map_fnv1a =
+  foa_fmodxm_unordered_rc15_map<K, V, fnv1a_hash>;
 
 template<class K, class V> using foa_absl_unordered_rc16_map_fnv1a =
   foa_absl_unordered_rc16_map<K, V, fnv1a_hash>;
