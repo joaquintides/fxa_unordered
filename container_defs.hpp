@@ -127,7 +127,23 @@ struct xmx_hash
   }
 };
 
-// xmx
+// xm
+
+template<class T>
+struct xm_hash
+{
+  std::size_t operator()(const T& x) const
+  {
+    boost::uint64_t z = boost::hash<T>()(x);
+
+    z ^= z >> 23;
+    z *= 0xff51afd7ed558ccdull;
+
+    return (std::size_t)z; // good results only in 64 bits
+  }
+};
+
+// fast_hash
 
 template<class T>
 struct fast_hash
@@ -538,6 +554,20 @@ using foa_xmx_unordered_rc16_map =
 
 template<class K, class V, class H=xmx_hash<K>>
 using foa_xmx_unordered_rc15_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group15>;
+
+template<class K, class V, class H=xm_hash<K>>
+using foa_xm_unordered_rc16_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group16>;
+
+template<class K, class V, class H=xm_hash<K>>
+using foa_xm_unordered_rc15_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
