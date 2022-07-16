@@ -360,11 +360,11 @@ struct shift_hash
   static inline std::size_t short_hash(std::size_t hash){return hash;}
 };
 
-template<unsigned N>
+template<unsigned N,unsigned Mod=127>
 struct shift_mod_hash
 {
   static inline std::size_t long_hash(std::size_t hash){return hash>>N;}
-  static inline std::size_t short_hash(std::size_t hash){return hash%127;}
+  static inline std::size_t short_hash(std::size_t hash){return hash%Mod;}
 };
 
 template<class Key,class Value>

@@ -362,16 +362,37 @@ private:
   std::size_t pos,step=0;
 };
 
+struct nonpow2_prober
+{
+  nonpow2_prober(std::size_t pos):pos{pos}{}
+
+  std::size_t get()const{return pos;}
+
+  void next(std::size_t size)
+  {
+    for(;;){
+      step+=1;
+      pos=(pos+step)&(boost::core::bit_ceil(size)-1);
+      if(pos<size)break;
+    }
+  }
+
+private:
+  std::size_t pos,step=0;
+};
+
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
   typename Group=group15,
-  typename SizePolicy=pow2_size, // growth must be in powers of two
+  typename SizePolicy=pow2_size,
+  typename Prober=pow2_prober, // must match growing policy
   typename HashSplitPolicy=shift_hash<0>
 >
 class foa_unordered_rc_set 
 {
   using size_policy=SizePolicy;
+  using prober=Prober;
   using hash_split_policy=HashSplitPolicy;
   using alloc_traits=std::allocator_traits<Allocator>;
   using group_type=Group;
@@ -576,7 +597,7 @@ private:
   {    
     auto        hash=h(x);
     auto        short_hash=hash_split_policy::short_hash(hash);
-    for(pow2_prober pb(position_for(hash_split_policy::long_hash(hash)));;
+    for(prober pb(position_for(hash_split_policy::long_hash(hash)));;
         pb.next(groups.size())){
       auto pos=pb.get();
       if(auto pe=find_in_group(x,pos,short_hash)){
@@ -595,7 +616,7 @@ private:
     auto        long_hash=hash_split_policy::long_hash(hash);
     auto        pos0=position_for(long_hash);
     auto        short_hash=hash_split_policy::short_hash(hash);
-    for(pow2_prober pb(pos0);;pb.next(groups.size())){
+    for(prober pb(pos0);;pb.next(groups.size())){
       auto pos=pb.get();
       if(auto pe=find_in_group(x,pos,short_hash)){
         return {{groups.data()+pos,std::size_t(pe-(elements.data()+pos*N)),pe},false};
@@ -608,7 +629,7 @@ private:
       return {unchecked_insert(std::forward<Value>(x),long_hash,short_hash),true};
     }
 
-    for(pow2_prober pb(pos0);;pb.next(groups.size())){
+    for(prober pb(pos0);;pb.next(groups.size())){
       auto pos=pb.get();
       auto pg=groups.data()+pos;
       if(auto mask=pg->match_empty_or_deleted()){
@@ -671,7 +692,7 @@ private:
     Value&& x,std::size_t long_hash,unsigned char short_hash)
   {
     auto        pos0=position_for(long_hash);
-    for(pow2_prober pb(pos0);;pb.next(groups.size())){
+    for(prober pb(pos0);;pb.next(groups.size())){
       auto pos=pb.get();
       if(auto mask=groups[pos].match_empty_or_deleted()){
         FXA_ASSUME(mask!=0);
@@ -717,12 +738,13 @@ template<
   typename Allocator=std::allocator<map_value_adaptor<Key,Value>>,
   typename Group=group15,
   typename SizePolicy=pow2_size,
+  typename Prober=pow2_prober,
   typename HashSplitPolicy=shift_hash<0>
 >
 using foa_unordered_rc_map=foa_unordered_rc_set<
   map_value_adaptor<Key,Value>,
   map_hash_adaptor<Hash>,map_pred_adaptor<Pred>,
-  Allocator,Group,SizePolicy,HashSplitPolicy
+  Allocator,Group,SizePolicy,Prober,HashSplitPolicy
 >;
 
 } // namespace rc

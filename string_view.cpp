@@ -277,6 +277,8 @@ int main()
     test<foa_absl_unordered_longhop_map_fnv1a>( "foa_absl_unordered_longhop_map, FNV-1a" );
 #endif
 
+    test<foa_fmod_unordered_rc16_map_fnv1a>( "foa_fmod_unordered_rc16_map, FNV-1a" );
+    test<foa_fmod_unordered_rc15_map_fnv1a>( "foa_fmod_unordered_rc15_map, FNV-1a" );
     test<foa_absl_unordered_rc16_map_fnv1a>( "foa_absl_unordered_rc16_map, FNV-1a" );
     test<foa_absl_unordered_rc15_map_fnv1a>( "foa_absl_unordered_rc15_map, FNV-1a" );
 
