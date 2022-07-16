@@ -502,13 +502,6 @@ using foa_fmod_unordered_rc15_map =
     fxa_unordered::shift_mod_hash<0,257>>;
 
 template<class K, class V, class H=absl::container_internal::hash_default_hash<K>>
-using foa_absl_unordered_rc15_map =
-  foa_unordered_rc_map<
-    K, V, H,std::equal_to<K>,
-    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
-    fxa_unordered::rc::group15>;
-
-template<class K, class V, class H=absl::container_internal::hash_default_hash<K>>
 using foa_absl_unordered_rc16_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
