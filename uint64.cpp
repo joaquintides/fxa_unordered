@@ -326,13 +326,16 @@ int main()
     int label_witdh = 0;
     for( auto const& x: times ) label_witdh = (std::max)((int)( x.label_ + ": " ).size(), label_witdh);
     
-    for( auto const& x: times )
-    {
-        std::cout << std::setw( label_witdh ) << ( x.label_ + ": " ) << std::setw( 5 ) << x.time_ << " ms, " << std::setw( 9 ) << x.bytes_ << " bytes in " << x.count_ << " allocations\n";
-    }
-
     auto precision = std::cout.precision();
-    std::cout << std::fixed <<std::setprecision(2);
+    std::cout << std::fixed << std::setprecision(2);
+
+    for (auto const& x : times)
+    {
+        std::cout << std::setw(label_witdh) << (x.label_ + ": ") <<
+        std::setw( 5 ) << x.time_ << " ms, " <<
+        std::setw( 6 ) << (double)x.time_ * x.bytes_ / 1'048'576 / 1'000 << " us*MB, " <<
+        std::setw( 9 ) << x.bytes_ << " bytes in " << x.count_ << " allocations\n";
+    }
 
     auto [pmint, pmaxt] = boost::minmax_element(
         times.begin(), times.end(), [](const record& x, const record& y){ return x.time_< y.time_; });
