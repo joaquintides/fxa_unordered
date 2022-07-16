@@ -576,9 +576,8 @@ private:
   {    
     auto        hash=h(x);
     auto        short_hash=hash_split_policy::short_hash(hash);
-    for(pow2_prober pb(
-         position_for(hash_split_policy::long_hash(hash)),
-         groups.size());;pb.next(groups.size())){
+    for(pow2_prober pb(position_for(hash_split_policy::long_hash(hash)));;
+        pb.next(groups.size())){
       auto pos=pb.get();
       if(auto pe=find_in_group(x,pos,short_hash)){
         return {groups.data()+pos,std::size_t(pe-(elements.data()+pos*N)),pe};
@@ -596,7 +595,7 @@ private:
     auto        long_hash=hash_split_policy::long_hash(hash);
     auto        pos0=position_for(long_hash);
     auto        short_hash=hash_split_policy::short_hash(hash);
-    for(pow2_prober pb(pos0,groups.size());;pb.next(groups.size())){
+    for(pow2_prober pb(pos0);;pb.next(groups.size())){
       auto pos=pb.get();
       if(auto pe=find_in_group(x,pos,short_hash)){
         return {{groups.data()+pos,std::size_t(pe-(elements.data()+pos*N)),pe},false};
@@ -609,7 +608,7 @@ private:
       return {unchecked_insert(std::forward<Value>(x),long_hash,short_hash),true};
     }
 
-    for(pow2_prober pb(pos0,groups.size());;pb.next(groups.size())){
+    for(pow2_prober pb(pos0);;pb.next(groups.size())){
       auto pos=pb.get();
       auto pg=groups.data()+pos;
       if(auto mask=pg->match_empty_or_deleted()){
@@ -672,7 +671,7 @@ private:
     Value&& x,std::size_t long_hash,unsigned char short_hash)
   {
     auto        pos0=position_for(long_hash);
-    for(pow2_prober pb(pos0,groups.size());;pb.next(groups.size())){
+    for(pow2_prober pb(pos0);;pb.next(groups.size())){
       auto pos=pb.get();
       if(auto mask=groups[pos].match_empty_or_deleted()){
         FXA_ASSUME(mask!=0);
