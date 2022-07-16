@@ -378,7 +378,7 @@ struct xm_hash
     z ^= z >> 23;
     z *= 0xff51afd7ed558ccdull;
 
-    return (std::size_t)(hash>>(sizeof(boost::uint64_t)*8-8));
+    return (std::size_t)(z>>(sizeof(boost::uint64_t)*8-8));
   }
 };
 
