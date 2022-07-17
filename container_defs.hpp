@@ -143,10 +143,10 @@ struct xm_hash
   }
 };
 
-// split_mix_1
+// splitmix_1
 
 template<class T>
-struct split_mix_1
+struct splitmix_1
 {
   std::size_t operator()(const T& x) const
   {
@@ -592,14 +592,14 @@ using foa_xm_unordered_rc15_map =
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::rc::group15>;
 
-template<class K, class V, class H=split_mix_1<K>>
+template<class K, class V, class H=splitmix_1<K>>
 using foa_smx1_unordered_rc16_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::rc::group16>;
 
-template<class K, class V, class H=split_mix_1<K>>
+template<class K, class V, class H=splitmix_1<K>>
 using foa_smx1_unordered_rc15_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
