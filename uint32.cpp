@@ -311,6 +311,8 @@ int main()
     test<foa_xmx_unordered_rc15_map>( "foa_xmx_unordered_rc15_map" );
     test<foa_xm_unordered_rc16_map>( "foa_xm_unordered_rc16_map" );
     test<foa_xm_unordered_rc15_map>( "foa_xm_unordered_rc15_map" );
+    test<foa_hxm_unordered_rc16_map>( "foa_xm_unordered_rc16_map" );
+    test<foa_hxm_unordered_rc15_map>( "foa_xm_unordered_rc15_map" );
     test<foa_smx1_unordered_rc16_map>( "foa_smx1_unordered_rc16_map" );
     test<foa_smx1_unordered_rc15_map>( "foa_smx1_unordered_rc15_map" );
 #endif
