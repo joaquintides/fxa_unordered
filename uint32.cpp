@@ -315,6 +315,8 @@ int main()
     test<foa_hxm_unordered_rc15_map>( "foa_hxm_unordered_rc15_map" );
     test<foa_smx1_unordered_rc16_map>( "foa_smx1_unordered_rc16_map" );
     test<foa_smx1_unordered_rc15_map>( "foa_smx1_unordered_rc15_map" );
+    test<foa_hsmx1_unordered_rc16_map>( "foa_hsmx1_unordered_rc16_map" );
+    test<foa_hsmx1_unordered_rc15_map>( "foa_hsmx1_unordered_rc15_map" );
 #endif
 
 #ifdef HAVE_ABSEIL

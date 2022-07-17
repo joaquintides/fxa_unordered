@@ -626,6 +626,26 @@ using foa_smx1_unordered_rc15_map =
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::rc::group15>;
 
+template<class K, class V, class H=splitmix_1<K>>
+using foa_hsmx1_unordered_rc16_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group16,
+    fxa_unordered::pow2_size,
+    fxa_unordered::rc::pow2_prober,
+    fxa_unordered::rshift_hash<7>>;
+
+template<class K, class V, class H=splitmix_1<K>>
+using foa_hsmx1_unordered_rc15_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group15,
+    fxa_unordered::pow2_size,
+    fxa_unordered::rc::pow2_prober,
+    fxa_unordered::rshift_hash<8>>;
+
 // fnv1a_hash
 
 template<int Bits> struct fnv1a_hash_impl;
