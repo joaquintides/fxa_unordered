@@ -574,7 +574,8 @@ private:
   }
 
   template<typename Key>
-  const element_type* find_in_group(
+  std::pair<const element_type*,int>
+  find_in_group(
     const Key& x,std::size_t pos,unsigned char short_hash)const
   {
     auto pg=groups.data()+pos;
@@ -585,11 +586,11 @@ private:
       do{
         FXA_ASSUME(mask!=0);
         auto n=boost::core::countr_zero((unsigned int)mask);
-        if(BOOST_LIKELY(pred(x,pe[n].value())))return pe+n;
+        if(BOOST_LIKELY(pred(x,pe[n].value())))return {pe+n,n};
         mask&=mask-1;
       }while(mask);
     }
-    return nullptr;
+    return {nullptr,0};
   }
 
   template<typename Key>
@@ -600,8 +601,9 @@ private:
     for(prober pb(position_for(hash_split_policy::long_hash(hash)));;
         pb.next(groups.size())){
       auto pos=pb.get();
-      if(auto pe=find_in_group(x,pos,short_hash)){
-        return {groups.data()+pos,std::size_t(pe-(elements.data()+pos*N)),pe};
+      auto [pe,n]=find_in_group(x,pos,short_hash);
+      if(pe){
+        return {groups.data()+pos,(std::size_t)(n),pe};
       }
       if(groups[pos].check_empty()){
         return end();
@@ -618,8 +620,9 @@ private:
     auto        short_hash=hash_split_policy::short_hash(hash);
     for(prober pb(pos0);;pb.next(groups.size())){
       auto pos=pb.get();
-      if(auto pe=find_in_group(x,pos,short_hash)){
-        return {{groups.data()+pos,std::size_t(pe-(elements.data()+pos*N)),pe},false};
+      auto [pe,n]=find_in_group(x,pos,short_hash);
+      if(pe){
+        return {{groups.data()+pos,(std::size_t)(n),pe},false};
       }
       if(groups[pos].check_empty())break;
     }
