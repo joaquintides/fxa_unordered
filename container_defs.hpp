@@ -550,6 +550,26 @@ using foa_absl_unordered_rc15_map =
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::rc::group15>;
 
+template<class K, class V, class H=absl::container_internal::hash_default_hash<K>>
+using foa_habsl_unordered_rc16_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group16,
+    fxa_unordered::pow2_size,
+    fxa_unordered::rc::pow2_prober,
+    fxa_unordered::rshift_hash<7>>;
+
+template<class K, class V, class H=absl::container_internal::hash_default_hash<K>>
+using foa_habsl_unordered_rc15_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group15,
+    fxa_unordered::pow2_size,
+    fxa_unordered::rc::pow2_prober,
+    fxa_unordered::rshift_hash<8>>;
+
 template<class K, class V, class H=mxm_hash<K>>
 using foa_mxm_unordered_rc16_map =
   foa_unordered_rc_map<
@@ -916,6 +936,12 @@ template<class K, class V> using foa_absl_unordered_rc16_map_fnv1a =
 
 template<class K, class V> using foa_absl_unordered_rc15_map_fnv1a =
   foa_absl_unordered_rc15_map<K, V, fnv1a_hash>;
+
+template<class K, class V> using foa_habsl_unordered_rc16_map_fnv1a =
+  foa_habsl_unordered_rc16_map<K, V, fnv1a_hash>;
+
+template<class K, class V> using foa_habsl_unordered_rc15_map_fnv1a =
+  foa_habsl_unordered_rc15_map<K, V, fnv1a_hash>;
 
 #ifdef HAVE_ABSEIL
 
