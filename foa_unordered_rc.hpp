@@ -58,10 +58,12 @@ struct group16
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
   }
 
-  inline int check_empty()const
+  inline int is_overflowed(unsigned char /* hash */)const
   {
-    return match_empty();  
+    return match_empty();
   }
+
+  inline void mark_overflow(unsigned char /* hash */){}
 
   inline int match_empty()const
   {
@@ -69,7 +71,7 @@ struct group16
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
   }
 
-  inline int match_empty_or_deleted()const
+  inline int match_available()const
   {
     auto m=_mm_set1_epi8(sentinel_);
     return _mm_movemask_epi8(_mm_cmpgt_epi8_fixed(m,mask));    
@@ -77,7 +79,7 @@ struct group16
 
   inline int match_occupied()const
   {
-    return (~match_empty_or_deleted())&0xFFFFul;
+    return (~match_available())&0xFFFFul;
   }
 
   inline int match_really_occupied()const // excluding sentinel
@@ -127,19 +129,16 @@ protected:
     return match_impl(hash&0x7Fu);
   }
 
-  inline int check_empty()const
-  {
-    return match_empty();  
-  }
-
-  inline int match_empty()const
+  inline int is_overflowed(unsigned char /* hash */)const
   {
     return
       (himask & uint64_t(0x0000FFFF00000000ull))>>32&
       (himask & uint64_t(0xFFFF000000000000ull))>>48;
   }
 
-  inline int match_empty_or_deleted()const
+  inline void mark_overflow(unsigned char /* hash */){}
+
+  inline int match_available()const
   {
     return
       (himask & uint64_t(0x00000000FFFF0000ull))>>16&
@@ -148,7 +147,7 @@ protected:
 
   inline int match_occupied()const
   {
-    return // ~match_empty_or_deleted()
+    return // ~match_available()
       (~himask | uint64_t(0xFFFFFFFF0000FFFFull))>>16|
       (~himask | uint64_t(0x0000FFFFFFFFFFFFull))>>48;
   }
@@ -210,25 +209,21 @@ struct group15
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m))&0x7FFF;
   }
 
-  inline auto check_empty()const
+  inline auto is_overflowed(unsigned char /* hash */)const
   {
     return nonempty_count()<2*N-1;
   }
 
-#if 0 /* not used*/
-  inline int match_empty()const
-  {
-  }
-#endif
+  inline void mark_overflow(unsigned char /* hash */){}
 
-  inline int match_empty_or_deleted()const
+  inline int match_available()const
   {
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,_mm_setzero_si128()))&0x7FFF;
   }
 
   inline int match_occupied()const
   {
-    return (~match_empty_or_deleted())&0x7FFF;
+    return (~match_available())&0x7FFF;
   }
 
   inline int match_really_occupied()const // excluding sentinel
@@ -288,19 +283,21 @@ struct group15:private group16
     return super::match(hash);
   }
 
-  inline auto check_empty()const
+  inline auto is_overflowed(unsigned char /* hash */)const
   {
     return nonempty_count()!=N;  
   }
+
+  inline void mark_overflow(unsigned char /* hash */){}
 
   inline int match_empty()const
   {
     return super::match_empty()&0x7FFF;
   }
 
-  inline int match_empty_or_deleted()const
+  inline int match_available()const
   {
-    return super::match_empty_or_deleted()&0x7FFF;
+    return super::match_available()&0x7FFF;
   }
 
   inline int match_occupied()const
@@ -605,7 +602,7 @@ private:
       if(pe){
         return {groups.data()+pos,(std::size_t)(n),pe};
       }
-      if(groups[pos].check_empty()){
+      if(groups[pos].is_overflowed(short_hash)){
         return end();
       }
     }
@@ -624,7 +621,7 @@ private:
       if(pe){
         return {{groups.data()+pos,(std::size_t)(n),pe},false};
       }
-      if(groups[pos].check_empty())break;
+      if(groups[pos].is_overflowed(short_hash))break;
     }
 
     if(BOOST_UNLIKELY(size_+1>ml)){
@@ -635,7 +632,7 @@ private:
     for(prober pb(pos0);;pb.next(groups.size())){
       auto pos=pb.get();
       auto pg=groups.data()+pos;
-      if(auto mask=pg->match_empty_or_deleted()){
+      if(auto mask=pg->match_available()){
         FXA_ASSUME(mask!=0);
         int  n=boost::core::countr_zero((unsigned int)mask);
         auto pe=elements.data()+pos*N+n;
@@ -644,6 +641,7 @@ private:
         ++size_;
         return {{pg,std::size_t(n),pe},true};    
       }
+      else pg->mark_overflow(short_hash);
     }
   }
 
@@ -697,16 +695,17 @@ private:
     auto        pos0=position_for(long_hash);
     for(prober pb(pos0);;pb.next(groups.size())){
       auto pos=pb.get();
-      if(auto mask=groups[pos].match_empty_or_deleted()){
+      auto pg=groups.data()+pos;
+      if(auto mask=pg->match_available()){
         FXA_ASSUME(mask!=0);
         int n=boost::core::countr_zero((unsigned int)mask);
-        auto pg=groups.data()+pos;
         auto pe=elements.data()+pos*N+n;
         construct_element(std::forward<Value>(x),pe->data());
         pg->set(n,short_hash);
         ++size_;
         return {pg,std::size_t(n),pe};
       }
+      else pg->mark_overflow(short_hash);
     }
   }
 
