@@ -60,16 +60,11 @@ struct group16
 
   inline int is_overflowed(unsigned char /* hash */)const
   {
-    return match_empty();
-  }
-
-  inline void mark_overflow(unsigned char /* hash */){}
-
-  inline int match_empty()const
-  {
     auto m=_mm_set1_epi8(empty_);
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
   }
+
+  inline void mark_overflow(unsigned char /* hash */){}
 
   inline int match_available()const
   {
@@ -131,12 +126,17 @@ protected:
 
   inline int is_overflowed(unsigned char /* hash */)const
   {
+    return match_empty();
+  }
+
+  inline void mark_overflow(unsigned char /* hash */){}
+
+  inline int match_empty()const
+  {
     return
       (himask & uint64_t(0x0000FFFF00000000ull))>>32&
       (himask & uint64_t(0xFFFF000000000000ull))>>48;
   }
-
-  inline void mark_overflow(unsigned char /* hash */){}
 
   inline int match_available()const
   {
