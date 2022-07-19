@@ -58,7 +58,7 @@ struct group16
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
   }
 
-  inline int is_overflowed(unsigned char /* hash */)const
+  inline int is_not_overflowed(unsigned char /* hash */)const
   {
     auto m=_mm_set1_epi8(empty_);
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
@@ -124,7 +124,7 @@ protected:
     return match_impl(hash&0x7Fu);
   }
 
-  inline int is_overflowed(unsigned char /* hash */)const
+  inline int is_not_overflowed(unsigned char /* hash */)const
   {
     return match_empty();
   }
@@ -187,13 +187,11 @@ struct group15
   inline void set(std::size_t pos,unsigned char hash)
   {
     assert(pos<N);
-    update_nonempty_count(pos);
     reinterpret_cast<unsigned char*>(&mask)[pos]=adjust_hash(hash);
   }
 
   inline void set_sentinel()
   {
-    nonempty_count()=0x01; // odd bit
     reinterpret_cast<unsigned char*>(&mask)[N-1]=0x01; // occupied
   }
 
@@ -209,12 +207,15 @@ struct group15
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m))&0x7FFF;
   }
 
-  inline auto is_overflowed(unsigned char /* hash */)const
+  inline auto is_not_overflowed(unsigned char hash)const
   {
-    return nonempty_count()<2*N-1;
+    return !(overflow()&((unsigned char)1<<(hash%8)));
   }
 
-  inline void mark_overflow(unsigned char /* hash */){}
+  inline void mark_overflow(unsigned char hash)
+  {
+    overflow()|=((unsigned char)1<<(hash%8));
+  }
 
   inline int match_available()const
   {
@@ -228,7 +229,8 @@ struct group15
 
   inline int match_really_occupied()const // excluding sentinel
   {
-    return (nonempty_count()%2)?match_occupied()&0x3FFF:match_occupied();
+    return reinterpret_cast<const unsigned char*>(&mask)[N-1]==0x01?
+      match_occupied()&0x3FFF:match_occupied();
   }
 
 private:
@@ -237,19 +239,14 @@ private:
     return hash|(2*(hash<2));
   }
 
-  unsigned char& nonempty_count()
+  unsigned char& overflow()
   {
     return reinterpret_cast<unsigned char*>(&mask)[N];
   }
 
-  unsigned char nonempty_count()const
+  unsigned char overflow()const
   {
     return reinterpret_cast<const unsigned char*>(&mask)[N];
-  }
-
-  void update_nonempty_count(std::size_t pos)
-  {
-    nonempty_count()+=2*(pos==nonempty_count()/2);
   }
 
   __m128i mask=_mm_setzero_si128();
@@ -283,7 +280,7 @@ struct group15:private group16
     return super::match(hash);
   }
 
-  inline auto is_overflowed(unsigned char /* hash */)const
+  inline auto is_not_overflowed(unsigned char /* hash */)const
   {
     return nonempty_count()!=N;  
   }
@@ -602,7 +599,7 @@ private:
       if(pe){
         return {groups.data()+pos,(std::size_t)(n),pe};
       }
-      if(groups[pos].is_overflowed(short_hash)){
+      if(groups[pos].is_not_overflowed(short_hash)){
         return end();
       }
     }
@@ -621,7 +618,7 @@ private:
       if(pe){
         return {{groups.data()+pos,(std::size_t)(n),pe},false};
       }
-      if(groups[pos].is_overflowed(short_hash))break;
+      if(groups[pos].is_not_overflowed(short_hash))break;
     }
 
     if(BOOST_UNLIKELY(size_+1>ml)){
