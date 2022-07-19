@@ -295,6 +295,11 @@ struct group15:private group16
     return super::match_empty()&0x7FFF;
   }
 
+  inline int match_available()const
+  {
+    return super::match_available()&0x7FFF;
+  }
+
   inline int match_occupied()const
   {
     // no need to mask with 0x7FFF as nonempty_count MSB is always 1
