@@ -184,11 +184,6 @@ struct group15
 {
   static constexpr int N=15;
   
-  group15()
-  {
-    underflow()=0xFFu;
-  }
-
   inline void set(std::size_t pos,std::size_t hash)
   {
     assert(pos<N);
@@ -214,12 +209,12 @@ struct group15
 
   inline auto is_not_overflowed(std::size_t hash)const
   {
-    return underflow()&(1u<<(hash%8));
+    return BOOST_LIKELY(!overflow())||!(overflow()&(1u<<(hash%8)));
   }
 
   inline void mark_overflow(std::size_t hash)
   {
-    underflow()&=~(1u<<(hash%8));
+    overflow()|=1u<<(hash%8);
   }
 
   inline int match_available()const
@@ -244,12 +239,12 @@ private:
     return hash|(2*(hash<2));
   }
 
-  unsigned char& underflow()
+  unsigned char& overflow()
   {
     return reinterpret_cast<unsigned char*>(&mask)[N];
   }
 
-  std::size_t underflow()const
+  std::size_t overflow()const
   {
     return reinterpret_cast<const unsigned char*>(&mask)[N];
   }
