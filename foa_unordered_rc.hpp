@@ -321,7 +321,7 @@ private:
     uint64_ops::set(this->lowmask,N,m);
   }
 
-  auto nonempty_count()const
+  uint64_t nonempty_count()const
   {
     return 
       (this->lowmask & 0x0000000000008000ull)>>15|
