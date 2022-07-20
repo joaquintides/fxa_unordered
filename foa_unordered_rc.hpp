@@ -212,6 +212,17 @@ struct group15
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m))&0x7FFF;
   }
 
+#if 1
+  inline auto is_not_overflowed(std::size_t)const
+  {
+    return underflow();
+  }
+
+  inline void mark_overflow(std::size_t)
+  {
+    underflow()=0;
+  }
+#else
   inline auto is_not_overflowed(std::size_t hash)const
   {
     return underflow()&(1u<<(hash%8));
@@ -221,6 +232,7 @@ struct group15
   {
     underflow()&=~(1u<<(hash%8));
   }
+#endif
 
   inline int match_available()const
   {
