@@ -604,7 +604,7 @@ private:
       if(pe){
         return {groups.data()+pos,(std::size_t)(n),pe};
       }
-      if(groups[pos].is_not_overflowed(short_hash)){
+      if(BOOST_LIKELY(groups[pos].is_not_overflowed(short_hash))){
         return end();
       }
     }
@@ -623,27 +623,22 @@ private:
       if(pe){
         return {{groups.data()+pos,(std::size_t)(n),pe},false};
       }
-      if(groups[pos].is_not_overflowed(short_hash))break;
+      if(BOOST_LIKELY(groups[pos].is_not_overflowed(short_hash)))break;
     }
 
-    if(BOOST_UNLIKELY(size_+1>ml)){
+    if(BOOST_LIKELY(size_+1<=ml)){
+      return {
+        unchecked_insert(std::forward<Value>(x),pos0,short_hash),
+        true
+      };
+    }
+    else{
       rehash(size_+1);
-      return {unchecked_insert(std::forward<Value>(x),long_hash,short_hash),true};
-    }
-
-    for(prober pb(pos0);;pb.next(groups.size())){
-      auto pos=pb.get();
-      auto pg=groups.data()+pos;
-      if(auto mask=pg->match_available()){
-        FXA_ASSUME(mask!=0);
-        int  n=boost::core::countr_zero((unsigned int)mask);
-        auto pe=elements.data()+pos*N+n;
-        construct_element(std::forward<Value>(x),pe->data());  
-        pg->set(n,short_hash);
-        ++size_;
-        return {{pg,std::size_t(n),pe},true};    
-      }
-      else pg->mark_overflow(short_hash);
+      return {
+        unchecked_insert(
+          std::forward<Value>(x),position_for(long_hash),short_hash),
+        true
+      };
     }
   }
 
@@ -687,18 +682,19 @@ private:
     auto hash=h(x);
     return unchecked_insert(
       std::forward<Value>(x),
-      hash_split_policy::long_hash(hash),hash_split_policy::short_hash(hash));
+      position_for(hash_split_policy::long_hash(hash)),
+      hash_split_policy::short_hash(hash));
   }
 
   template<typename Value>
   iterator unchecked_insert(
-    Value&& x,std::size_t long_hash,unsigned char short_hash)
+    Value&& x,std::size_t pos0,unsigned char short_hash)
   {
-    auto        pos0=position_for(long_hash);
     for(prober pb(pos0);;pb.next(groups.size())){
       auto pos=pb.get();
       auto pg=groups.data()+pos;
-      if(auto mask=pg->match_available()){
+      auto mask=pg->match_available();
+      if(BOOST_LIKELY(mask)){
         FXA_ASSUME(mask!=0);
         int n=boost::core::countr_zero((unsigned int)mask);
         auto pe=elements.data()+pos*N+n;
