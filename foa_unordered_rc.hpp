@@ -244,7 +244,7 @@ private:
     return reinterpret_cast<unsigned char*>(&mask)[N];
   }
 
-  std::size_t overflow()const
+  unsigned char overflow()const
   {
     return reinterpret_cast<const unsigned char*>(&mask)[N];
   }
