@@ -573,9 +573,9 @@ private:
   }
 
   template<typename Key>
-  std::pair<const element_type*,int>
+  const element_type*
   find_in_group(
-    const Key& x,std::size_t pos,unsigned char short_hash)const
+    const Key& x,std::size_t pos,unsigned char short_hash,int& n)const
   {
     auto pg=groups.data()+pos;
     auto mask=pg->match(short_hash);
@@ -584,12 +584,12 @@ private:
       prefetch_elements(pe);
       do{
         FXA_ASSUME(mask!=0);
-        auto n=boost::core::countr_zero((unsigned int)mask);
-        if(BOOST_LIKELY(pred(x,pe[n].value())))return {pe+n,n};
+        n=boost::core::countr_zero((unsigned int)mask);
+        if(BOOST_LIKELY(pred(x,pe[n].value())))return pe+n;
         mask&=mask-1;
       }while(mask);
     }
-    return {nullptr,0};
+    return nullptr;
   }
 
   template<typename Key>
@@ -600,8 +600,8 @@ private:
     for(prober pb(position_for(hash_split_policy::long_hash(hash)));;
         pb.next(groups.size())){
       auto pos=pb.get();
-      auto [pe,n]=find_in_group(x,pos,short_hash);
-      if(pe){
+      int  n;
+      if(auto pe=find_in_group(x,pos,short_hash,n)){
         return {groups.data()+pos,(std::size_t)(n),pe};
       }
       if(BOOST_LIKELY(groups[pos].is_not_overflowed(short_hash))){
@@ -619,8 +619,8 @@ private:
     auto        short_hash=hash_split_policy::short_hash(hash);
     for(prober pb(pos0);;pb.next(groups.size())){
       auto pos=pb.get();
-      auto [pe,n]=find_in_group(x,pos,short_hash);
-      if(pe){
+      int  n;
+      if(auto pe=find_in_group(x,pos,short_hash,n)){
         return {{groups.data()+pos,(std::size_t)(n),pe},false};
       }
       if(BOOST_LIKELY(groups[pos].is_not_overflowed(short_hash)))break;
