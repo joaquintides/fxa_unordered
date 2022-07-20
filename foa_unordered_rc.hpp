@@ -234,7 +234,7 @@ struct group15
   }
 
 private:
-  static std::size_t adjust_hash(std::size_t hash)
+  static unsigned char adjust_hash(unsigned char hash)
   {
     return hash|(2*(hash<2));
   }
