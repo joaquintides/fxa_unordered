@@ -36,7 +36,7 @@ struct group16
 
 #ifdef FXA_UNORDERED_SSE2
 
-  inline void set(std::size_t pos,unsigned char hash)
+  inline void set(std::size_t pos,std::size_t hash)
   {
     reinterpret_cast<unsigned char*>(&mask)[pos]=hash&0x7Fu;
   }
@@ -52,19 +52,19 @@ struct group16
     reinterpret_cast<unsigned char*>(&mask)[pos]=deleted_;
   }
 
-  inline int match(unsigned char hash)const
+  inline int match(std::size_t hash)const
   {
     auto m=_mm_set1_epi8(hash&0x7Fu);
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
   }
 
-  inline int is_not_overflowed(unsigned char /* hash */)const
+  inline int is_not_overflowed(std::size_t /* hash */)const
   {
     auto m=_mm_set1_epi8(empty_);
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m));
   }
 
-  inline void mark_overflow(unsigned char /* hash */){}
+  inline void mark_overflow(std::size_t /* hash */){}
 
   inline int match_available()const
   {
@@ -104,7 +104,7 @@ protected:
 
 #else
 
-  inline void set(std::size_t pos,unsigned char hash)
+  inline void set(std::size_t pos,std::size_t hash)
   {
     set_impl(pos,hash&0x7Fu);
   }
@@ -119,17 +119,17 @@ protected:
     uint64_ops::set(himask,pos,deleted_);
   }
 
-  inline int match(unsigned char hash)const
+  inline int match(std::size_t hash)const
   {
     return match_impl(hash&0x7Fu);
   }
 
-  inline int is_not_overflowed(unsigned char /* hash */)const
+  inline int is_not_overflowed(std::size_t /* hash */)const
   {
     return match_empty();
   }
 
-  inline void mark_overflow(unsigned char /* hash */){}
+  inline void mark_overflow(std::size_t /* hash */){}
 
   inline int match_empty()const
   {
@@ -163,13 +163,13 @@ protected:
                        deleted_= 0xA, // 1010
                        sentinel_=0x8; // 1000
 
-  inline void set_impl(std::size_t pos,unsigned char m)
+  inline void set_impl(std::size_t pos,std::size_t m)
   {
     uint64_ops::set(lowmask,pos,m&0xFu);
     uint64_ops::set(himask,pos,m>>4);
   }
   
-  inline int match_impl(unsigned char m)const
+  inline int match_impl(std::size_t m)const
   {
     return uint64_ops::match(lowmask,m&0xFu)&
            uint64_ops::match(himask,m>>4);
@@ -189,7 +189,7 @@ struct group15
     underflow()=0xFFu;
   }
 
-  inline void set(std::size_t pos,unsigned char hash)
+  inline void set(std::size_t pos,std::size_t hash)
   {
     assert(pos<N);
     reinterpret_cast<unsigned char*>(&mask)[pos]=adjust_hash(hash);
@@ -206,18 +206,18 @@ struct group15
     reinterpret_cast<unsigned char*>(&mask)[pos]=0u;
   }
 
-  inline int match(unsigned char hash)const
+  inline int match(std::size_t hash)const
   {
     auto m=_mm_set1_epi8(adjust_hash(hash));
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m))&0x7FFF;
   }
 
-  inline auto is_not_overflowed(unsigned char hash)const
+  inline auto is_not_overflowed(std::size_t hash)const
   {
     return underflow()&(1u<<(hash%8));
   }
 
-  inline void mark_overflow(unsigned char hash)
+  inline void mark_overflow(std::size_t hash)
   {
     underflow()&=~(1u<<(hash%8));
   }
@@ -239,7 +239,7 @@ struct group15
   }
 
 private:
-  static unsigned char adjust_hash(unsigned char hash)
+  static std::size_t adjust_hash(std::size_t hash)
   {
     return hash|(2*(hash<2));
   }
@@ -249,7 +249,7 @@ private:
     return reinterpret_cast<unsigned char*>(&mask)[N];
   }
 
-  unsigned char underflow()const
+  std::size_t underflow()const
   {
     return reinterpret_cast<const unsigned char*>(&mask)[N];
   }
@@ -261,7 +261,7 @@ struct group15:private group16
 {
   static constexpr int N=15;
 
-  inline void set(std::size_t pos,unsigned char hash)
+  inline void set(std::size_t pos,std::size_t hash)
   {
     set_nonempty_count(
       nonempty_count()+((super::match_empty()&(1<<pos))!=0));
@@ -279,18 +279,18 @@ struct group15:private group16
     super::reset(pos);
   }
 
-  inline int match(unsigned char hash)const
+  inline int match(std::size_t hash)const
   {
     // no need to mask with 0x7FFF as nonempty_count MSB is always 1
     return super::match(hash);
   }
 
-  inline auto is_not_overflowed(unsigned char /* hash */)const
+  inline auto is_not_overflowed(std::size_t /* hash */)const
   {
     return nonempty_count()!=N;  
   }
 
-  inline void mark_overflow(unsigned char /* hash */){}
+  inline void mark_overflow(std::size_t /* hash */){}
 
   inline int match_empty()const
   {
@@ -316,12 +316,12 @@ struct group15:private group16
 private:
   using super=group16;
 
-  void set_nonempty_count(unsigned char m)
+  void set_nonempty_count(std::size_t m)
   {
     uint64_ops::set(this->lowmask,N,m);
   }
 
-  unsigned char nonempty_count()const
+  auto nonempty_count()const
   {
     return 
       (this->lowmask & 0x0000000000008000ull)>>15|
@@ -575,7 +575,7 @@ private:
   template<typename Key>
   const element_type*
   find_in_group(
-    const Key& x,std::size_t pos,unsigned char short_hash,int& n)const
+    const Key& x,std::size_t pos,std::size_t short_hash,int& n)const
   {
     auto pg=groups.data()+pos;
     auto mask=pg->match(short_hash);
@@ -688,7 +688,7 @@ private:
 
   template<typename Value>
   iterator unchecked_insert(
-    Value&& x,std::size_t pos0,unsigned char short_hash)
+    Value&& x,std::size_t pos0,std::size_t short_hash)
   {
     for(prober pb(pos0);;pb.next(groups.size())){
       auto pos=pb.get();
