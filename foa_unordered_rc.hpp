@@ -596,11 +596,10 @@ private:
         pb.next(groups.size())){
       auto pos=pb.get();
       int  n;
-      auto end_probe=groups[pos].is_not_overflowed(short_hash);
       if(auto pe=find_in_group(x,pos,short_hash,n)){
         return {groups.data()+pos,(std::size_t)(n),pe};
       }
-      if(BOOST_LIKELY(end_probe)){
+      if(BOOST_LIKELY(groups[pos].is_not_overflowed(short_hash))){
         return end();
       }
     }
