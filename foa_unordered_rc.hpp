@@ -236,8 +236,7 @@ struct group15
 private:
   static unsigned char adjust_hash(unsigned char hash)
   {
-    //return hash|(2*(hash<2));
-    return hash|0x10;
+    return hash|(2*(hash<2));
   }
 
   unsigned char& overflow()
