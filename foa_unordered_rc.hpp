@@ -123,7 +123,7 @@ protected:
   inline bool is_sentinel(std::size_t pos)const
   {
     return pos==N-1&&
-      match_occupied()!=match_really_occupied();
+      (match_occupied()&0xFFFFu)!=(match_really_occupied()&0xFFFFu);
   }
 
   inline void reset(std::size_t pos)
@@ -290,7 +290,7 @@ struct group15:private group16
   inline bool is_sentinel(std::size_t pos)const
   {
     return pos==N-1&&
-      match_occupied()!=match_really_occupied();
+      (match_occupied()&0x7FFFu)!=(match_really_occupied()&0x7FFFu);
   }
 
   inline void reset(std::size_t pos)
