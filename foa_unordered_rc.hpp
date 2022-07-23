@@ -497,11 +497,8 @@ public:
 
   void erase(const_iterator pos)
   {
-    auto pg=pos.group();
-    auto n=pos.offset();
-    auto pe=pos.pe;
-    destroy_element(pe->data());
-    pg->reset(n);
+    destroy_element(pos.pe->data());
+    pos.group()->reset(pos.offset());
     --size_;
   }
 
@@ -519,7 +516,7 @@ public:
   template<typename Key>
   iterator find(const Key& x)const
   {
-    auto        hash=h(x);
+    auto   hash=h(x);
     return find_impl(
       x,
       position_for(hash_split_policy::long_hash(hash)),
@@ -585,7 +582,7 @@ private:
           mask&=mask-1;
         }while(mask);
       }
-      if(BOOST_LIKELY(groups[pos].is_not_overflowed(short_hash))){
+      if(BOOST_LIKELY(pg->is_not_overflowed(short_hash))){
         return end();
       }
     }
@@ -632,9 +629,8 @@ private:
         auto pg=groups.data()+pos;
         auto mask=pg->match_really_occupied();
         while(mask){
-          FXA_ASSUME(mask!=0);
-          auto n=std::size_t(countr_zero((unsigned int)mask));
-          auto& x=elements[pos*N+n];
+          auto n=countr_zero((unsigned int)mask);
+          auto& x=elements[pos*N+(std::size_t)n];
           new_container.unchecked_insert(std::move(x.value()));
           destroy_element(x.data());
           pg->reset(n);
