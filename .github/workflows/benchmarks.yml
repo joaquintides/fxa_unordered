@@ -329,7 +329,7 @@ jobs:
       - name: Install Abseil
         run: |
           cd $GITHUB_WORKSPACE
-          git clone -b lts_2021_11_02 https://github.com/abseil/abseil-cpp.git abseil-root
+          git clone -b lts_2022_06_23 https://github.com/abseil/abseil-cpp.git abseil-root
       - name: Install fastrange
         run: |
           cd $GITHUB_WORKSPACE
@@ -496,7 +496,7 @@ jobs:
         shell: cmd
         run: |
           cd %GITHUB_WORKSPACE%
-          git clone -b lts_2021_11_02 https://github.com/abseil/abseil-cpp.git abseil-root
+          git clone -b lts_2022_06_23 https://github.com/abseil/abseil-cpp.git abseil-root
       - name: Install fastrange
         shell: cmd
         run: |
