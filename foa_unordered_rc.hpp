@@ -443,13 +443,13 @@ public:
       std::size_t n0=offset(),
                   n;
 
-      if((n=boost::core::countr_zero((unsigned int)(
+      if((n=countr_zero((unsigned int)(
           pg->match_occupied()&reset_first_bits(n0+1))))>=N){
         do{
           ++pg;
           pe+=N;
         }
-        while((n=boost::core::countr_zero(
+        while((n=countr_zero(
           (unsigned int)((pg)->match_occupied())))>=N);
       }
 
@@ -578,9 +578,7 @@ private:
         auto pe=elements.data()+pos*N;
         prefetch_elements(pe);
         do{
-          //unsigned long n;
-          //_BitScanForward(&n,mask);
-          auto n=boost::core::countr_zero((unsigned int)mask);
+          auto n=countr_zero((unsigned int)mask);
           if(BOOST_LIKELY(pred(x,pe[n].value()))){
             return {pg,(std::size_t)(n),pe+n};
           }
@@ -635,7 +633,7 @@ private:
         auto mask=pg->match_really_occupied();
         while(mask){
           FXA_ASSUME(mask!=0);
-          auto n=std::size_t(boost::core::countr_zero((unsigned int)mask));
+          auto n=std::size_t(countr_zero((unsigned int)mask));
           auto& x=elements[pos*N+n];
           new_container.unchecked_insert(std::move(x.value()));
           destroy_element(x.data());
@@ -676,7 +674,7 @@ private:
       auto mask=pg->match_available();
       if(BOOST_LIKELY(mask)){
         FXA_ASSUME(mask!=0);
-        int n=boost::core::countr_zero((unsigned int)mask);
+        int n=countr_zero((unsigned int)mask);
         auto pe=elements.data()+pos*N+n;
         construct_element(std::forward<Value>(x),pe->data());
         pg->set(n,short_hash);
@@ -703,6 +701,18 @@ private:
       elements.data()+elements.size()-1
     };
   }
+
+  static inline int countr_zero(unsigned int x)
+  {
+#if defined(_MSC_VER)&&!defined(USE_BOOST_CORE_COUNTR_ZERO)
+    unsigned long r;
+    _BitScanForward(&r,x);
+    return (int)r;
+#else
+    return boost::core::countr_zero((unsigned int)mask);
+#endif
+  }
+
 
   Hash                                     h;
   Pred                                     pred;
