@@ -46,6 +46,12 @@ struct group16
     reinterpret_cast<unsigned char*>(&mask)[N-1]=sentinel_;
   }
 
+  inline bool is_sentinel(std::size_t pos)const
+  {
+    return pos==N-1&&
+      reinterpret_cast<const unsigned char*>(&mask)[N-1]==(unsigned char)sentinel_;
+  }
+
   inline void reset(std::size_t pos)
   {
     assert(pos<N);
@@ -112,6 +118,12 @@ protected:
   inline void set_sentinel()
   {
     uint64_ops::set(himask,N-1,sentinel_);
+  }
+
+  inline bool is_sentinel(std::size_t pos)const
+  {
+    return pos==N-1&&
+      match_occupied()!=match_really_occupied();
   }
 
   inline void reset(std::size_t pos)
@@ -195,6 +207,12 @@ struct group15
     reinterpret_cast<unsigned char*>(&mask)[N-1]=0x01; // occupied
   }
 
+  inline bool is_sentinel(std::size_t pos)const
+  {
+    return pos==N-1&&
+      reinterpret_cast<const unsigned char*>(&mask)[N-1]==0x01;
+  }
+
   inline void reset(std::size_t pos)
   {
     assert(pos<N);
@@ -267,6 +285,12 @@ struct group15:private group16
   {
     set_nonempty_count(nonempty_count()+1);
     uint64_ops::set(this->himask,N-1,this->sentinel_);
+  }
+
+  inline bool is_sentinel(std::size_t pos)const
+  {
+    return pos==N-1&&
+      match_occupied()!=match_really_occupied();
   }
 
   inline void reset(std::size_t pos)
@@ -453,8 +477,13 @@ public:
           (unsigned int)((pg)->match_occupied())))>=N);
       }
 
-      pc=reinterpret_cast<unsigned char*>(pg)+n;
-      pe+=n-n0;
+      if(BOOST_UNLIKELY(pg->is_sentinel(n))){
+        pe=nullptr;
+      }
+      else{
+        pc=reinterpret_cast<unsigned char*>(pg)+n;
+        pe+=n-n0;
+      }
     }
 
     unsigned char *pc=nullptr;
@@ -481,13 +510,13 @@ public:
   {
     auto pg=groups.data();
     const_iterator it{pg,0,elements.data()};
-    if(pg&&!(pg->match_occupied()&0x1u))++it;
+    if(pg&&!(pg->match_really_occupied()&0x1u))++it;
     return it;
   }
   
   const_iterator end()const noexcept
   {
-    return end_;
+    return {};
   }
 
   size_type size()const noexcept{return size_;};
@@ -647,7 +676,6 @@ private:
     groups=std::move(new_container.groups);
     elements=std::move(new_container.elements);
     ml=max_load();
-    end_=calculate_end();
   }
 
   template<typename Value>
@@ -688,15 +716,6 @@ private:
     return res;
   }  
 
-  const_iterator calculate_end()const noexcept
-  {
-    return {
-      groups.data()+groups.size()-1,
-      N-1,
-      elements.data()+elements.size()-1
-    };
-  }
-
   static inline int countr_zero(unsigned int x)
   {
 #if !defined(USE_BOOST_CORE_COUNTR_ZERO)&&defined(_MSC_VER)&&!defined(__clang__)
@@ -724,7 +743,6 @@ private:
     typename alloc_traits::
       template rebind_alloc<element_type>> elements{groups.size()*N,al};
   size_type                                ml=max_load();
-  const_iterator                           end_=calculate_end();
 };
 
 template<
