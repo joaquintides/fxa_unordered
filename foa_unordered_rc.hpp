@@ -443,13 +443,13 @@ public:
       std::size_t n0=offset(),
                   n;
 
-      if((n=countr_zero((unsigned int)(
+      if((n=boost::core::countr_zero((unsigned int)(
           pg->match_occupied()&reset_first_bits(n0+1))))>=N){
         do{
           ++pg;
           pe+=N;
         }
-        while((n=countr_zero(
+        while((n=boost::core::countr_zero(
           (unsigned int)((pg)->match_occupied())))>=N);
       }
 
@@ -669,7 +669,6 @@ private:
       auto pg=groups.data()+pos;
       auto mask=pg->match_available();
       if(BOOST_LIKELY(mask)){
-        FXA_ASSUME(mask!=0);
         int n=countr_zero((unsigned int)mask);
         auto pe=elements.data()+pos*N+n;
         construct_element(std::forward<Value>(x),pe->data());
@@ -705,10 +704,10 @@ private:
     _BitScanForward(&r,x);
     return (int)r;
 #else
+    FXA_ASSUME(x);
     return boost::core::countr_zero(x);
 #endif
   }
-
 
   Hash                                     h;
   Pred                                     pred;
