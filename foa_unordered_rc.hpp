@@ -709,7 +709,7 @@ private:
     _BitScanForward(&r,x);
     return (int)r;
 #else
-    return boost::core::countr_zero((unsigned int)mask);
+    return boost::core::countr_zero(x);
 #endif
   }
 
