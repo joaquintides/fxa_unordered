@@ -234,17 +234,17 @@ struct group15
   }
 
 private:
-  static unsigned char adjust_hash(unsigned char hash)
+  inline static unsigned char adjust_hash(unsigned char hash)
   {
     return hash|(2*(hash<2));
   }
 
-  unsigned char& overflow()
+  inline unsigned char& overflow()
   {
     return reinterpret_cast<unsigned char*>(&mask)[N];
   }
 
-  unsigned char overflow()const
+  inline unsigned char overflow()const
   {
     return reinterpret_cast<const unsigned char*>(&mask)[N];
   }
@@ -487,11 +487,7 @@ public:
   
   const_iterator end()const noexcept
   {
-    return {
-      groups.data()+groups.size()-1,
-      N-1,
-      elements.data()+elements.size()-1
-    };
+    return end_;
   }
 
   size_type size()const noexcept{return size_;};
@@ -523,7 +519,11 @@ public:
   template<typename Key>
   iterator find(const Key& x)const
   {
-    return find_impl(x);
+    auto        hash=h(x);
+    return find_impl(
+      x,
+      position_for(hash_split_policy::long_hash(hash)),
+      hash_split_policy::short_hash(hash));
   }
 
 private:
@@ -568,36 +568,24 @@ private:
   }
 
   template<typename Key>
-  const element_type*
-  find_in_group(
-    const Key& x,std::size_t pos,std::size_t short_hash,int& n)const
-  {
-    auto pg=groups.data()+pos;
-    auto mask=pg->match(short_hash);
-    if(mask){
-      auto pe=elements.data()+pos*N;
-      prefetch_elements(pe);
-      do{
-        FXA_ASSUME(mask!=0);
-        n=boost::core::countr_zero((unsigned int)mask);
-        if(BOOST_LIKELY(pred(x,pe[n].value())))return pe+n;
-        mask&=mask-1;
-      }while(mask);
-    }
-    return nullptr;
-  }
-
-  template<typename Key>
-  iterator find_impl(const Key& x)const
+  iterator find_impl(const Key& x,std::size_t pos0,std::size_t short_hash)const
   {    
-    auto        hash=h(x);
-    auto        short_hash=hash_split_policy::short_hash(hash);
-    for(prober pb(position_for(hash_split_policy::long_hash(hash)));;
-        pb.next(groups.size())){
+    for(prober pb(pos0);;pb.next(groups.size())){
       auto pos=pb.get();
-      int  n;
-      if(auto pe=find_in_group(x,pos,short_hash,n)){
-        return {groups.data()+pos,(std::size_t)(n),pe};
+      auto pg=groups.data()+pos;
+      auto mask=pg->match(short_hash);
+      if(mask){
+        auto pe=elements.data()+pos*N;
+        prefetch_elements(pe);
+        do{
+          //unsigned long n;
+          //_BitScanForward(&n,mask);
+          auto n=boost::core::countr_zero((unsigned int)mask);
+          if(BOOST_LIKELY(pred(x,pe[n].value()))){
+            return {pg,(std::size_t)(n),pe+n};
+          }
+          mask&=mask-1;
+        }while(mask);
       }
       if(BOOST_LIKELY(groups[pos].is_not_overflowed(short_hash))){
         return end();
@@ -608,20 +596,16 @@ private:
   template<typename Value>
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
-    auto        hash=h(x);
-    auto        long_hash=hash_split_policy::long_hash(hash);
-    auto        pos0=position_for(long_hash);
-    auto        short_hash=hash_split_policy::short_hash(hash);
-    for(prober pb(pos0);;pb.next(groups.size())){
-      auto pos=pb.get();
-      int  n;
-      if(auto pe=find_in_group(x,pos,short_hash,n)){
-        return {{groups.data()+pos,(std::size_t)(n),pe},false};
-      }
-      if(BOOST_LIKELY(groups[pos].is_not_overflowed(short_hash)))break;
-    }
+    auto hash=h(x);
+    auto long_hash=hash_split_policy::long_hash(hash);
+    auto pos0=position_for(long_hash);
+    auto short_hash=hash_split_policy::short_hash(hash);
+    auto it=find_impl(x,pos0,short_hash);
 
-    if(BOOST_LIKELY(size_+1<=ml)){
+    if(it!=end()){
+      return {it,false};
+    }
+    else if(BOOST_LIKELY(size_+1<=ml)){
       return {
         unchecked_insert(std::forward<Value>(x),pos0,short_hash),
         true
@@ -668,7 +652,8 @@ private:
     group_size_index=new_container.group_size_index;
     groups=std::move(new_container.groups);
     elements=std::move(new_container.elements);
-    ml=max_load();   
+    ml=max_load();
+    end_=calculate_end();
   }
 
   template<typename Value>
@@ -710,6 +695,15 @@ private:
     return res;
   }  
 
+  const_iterator calculate_end()const noexcept
+  {
+    return {
+      groups.data()+groups.size()-1,
+      N-1,
+      elements.data()+elements.size()-1
+    };
+  }
+
   Hash                                     h;
   Pred                                     pred;
   Allocator                                al;
@@ -725,6 +719,7 @@ private:
     typename alloc_traits::
       template rebind_alloc<element_type>> elements{groups.size()*N,al};
   size_type                                ml=max_load();
+  const_iterator                           end_=calculate_end();
 };
 
 template<
