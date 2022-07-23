@@ -699,7 +699,7 @@ private:
 
   static inline int countr_zero(unsigned int x)
   {
-#if defined(_MSC_VER)&&!defined(USE_BOOST_CORE_COUNTR_ZERO)
+#if !defined(USE_BOOST_CORE_COUNTR_ZERO)&&defined(_MSC_VER)&&!defined(__clang__)
     unsigned long r;
     _BitScanForward(&r,x);
     return (int)r;
