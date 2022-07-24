@@ -543,7 +543,7 @@ public:
   }
   
   template<typename Key>
-  iterator find(const Key& x)const
+  BOOST_FORCEINLINE iterator find(const Key& x)const
   {
     auto   hash=h(x);
     return find_impl(
@@ -594,7 +594,8 @@ private:
   }
 
   template<typename Key>
-  iterator find_impl(const Key& x,std::size_t pos0,std::size_t short_hash)const
+  BOOST_FORCEINLINE iterator find_impl(
+    const Key& x,std::size_t pos0,std::size_t short_hash)const
   {    
     for(prober pb(pos0);;pb.next(groups.size())){
       auto pos=pb.get();
