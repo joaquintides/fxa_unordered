@@ -32,6 +32,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <cstdint>
 
 // counting allocator
 
@@ -95,7 +96,15 @@ template<class K, class V> using multi_index_map = multi_index_container<
 
 // mulx
 
-#if defined(_MSC_VER) && !defined(__clang__)
+#if ((SIZE_MAX>>16)>>16)==0
+
+inline std::uint32_t mulx( std::uint32_t x, std::uint32_t y )
+{
+	std::uint64_t r = (std::uint64_t)x * y;
+	return (std::uint32_t)r ^ (std::uint32_t)( r >> 32 );
+}
+
+#elif defined(_MSC_VER) && !defined(__clang__)
 
 #include <intrin.h>
 
