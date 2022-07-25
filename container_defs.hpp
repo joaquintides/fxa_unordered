@@ -93,6 +93,42 @@ template<class K, class V> using multi_index_map = multi_index_container<
   ::allocator< pair<K, V> >
 >;
 
+// mulx
+
+#if defined(_MSC_VER) && !defined(__clang__)
+
+#include <intrin.h>
+
+__forceinline std::uint64_t mulx( std::uint64_t x, std::uint64_t y )
+{
+	std::uint64_t r2;
+	std::uint64_t r = _umul128( x, y, &r2 );
+	return r ^ r2;
+}
+
+#else
+
+inline std::uint64_t mulx( std::uint64_t x, std::uint64_t y )
+{
+	__uint128_t r = (__uint128_t)x * y;
+	return (std::uint64_t)r ^ (std::uint64_t)( r >> 64 );
+}
+
+#endif
+
+template<class T>
+struct mulx_hash
+{
+  std::size_t operator()(const T& x) const
+  {
+    boost::uint64_t z = boost::hash<T>()(x);
+
+	z = mulx( z, 0x9DDFEA08EB382D69ull );
+
+    return (std::size_t)z; // good results only in 64 bits
+  }
+};
+
 // xmxmx
 
 template<class T>
@@ -598,6 +634,20 @@ using foa_absl_unordered_rc16_map =
 
 template<class K, class V, class H=absl::container_internal::hash_default_hash<K>>
 using foa_absl_unordered_rc15_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group15>;
+
+template<class K, class V, class H=mulx_hash<K>>
+using foa_mulx_unordered_rc16_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group16>;
+
+template<class K, class V, class H=mulx_hash<K>>
+using foa_mulx_unordered_rc15_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
