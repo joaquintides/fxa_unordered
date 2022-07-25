@@ -7,6 +7,7 @@
 // https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/algorithm/minmax_element.hpp>
+#include <boost/endian/conversion.hpp>
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
@@ -55,7 +56,7 @@ static void init_indices()
 
     for( unsigned i = 1; i <= N*2; ++i )
     {
-        indices3.push_back( (std::uint32_t)i << 11 );
+        indices3.push_back( boost::endian::endian_reverse( static_cast<std::uint32_t>( i ) ) );
     }
 }
 
@@ -80,7 +81,7 @@ template<class Map> void test_insert( Map& map, std::chrono::steady_clock::time_
         map.insert( { indices3[ i ], i } );
     }
 
-    print_time( t1, "Consecutive shifted insert",  0, map.size() );
+    print_time( t1, "Consecutive reversed insert",  0, map.size() );
 
     std::cout << std::endl;
 }
@@ -126,7 +127,7 @@ template<class Map> void test_lookup( Map& map, std::chrono::steady_clock::time_
         }
     }
 
-    print_time( t1, "Consecutive shifted lookup",  s, map.size() );
+    print_time( t1, "Consecutive reversed lookup",  s, map.size() );
 
     std::cout << std::endl;
 }
@@ -168,13 +169,9 @@ template<class Map> void test_erase( Map& map, std::chrono::steady_clock::time_p
 
     print_time( t1, "Consecutive erase",  0, map.size() );
 
+    for( unsigned i = 1; i <= N; ++i )
     {
-        boost::detail::splitmix64 rng;
-
-        for( unsigned i = 1; i <= N; ++i )
-        {
-            map.erase( indices2[ i ] );
-        }
+        map.erase( indices2[ i ] );
     }
 
     print_time( t1, "Random erase",  0, map.size() );
@@ -184,7 +181,7 @@ template<class Map> void test_erase( Map& map, std::chrono::steady_clock::time_p
         map.erase( indices3[ i ] );
     }
 
-    print_time( t1, "Consecutive shifted erase",  0, map.size() );
+    print_time( t1, "Consecutive reversed erase",  0, map.size() );
 
     std::cout << std::endl;
 }
@@ -305,18 +302,24 @@ int main()
     test<foa_absl_unordered_rc15_map>( "foa_absl_unordered_rc15_map" );
 
 #if !defined(IN_32BIT_ARCHITECTURE)
+    test<foa_xmxmx_unordered_rc16_map>( "foa_xmxmx_unordered_rc16_map" );
+    test<foa_xmxmx_unordered_rc15_map>( "foa_xmxmx_unordered_rc15_map" );
     test<foa_mxm_unordered_rc16_map>( "foa_mxm_unordered_rc16_map" );
     test<foa_mxm_unordered_rc15_map>( "foa_mxm_unordered_rc15_map" );
+    test<foa_mxm2_unordered_rc16_map>( "foa_mxm2_unordered_rc16_map" );
+    test<foa_mxm2_unordered_rc15_map>( "foa_mxm2_unordered_rc15_map" );
     test<foa_xmx_unordered_rc16_map>( "foa_xmx_unordered_rc16_map" );
     test<foa_xmx_unordered_rc15_map>( "foa_xmx_unordered_rc15_map" );
+    test<foa_xmx2_unordered_rc16_map>( "foa_xmx2_unordered_rc16_map" );
+    test<foa_xmx2_unordered_rc15_map>( "foa_xmx2_unordered_rc15_map" );
     test<foa_xm_unordered_rc16_map>( "foa_xm_unordered_rc16_map" );
     test<foa_xm_unordered_rc15_map>( "foa_xm_unordered_rc15_map" );
     test<foa_hxm_unordered_rc16_map>( "foa_hxm_unordered_rc16_map" );
     test<foa_hxm_unordered_rc15_map>( "foa_hxm_unordered_rc15_map" );
-    test<foa_smx1_unordered_rc16_map>( "foa_smx1_unordered_rc16_map" );
-    test<foa_smx1_unordered_rc15_map>( "foa_smx1_unordered_rc15_map" );
-    test<foa_hsmx1_unordered_rc16_map>( "foa_hsmx1_unordered_rc16_map" );
-    test<foa_hsmx1_unordered_rc15_map>( "foa_hsmx1_unordered_rc15_map" );
+    test<foa_xm2_unordered_rc16_map>( "foa_xm2_unordered_rc16_map" );
+    test<foa_xm2_unordered_rc15_map>( "foa_xm2_unordered_rc15_map" );
+    test<foa_hxm2_unordered_rc16_map>( "foa_hxm2_unordered_rc16_map" );
+    test<foa_hxm2_unordered_rc15_map>( "foa_hxm2_unordered_rc15_map" );
 #endif
 
 #ifdef HAVE_ABSEIL
