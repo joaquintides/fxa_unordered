@@ -388,9 +388,10 @@ struct nonpow2_prober
 
   void next(std::size_t size)
   {
+    auto ceil = boost::core::bit_ceil(size);
     for(;;){
       step+=1;
-      pos=(pos+step)&(boost::core::bit_ceil(size)-1);
+      pos=(pos+step)&(ceil-1);
       if(pos<size)break;
     }
   }
