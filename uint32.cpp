@@ -298,6 +298,7 @@ int main()
     test<foa_fmod_unordered_rc15_map>( "foa_fmod_unordered_rc15_map" );
     test<foa_fmodxm_unordered_rc16_map>( "foa_fmodxm_unordered_rc16_map" );
     test<foa_fmodxm_unordered_rc15_map>( "foa_fmodxm_unordered_rc15_map" );
+
     // test<foa_absl_unordered_rc16_map>( "foa_absl_unordered_rc16_map" );
     // test<foa_absl_unordered_rc15_map>( "foa_absl_unordered_rc15_map" );
     test<foa_mulx_unordered_rc16_map>( "foa_mulx_unordered_rc16_map" );
@@ -322,6 +323,15 @@ int main()
     // test<foa_xm2_unordered_rc15_map>( "foa_xm2_unordered_rc15_map" );
     test<foa_hxm2_unordered_rc16_map>( "foa_hxm2_unordered_rc16_map" );
     test<foa_hxm2_unordered_rc15_map>( "foa_hxm2_unordered_rc15_map" );
+#else
+    test<foa_xmxmx32_unordered_rc16_map>( "foa_xmxmx32_unordered_rc16_map" );
+    test<foa_xmxmx32_unordered_rc15_map>( "foa_xmxmx32_unordered_rc15_map" );
+    test<foa_mxm32_unordered_rc16_map>( "foa_mxm32_unordered_rc16_map" );
+    test<foa_mxm32_unordered_rc15_map>( "foa_mxm32_unordered_rc15_map" );
+    test<foa_xmx32_unordered_rc16_map>( "foa_xmx32_unordered_rc16_map" );
+    test<foa_xmx32_unordered_rc15_map>( "foa_xmx32_unordered_rc15_map" );
+    test<foa_xmx33_unordered_rc16_map>( "foa_xmx33_unordered_rc16_map" );
+    test<foa_xmx33_unordered_rc15_map>( "foa_xmx33_unordered_rc15_map" );
 #endif
 
 #ifdef HAVE_ABSEIL
