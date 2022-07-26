@@ -332,6 +332,24 @@ struct xmx33_hash
   }
 };
 
+// rmr32
+
+template<class T>
+struct rmr32_hash
+{
+  std::size_t operator()(const T& t) const
+  {
+    std::size_t x = boost::hash<T>()(t);
+
+    // score = 95.87173427168284
+    x ^= ((x << 12) | (x >> 20)) ^ ((x << 24) | (x >> 8));
+    x *= 0xa8ee8555U;
+    x ^= ((x << 11) | (x >> 21)) ^ ((x << 20) | (x >> 12));
+
+    return x;
+  }
+};
+
 // fxa_unordered variations
 
 template<class K, class V, class H=boost::hash<K>>
@@ -926,6 +944,20 @@ using foa_xmx33_unordered_rc16_map =
 
 template<class K, class V, class H=xmx33_hash<K>>
 using foa_xmx33_unordered_rc15_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group15>;
+
+template<class K, class V, class H=rmr32_hash<K>>
+using foa_rmr32_unordered_rc16_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group16>;
+
+template<class K, class V, class H=rmr32_hash<K>>
+using foa_rmr32_unordered_rc15_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
