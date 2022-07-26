@@ -287,11 +287,10 @@ struct mxm32_hash
   {
     std::size_t z = boost::hash<T>()(x);
 
-    // score = 196.45393348857411
-
-    z *= 0x4b2d3565U;
+    // score = 193.45195822264921
+    z *= 0x6acd36d3U;
     z ^= z >> 28;
-    z *= 0xcab66b9dU;
+    z *= 0x0acdb2adU;
 
     return z;
   }
@@ -324,10 +323,10 @@ struct xmx33_hash
   {
     std::size_t z = boost::hash<T>()(x);
 
-    // score = 347.2645328099519
-    z ^= z >> 15;
-    z *= 0x8e9ad693U;
-    z ^= z >> 15;
+    // score = 333.7934929677524
+    z ^= z >> 18;
+    z *= 0x56b5aaadU;
+    z ^= z >> 16;
 
     return z;
   }
