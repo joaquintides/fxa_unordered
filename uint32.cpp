@@ -298,28 +298,28 @@ int main()
     test<foa_fmod_unordered_rc15_map>( "foa_fmod_unordered_rc15_map" );
     test<foa_fmodxm_unordered_rc16_map>( "foa_fmodxm_unordered_rc16_map" );
     test<foa_fmodxm_unordered_rc15_map>( "foa_fmodxm_unordered_rc15_map" );
-    test<foa_absl_unordered_rc16_map>( "foa_absl_unordered_rc16_map" );
-    test<foa_absl_unordered_rc15_map>( "foa_absl_unordered_rc15_map" );
-
-#if !defined(IN_32BIT_ARCHITECTURE)
+    // test<foa_absl_unordered_rc16_map>( "foa_absl_unordered_rc16_map" );
+    // test<foa_absl_unordered_rc15_map>( "foa_absl_unordered_rc15_map" );
     test<foa_mulx_unordered_rc16_map>( "foa_mulx_unordered_rc16_map" );
     test<foa_mulx_unordered_rc15_map>( "foa_mulx_unordered_rc15_map" );
-    test<foa_xmxmx_unordered_rc16_map>( "foa_xmxmx_unordered_rc16_map" );
-    test<foa_xmxmx_unordered_rc15_map>( "foa_xmxmx_unordered_rc15_map" );
-    test<foa_mxm_unordered_rc16_map>( "foa_mxm_unordered_rc16_map" );
-    test<foa_mxm_unordered_rc15_map>( "foa_mxm_unordered_rc15_map" );
-    test<foa_mxm2_unordered_rc16_map>( "foa_mxm2_unordered_rc16_map" );
-    test<foa_mxm2_unordered_rc15_map>( "foa_mxm2_unordered_rc15_map" );
+
+#if !defined(IN_32BIT_ARCHITECTURE)
+    // test<foa_xmxmx_unordered_rc16_map>( "foa_xmxmx_unordered_rc16_map" );
+    // test<foa_xmxmx_unordered_rc15_map>( "foa_xmxmx_unordered_rc15_map" );
+    // test<foa_mxm_unordered_rc16_map>( "foa_mxm_unordered_rc16_map" );
+    // test<foa_mxm_unordered_rc15_map>( "foa_mxm_unordered_rc15_map" );
+    // test<foa_mxm2_unordered_rc16_map>( "foa_mxm2_unordered_rc16_map" );
+    // test<foa_mxm2_unordered_rc15_map>( "foa_mxm2_unordered_rc15_map" );
     test<foa_xmx_unordered_rc16_map>( "foa_xmx_unordered_rc16_map" );
     test<foa_xmx_unordered_rc15_map>( "foa_xmx_unordered_rc15_map" );
-    test<foa_xmx2_unordered_rc16_map>( "foa_xmx2_unordered_rc16_map" );
-    test<foa_xmx2_unordered_rc15_map>( "foa_xmx2_unordered_rc15_map" );
-    test<foa_xm_unordered_rc16_map>( "foa_xm_unordered_rc16_map" );
-    test<foa_xm_unordered_rc15_map>( "foa_xm_unordered_rc15_map" );
-    test<foa_hxm_unordered_rc16_map>( "foa_hxm_unordered_rc16_map" );
-    test<foa_hxm_unordered_rc15_map>( "foa_hxm_unordered_rc15_map" );
-    test<foa_xm2_unordered_rc16_map>( "foa_xm2_unordered_rc16_map" );
-    test<foa_xm2_unordered_rc15_map>( "foa_xm2_unordered_rc15_map" );
+    // test<foa_xmx2_unordered_rc16_map>( "foa_xmx2_unordered_rc16_map" );
+    // test<foa_xmx2_unordered_rc15_map>( "foa_xmx2_unordered_rc15_map" );
+    // test<foa_xm_unordered_rc16_map>( "foa_xm_unordered_rc16_map" );
+    // test<foa_xm_unordered_rc15_map>( "foa_xm_unordered_rc15_map" );
+    // test<foa_hxm_unordered_rc16_map>( "foa_hxm_unordered_rc16_map" );
+    // test<foa_hxm_unordered_rc15_map>( "foa_hxm_unordered_rc15_map" );
+    // test<foa_xm2_unordered_rc16_map>( "foa_xm2_unordered_rc16_map" );
+    // test<foa_xm2_unordered_rc15_map>( "foa_xm2_unordered_rc15_map" );
     test<foa_hxm2_unordered_rc16_map>( "foa_hxm2_unordered_rc16_map" );
     test<foa_hxm2_unordered_rc15_map>( "foa_hxm2_unordered_rc15_map" );
 #endif
