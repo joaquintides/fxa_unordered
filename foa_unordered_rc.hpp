@@ -370,10 +370,11 @@ struct pow2_prober
 
   std::size_t get()const{return pos;}
 
-  void next(std::size_t size)
+  bool next(std::size_t size)
   {
     step+=1;
     pos=(pos+step)&(size-1);
+    return step<size;
   }
 
 private:
@@ -386,7 +387,7 @@ struct nonpow2_prober
 
   std::size_t get()const{return pos;}
 
-  void next(std::size_t size)
+  bool next(std::size_t size)
   {
     auto ceil = boost::core::bit_ceil(size);
     for(;;){
@@ -394,6 +395,7 @@ struct nonpow2_prober
       pos=(pos+step)&(ceil-1);
       if(pos<size)break;
     }
+    return step<size;
   }
 
 private:
@@ -598,7 +600,7 @@ private:
   BOOST_FORCEINLINE iterator find_impl(
     const Key& x,std::size_t pos0,std::size_t short_hash)const
   {    
-    for(prober pb(pos0);;pb.next(groups.size())){
+    for(prober pb(pos0);;){
       auto pos=pb.get();
       auto pg=groups.data()+pos;
       auto mask=pg->match(short_hash);
@@ -613,7 +615,8 @@ private:
           mask&=mask-1;
         }while(mask);
       }
-      if(BOOST_LIKELY(pg->is_not_overflowed(short_hash))){
+      if(BOOST_LIKELY(
+        pg->is_not_overflowed(short_hash)||!pb.next(groups.size()))){
         return end();
       }
     }
