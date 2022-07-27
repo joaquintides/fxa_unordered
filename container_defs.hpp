@@ -296,6 +296,24 @@ struct mxm32_hash
   }
 };
 
+// mxm33
+
+template<class T>
+struct mxm33_hash
+{
+  std::size_t operator()(const T& t) const
+  {
+    std::size_t x = boost::hash<T>()(t);
+
+    // score = 183.29936089234624
+    x *= 0x0aa49955U;
+    x ^= x >> 28;
+    x *= 0xea69945bU;
+
+    return x;
+  }
+};
+
 // xmx32
 
 template<class T>
@@ -332,6 +350,24 @@ struct xmx33_hash
   }
 };
 
+// xmx34
+
+template<class T>
+struct xmx34_hash
+{
+  std::size_t operator()(const T& t) const
+  {
+    std::size_t x = boost::hash<T>()(t);
+
+    // score = 323.48134076841461
+    x ^= x >> 14;
+    x *= 0x72b55aabU;
+    x ^= x >> 15;
+
+    return x;
+  }
+};
+
 // rmr32
 
 template<class T>
@@ -345,6 +381,24 @@ struct rmr32_hash
     x ^= ((x << 12) | (x >> 20)) ^ ((x << 24) | (x >> 8));
     x *= 0xa8ee8555U;
     x ^= ((x << 11) | (x >> 21)) ^ ((x << 20) | (x >> 12));
+
+    return x;
+  }
+};
+
+// rmr33
+
+template<class T>
+struct rmr33_hash
+{
+  std::size_t operator()(const T& t) const
+  {
+    std::size_t x = boost::hash<T>()(t);
+
+    // score = 88.031149345621088
+    x ^= ((x << 21) | (x >> 11)) ^ ((x << 11) | (x >> 21));
+    x *= 0x6d4e2953U;
+    x ^= ((x << 20) | (x >> 12)) ^ ((x << 10) | (x >> 22));
 
     return x;
   }
@@ -921,6 +975,20 @@ using foa_mxm32_unordered_rc15_map =
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::rc::group15>;
 
+template<class K, class V, class H=mxm33_hash<K>>
+using foa_mxm33_unordered_rc16_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group16>;
+
+template<class K, class V, class H=mxm33_hash<K>>
+using foa_mxm33_unordered_rc15_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group15>;
+
 template<class K, class V, class H=xmx32_hash<K>>
 using foa_xmx32_unordered_rc16_map =
   foa_unordered_rc_map<
@@ -949,6 +1017,20 @@ using foa_xmx33_unordered_rc15_map =
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
     fxa_unordered::rc::group15>;
 
+template<class K, class V, class H=xmx34_hash<K>>
+using foa_xmx34_unordered_rc16_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group16>;
+
+template<class K, class V, class H=xmx34_hash<K>>
+using foa_xmx34_unordered_rc15_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group15>;
+
 template<class K, class V, class H=rmr32_hash<K>>
 using foa_rmr32_unordered_rc16_map =
   foa_unordered_rc_map<
@@ -958,6 +1040,20 @@ using foa_rmr32_unordered_rc16_map =
 
 template<class K, class V, class H=rmr32_hash<K>>
 using foa_rmr32_unordered_rc15_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group15>;
+
+template<class K, class V, class H=rmr33_hash<K>>
+using foa_rmr33_unordered_rc16_map =
+  foa_unordered_rc_map<
+    K, V, H,std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group16>;
+
+template<class K, class V, class H=rmr33_hash<K>>
+using foa_rmr33_unordered_rc15_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
