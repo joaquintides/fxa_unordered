@@ -17,13 +17,14 @@
 #include <iterator>
 #include "fastrange.h"
 
-#if __SSE2__
-#include <emmintrin.h>
+#if defined(_MSC_VER)
+# include <intrin.h>
 #endif
 
 #if defined(__SSE2__) || \
     defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)
-#define FXA_UNORDERED_SSE2
+# define FXA_UNORDERED_SSE2
+# include <emmintrin.h>
 #endif
 
 // ripped from
@@ -140,8 +141,7 @@ struct prime_switch_size:prime_size
 #  endif
 #endif
 
-#if !defined(BOOST_NO_INT64_T)&&\
-    (defined(BOOST_HAS_INT128) || (defined(BOOST_MSVC)&&defined(_WIN64)))
+#if defined(__SIZEOF_INT128__) || (defined(_MSC_VER) && defined(_WIN64))
 #define FCA_FASTMOD_SUPPORT
 #endif
 
@@ -220,23 +220,28 @@ struct prime_fmod_size
 #if defined(FCA_FASTMOD_SUPPORT)
   // https://github.com/lemire/fastmod
 
-#  if defined(_MSC_VER)
-  static inline uint64_t mul128_u32(uint64_t lowbits, uint32_t d)
-  {
-    return __umulh(lowbits, d);
-  }
-#  else
+#if defined(__SIZEOF_INT128__)
+
   static inline uint64_t mul128_u32(uint64_t lowbits, uint32_t d)
   {
     return ((unsigned __int128)lowbits * d) >> 64;
   }
-#  endif /* defined(_MSC_VER) */
+
+#else
+
+  static inline uint64_t mul128_u32(uint64_t lowbits, uint32_t d)
+  {
+    return __umulh(lowbits, d);
+  }
+
+#endif
 
   static inline uint32_t fastmod_u32(uint32_t a, uint64_t M, uint32_t d)
   {
     uint64_t lowbits = M * a;
     return (uint32_t)(mul128_u32(lowbits, d));
   }
+
 #endif /* defined(FCA_FASTMOD_SUPPORT) */
 
   static inline std::size_t position(std::size_t hash,std::size_t size_index)
