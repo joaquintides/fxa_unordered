@@ -268,13 +268,6 @@ struct prime_fmod_size
   }
 };
 
-#ifdef FCA_FASTMOD_SUPPORT
-#undef FCA_FASTMOD_SUPPORT
-#endif
-#ifdef FCA_HAS_64B_SIZE_T
-#undef FCA_HAS_64B_SIZE_T
-#endif
-
 struct prime_frng_size:prime_size
 {      
   static inline std::size_t position(std::size_t hash,std::size_t size_index)
@@ -389,12 +382,25 @@ struct xm_hash
 
   static inline std::size_t short_hash(std::size_t hash)
   {
-    boost::uint64_t z = hash;
+#ifdef FCA_HAS_64B_SIZE_T
+
+    std::size_t z = hash;
 
     z ^= z >> 23;
     z *= 0xff51afd7ed558ccdull;
 
-    return (std::size_t)(z>>(sizeof(boost::uint64_t)*8-8));
+    return z >> 56;
+
+#else
+
+    std::size_t x = hash;
+
+    x ^= x >> 15;
+    x *= 0xc92adaabU;
+
+    return x >> 24;
+
+#endif
   }
 };
 
