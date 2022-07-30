@@ -421,20 +421,20 @@ struct group15:private legacy_non_sse2_group16
   }
 
 private:
-  using super=group16;
+  using super=legacy_non_sse2_group16;
 
   void set_nonempty_count(std::size_t m)
   {
-    uint64_ops::set(this->lomask,N,m);
+    uint64_ops::set(this->lowmask,N,m);
   }
 
   uint64_t nonempty_count()const
   {
     return 
-      (this->lomask & 0x0000000000008000ull)>>15|
-      (this->lomask & 0x0000000080000000ull)>>30|
-      (this->lomask & 0x0000800000000000ull)>>45|
-      (this->lomask & 0x8000000000000000ull)>>60;
+      (this->lowmask & 0x0000000000008000ull)>>15|
+      (this->lowmask & 0x0000000080000000ull)>>30|
+      (this->lowmask & 0x0000800000000000ull)>>45|
+      (this->lowmask & 0x8000000000000000ull)>>60;
   }
 };
 #endif /* FXA_UNORDERED_SSE2 */
