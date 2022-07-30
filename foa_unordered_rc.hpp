@@ -25,6 +25,7 @@
 #include <type_traits>
 #include <vector>
 #include "fxa_common.hpp"
+#include "fxa_uint64_xops.hpp"
 
 namespace fxa_unordered{
 
@@ -117,6 +118,94 @@ protected:
 
   inline void set_sentinel()
   {
+    uint64_xops::set(mask[1],N/2-1,sentinel_);
+  }
+
+  inline bool is_sentinel(std::size_t pos)const
+  {
+    return pos==N-1&&
+      (match_occupied()&0xFFFFu)!=(match_really_occupied()&0xFFFFu);
+  }
+
+  inline void reset(std::size_t pos)
+  {
+    set_impl(pos,deleted_);
+  }
+
+  inline int match(std::size_t hash)const
+  {
+    return match_impl(hash&0x7Fu);
+  }
+
+  inline int is_not_overflowed(std::size_t /* hash */)const
+  {
+    return match_empty();
+  }
+
+  inline void mark_overflow(std::size_t /* hash */){}
+
+  inline int match_empty()const
+  {
+    auto lo=(mask[0] & uint64_t(0xFFFF000000000000ull))>>48;
+    lo&=lo>>8;
+    auto hi=(mask[1] & uint64_t(0xFFFF000000000000ull))>>40;
+    hi&=hi>>8;
+    return lo|hi;
+  }
+
+  inline int match_available()const
+  {
+    auto lo=(mask[0] & uint64_t(0xFF00FF0000000000ull))>>40;
+    lo&=lo>>16;
+    auto hi=(mask[1] & uint64_t(0xFF00FF0000000000ull))>>32;
+    hi&=hi>>16;
+    return lo|hi;
+  }
+
+  inline int match_occupied()const
+  {
+    return  ~match_available()&0xFFFFu;
+  }
+
+  inline int match_really_occupied()const // excluding sentinel
+  {
+    return
+      (~mask[0] & uint64_t(0xFF00000000000000ull))>>56|
+      (~mask[1] & uint64_t(0xFF00000000000000ull))>>48;
+  }
+
+protected:
+  static constexpr unsigned char empty_=   0xE0u, // 11100000
+                                 deleted_= 0xA0u, // 10100000
+                                 sentinel_=0x80u; // 10000000
+
+  inline void set_impl(std::size_t pos,std::size_t m)
+  {
+    uint64_xops::set(mask[pos>=8],pos-8*(pos>=8),m);
+  }
+  
+  inline int match_impl(std::size_t m)const
+  {
+    return uint64_xops::match(mask[0],m)|
+           (uint64_xops::match(mask[1],m)<<8);
+  }
+
+  uint64_t mask[2]={0xFFFFFF0000000000ull,0xFFFFFF0000000000ull};
+#endif /* FXA_UNORDERED_SSE2 */
+};
+
+
+struct legacy_non_sse2_group16
+{
+  static constexpr int N=16;
+
+  inline void set(std::size_t pos,std::size_t hash)
+  {
+    set_impl(pos,hash&0x7Fu);
+  }
+
+  inline void set_sentinel()
+  {
     uint64_ops::set(himask,N-1,sentinel_);
   }
 
@@ -188,7 +277,6 @@ protected:
   }
 
   uint64_t lowmask=0,himask=0xFFFFFFFFFFFF0000ull;
-#endif /* FXA_UNORDERED_SSE2 */
 };
 
 #ifdef FXA_UNORDERED_SSE2
@@ -270,7 +358,7 @@ private:
   __m128i mask=_mm_setzero_si128();
 };
 #else
-struct group15:private group16
+struct group15:private legacy_non_sse2_group16
 {
   static constexpr int N=15;
 
@@ -337,16 +425,16 @@ private:
 
   void set_nonempty_count(std::size_t m)
   {
-    uint64_ops::set(this->lowmask,N,m);
+    uint64_ops::set(this->lomask,N,m);
   }
 
   uint64_t nonempty_count()const
   {
     return 
-      (this->lowmask & 0x0000000000008000ull)>>15|
-      (this->lowmask & 0x0000000080000000ull)>>30|
-      (this->lowmask & 0x0000800000000000ull)>>45|
-      (this->lowmask & 0x8000000000000000ull)>>60;
+      (this->lomask & 0x0000000000008000ull)>>15|
+      (this->lomask & 0x0000000080000000ull)>>30|
+      (this->lomask & 0x0000800000000000ull)>>45|
+      (this->lomask & 0x8000000000000000ull)>>60;
   }
 };
 #endif /* FXA_UNORDERED_SSE2 */
