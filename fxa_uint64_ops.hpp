@@ -66,11 +66,21 @@ static constexpr uint64_t mmasks[]=
   mmask(12),mmask(13),mmask(14),mmask(15),
 };
 
+uint64_t fast_mmask(uint64_t n)
+{
+  assert(n<16);
+
+   return (((n&0x1u)<<0)|
+          ((n&0x2u)<<15)|
+          ((n&0x4u)<<30)|
+          ((n&0x8u)<<45))*0xFFFFu;
+}
+
 int match(uint64_t x,int n)
 {
   assert(n<16);
   
-  x=~(x^mmasks[n]);
+  x=~(x^fast_mmask(n));
   return
     (x & uint64_t(0x000000000000FFFFull))>> 0&
     (x & uint64_t(0x00000000FFFF0000ull))>>16&
