@@ -44,7 +44,7 @@ static constexpr uint64_t simasks[]=
   simask(12),simask(13),simask(14),simask(15),
 };
 
-constexpr void set(uint64_t& x,unsigned pos,unsigned n)
+constexpr inline void set(uint64_t& x,unsigned pos,unsigned n)
 {
   assert(n<16&&pos<16);
     
