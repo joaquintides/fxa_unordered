@@ -129,9 +129,7 @@ struct group16
   inline bool is_sentinel(std::size_t pos)const
   {
     /* precondition: pos is occupied */
-    return
-      pos==N-1&&
-      (himask & uint64_t(0x8000000000000000ull));
+    return pos==N-1&&(himask & uint64_t(0x8000000000000000ull));
   }
 
   inline void reset(std::size_t pos)
@@ -191,8 +189,7 @@ protected:
   
   inline int match_impl(std::size_t m)const
   {
-    return uint64_ops::match(lomask,m&0xFu)&
-           uint64_ops::match(himask,m>>4);
+    return uint64_ops::match(lomask,lomask,m);
   }
 
   uint64_t lomask=0,himask=0xFFFFFFFFFFFF0000ull;
@@ -298,7 +295,9 @@ struct group15
 
   inline bool is_sentinel(std::size_t pos)const
   {
-    return pos==N-1&&match_impl(1);
+    return pos==N-1&&
+           (mask[0] & uint64_t(0x4000400040004000ull))==uint64_t(0x4000ull)&&
+           (mask[1] & uint64_t(0x4000400040004000ull))==0;
   }
 
   inline void reset(std::size_t pos)
@@ -314,11 +313,10 @@ struct group15
   inline bool is_not_overflowed(std::size_t hash)const
   {
     if(
-      (lomask & uint64_t(0x8000800080008000ull))|
-      (himask & uint64_t(0x8000800080008000ull))){
+      (mask[0] & uint64_t(0x8000800080008000ull))|
+      (mask[1] & uint64_t(0x8000800080008000ull))){
       auto pos=(hash%8)*16+15;
-      if(pos<64)return !(lomask&(uint64_t(1)<<pos));
-      else      return !(himask&(uint64_t(1)<<(pos-64)));
+      return !(mask[pos<64] & uint64_t(1)<<(pos-64*(pos>=64)));
     }
     else return true;
   }
@@ -326,8 +324,7 @@ struct group15
   inline void mark_overflow(std::size_t hash)
   {
     auto pos=(hash%8)*16+15;
-    if(pos<64)lomask|=uint64_t(1)<<pos;
-    else      himask|=uint64_t(1)<<(pos-64);
+    mask[pos<64]|=int64_t(1)<<(pos-64*(pos>=64));
   }
 
   inline int match_available()const
@@ -353,18 +350,16 @@ protected:
 
   inline void set_impl(std::size_t pos,std::size_t m)
   {
-    uint64_ops::set(lomask,pos,m&0xFu);
-    uint64_ops::set(himask,pos,m>>4);
+    uint64_ops::set(mask[0],pos,m&0xFu);
+    uint64_ops::set(mask[1],pos,m>>4);
   }
   
   inline int match_impl(std::size_t m)const
   {
-    return uint64_ops::match(lomask,m&0xFu)&
-           uint64_ops::match(himask,m>>4)&
-           0x7FFF;
+    return uint64_ops::match(mask[0],mask[1],m)&0x7FFF;
   }
 
-  uint64_t lomask=0,himask=0;
+  uint64_t mask[2]={0,0};
 };
 
 #endif /* FXA_UNORDERED_SSE2 */
