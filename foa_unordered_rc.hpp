@@ -30,11 +30,12 @@ namespace fxa_unordered{
 
 namespace rc{
 
+
+#ifdef FXA_UNORDERED_SSE2
+
 struct group16
 {
   static constexpr int N=16;
-
-#ifdef FXA_UNORDERED_SSE2
 
   inline void set(std::size_t pos,std::size_t hash)
   {
@@ -107,8 +108,13 @@ protected:
   }
 
   __m128i   mask=_mm_set1_epi8(empty_);
+};
 
 #else
+
+struct group16
+{
+  static constexpr int N=16;
 
   inline void set(std::size_t pos,std::size_t hash)
   {
@@ -179,21 +185,23 @@ protected:
 
   inline void set_impl(std::size_t pos,std::size_t m)
   {
-    uint64_ops::set(lowmask,pos,m&0xFu);
+    uint64_ops::set(lomask,pos,m&0xFu);
     uint64_ops::set(himask,pos,m>>4);
   }
   
   inline int match_impl(std::size_t m)const
   {
-    return uint64_ops::match(lowmask,m&0xFu)&
+    return uint64_ops::match(lomask,m&0xFu)&
            uint64_ops::match(himask,m>>4);
   }
 
-  uint64_t lowmask=0,himask=0xFFFFFFFFFFFF0000ull;
-#endif /* FXA_UNORDERED_SSE2 */
+  uint64_t lomask=0,himask=0xFFFFFFFFFFFF0000ull;
 };
 
+#endif /* FXA_UNORDERED_SSE2 */
+
 #ifdef FXA_UNORDERED_SSE2
+
 struct group15
 {
   static constexpr int N=15;
@@ -271,7 +279,9 @@ private:
 
   __m128i mask=_mm_setzero_si128();
 };
+
 #else
+
 struct group15:private group16
 {
   static constexpr int N=15;
@@ -339,18 +349,19 @@ private:
 
   void set_nonempty_count(std::size_t m)
   {
-    uint64_ops::set(this->lowmask,N,m);
+    uint64_ops::set(this->lomask,N,m);
   }
 
   uint64_t nonempty_count()const
   {
     return 
-      (this->lowmask & 0x0000000000008000ull)>>15|
-      (this->lowmask & 0x0000000080000000ull)>>30|
-      (this->lowmask & 0x0000800000000000ull)>>45|
-      (this->lowmask & 0x8000000000000000ull)>>60;
+      (this->lomask & 0x0000000000008000ull)>>15|
+      (this->lomask & 0x0000000080000000ull)>>30|
+      (this->lomask & 0x0000800000000000ull)>>45|
+      (this->lomask & 0x8000000000000000ull)>>60;
   }
 };
+
 #endif /* FXA_UNORDERED_SSE2 */
 
 template<typename T>
