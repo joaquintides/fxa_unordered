@@ -122,8 +122,10 @@ protected:
 
   inline bool is_sentinel(std::size_t pos)const
   {
-    return pos==N-1&&
-      (match_occupied()&0xFFFFu)!=(match_really_occupied()&0xFFFFu);
+    /* precondition: pos is occupied */
+    return
+      pos==N-1&&
+      (himask & uint64_t(0x8000000000000000ull));
   }
 
   inline void reset(std::size_t pos)
