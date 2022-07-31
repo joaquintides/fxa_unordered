@@ -71,11 +71,9 @@ int match(uint64_t x,int n)
   assert(n<16);
   
   x=~(x^mmasks[n]);
-  return
-    (x & uint64_t(0x000000000000FFFFull))>> 0&
-    (x & uint64_t(0x00000000FFFF0000ull))>>16&
-    (x & uint64_t(0x0000FFFF00000000ull))>>32&
-    (x & uint64_t(0xFFFF000000000000ull))>>48;
+  uint32_t y=x&(x>>32);
+  y&=y>>16;
+  return y;
 }
 
 } // namespace uint64_ops
