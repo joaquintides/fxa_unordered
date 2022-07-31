@@ -189,7 +189,7 @@ protected:
   
   inline int match_impl(std::size_t m)const
   {
-    return uint64_ops::match(lomask,lomask,m);
+    return uint64_ops::match(lomask,himask,m);
   }
 
   uint64_t lomask=0,himask=0xFFFFFFFFFFFF0000ull;
