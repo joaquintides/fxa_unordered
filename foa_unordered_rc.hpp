@@ -282,84 +282,89 @@ private:
 
 #else
 
-struct group15:private group16
+struct group15
 {
   static constexpr int N=15;
 
   inline void set(std::size_t pos,std::size_t hash)
   {
-    set_nonempty_count(
-      nonempty_count()+((super::match_empty()&(1<<pos))!=0));
-    super::set(pos,hash);
+    set_impl(pos,adjust_hash(hash));
   }
 
   inline void set_sentinel()
   {
-    set_nonempty_count(nonempty_count()+1);
-    uint64_ops::set(this->himask,N-1,this->sentinel_);
+    set_impl(N-1,1);
   }
 
   inline bool is_sentinel(std::size_t pos)const
   {
-    return pos==N-1&&
-      (match_occupied()&0x7FFFu)!=(match_really_occupied()&0x7FFFu);
+    return pos==N-1&&match_impl(1);
   }
 
   inline void reset(std::size_t pos)
   {
-    super::reset(pos);
+    set_impl(pos,0);
   }
 
   inline int match(std::size_t hash)const
   {
-    // no need to mask with 0x7FFF as nonempty_count MSB is always 1
-    return super::match(hash);
+    return match_impl(adjust_hash(hash));
   }
 
-  inline auto is_not_overflowed(std::size_t /* hash */)const
+  inline bool is_not_overflowed(std::size_t hash)const
   {
-    return nonempty_count()!=N;  
+    if(
+      (lomask & uint64_t(0x8000800080008000ull))|
+      (himask & uint64_t(0x8000800080008000ull))){
+      auto pos=(hash%8)*16+15;
+      if(pos<64)return !(lomask&(uint64_t(1)<<pos));
+      else      return !(himask&(uint64_t(1)<<(pos-64)));
+    }
+    else return true;
   }
 
-  inline void mark_overflow(std::size_t /* hash */){}
-
-  inline int match_empty()const
+  inline void mark_overflow(std::size_t hash)
   {
-    return super::match_empty()&0x7FFF;
+    auto pos=(hash%8)*16+15;
+    if(pos<64)lomask|=uint64_t(1)<<pos;
+    else      himask|=uint64_t(1)<<(pos-64);
   }
 
   inline int match_available()const
   {
-    return super::match_available()&0x7FFF;
+    return match_impl(0);
   }
 
   inline int match_occupied()const
   {
-    // no need to mask with 0x7FFF as nonempty_count MSB is always 1
-    return super::match_occupied();
+    return ~match_available()&0x7FFF;
   }
 
   inline int match_really_occupied()const // excluding sentinel
   {
-    return super::match_really_occupied()&0x7FFF;
+    return ~(match_impl(0)|match_impl(1))&0x7FFF;
   }
 
-private:
-  using super=group16;
-
-  void set_nonempty_count(std::size_t m)
+protected:
+  inline static unsigned char adjust_hash(unsigned char hash)
   {
-    uint64_ops::set(this->lomask,N,m);
+    return hash|(2*(hash<2));
   }
 
-  uint64_t nonempty_count()const
+  inline void set_impl(std::size_t pos,std::size_t m)
   {
-    return 
-      (this->lomask & 0x0000000000008000ull)>>15|
-      (this->lomask & 0x0000000080000000ull)>>30|
-      (this->lomask & 0x0000800000000000ull)>>45|
-      (this->lomask & 0x8000000000000000ull)>>60;
+    uint64_ops::set(lomask,pos,m&0xFu);
+    uint64_ops::set(himask,pos,m>>4);
   }
+  
+  inline int match_impl(std::size_t m)const
+  {
+    return uint64_ops::match(lomask,m&0xFu)&
+           uint64_ops::match(himask,m>>4)&
+           0x7FFF;
+  }
+
+  uint64_t lomask=0,himask=0;
 };
 
 #endif /* FXA_UNORDERED_SSE2 */
