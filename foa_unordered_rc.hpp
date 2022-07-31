@@ -31,7 +31,7 @@ namespace fxa_unordered{
 namespace rc{
 
 
-#ifdef XXXFXA_UNORDERED_SSE2
+#ifdef FXA_UNORDERED_SSE2
 
 struct group16
 {
@@ -197,7 +197,7 @@ protected:
 
 #endif /* FXA_UNORDERED_SSE2 */
 
-#ifdef XXXFXA_UNORDERED_SSE2
+#ifdef FXA_UNORDERED_SSE2
 
 struct group15
 {
