@@ -76,6 +76,17 @@ inline int match(uint64_t x,int n)
   return y;
 }
 
+inline int match(uint64_t lo,uint64_t hi,int n)
+{
+  assert(n<256);
+  
+  lo=~(lo^mmasks[n&0xFu]);
+  hi=~(hi^mmasks[n>>4])&lo;
+  uint32_t y=hi&(hi>>32);
+  y&=y>>16;
+  return y;
+}
+
 } // namespace uint64_ops
 
 
