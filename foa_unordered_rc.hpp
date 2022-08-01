@@ -312,19 +312,12 @@ struct group15
 
   inline bool is_not_overflowed(std::size_t hash)const
   {
-    if(
-      (mask[0] & uint64_t(0x8000800080008000ull))|
-      (mask[1] & uint64_t(0x8000800080008000ull))){
-      auto pos=(hash%8)*16+15;
-      return !(mask[pos<64] & uint64_t(1)<<(pos-64*(pos>=64)));
-    }
-    else return true;
+    return !(reinterpret_cast<const uint16_t*>(mask)[hash%8] & 0x8000u);
   }
 
   inline void mark_overflow(std::size_t hash)
   {
-    auto pos=(hash%8)*16+15;
-    mask[pos<64]|=int64_t(1)<<(pos-64*(pos>=64));
+    reinterpret_cast<uint16_t*>(mask)[hash%8]|=0x8000u;
   }
 
   inline int match_available()const
