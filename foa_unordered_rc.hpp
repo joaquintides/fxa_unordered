@@ -234,8 +234,11 @@ struct group15
 
   inline auto is_not_overflowed(std::size_t hash)const
   {
-    //return BOOST_LIKELY(!overflow())||!(overflow()&(1u<<(hash%8)));
+#if defined(BOOST_MSVC)
+    return BOOST_LIKELY(!overflow())||!(overflow()&(1u<<(hash%8)));
+#else
     return !(overflow()&(1u<<(hash%8)));
+#endif
   }
 
   inline void mark_overflow(std::size_t hash)
