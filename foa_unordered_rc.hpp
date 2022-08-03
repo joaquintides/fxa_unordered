@@ -380,6 +380,118 @@ private:
   __m128i mask=_mm_setzero_si128();
 };
 
+#elif defined(__ARM_NEON)
+// TODO: check for little endianness
+
+struct group15
+{
+  static constexpr int N=15;
+  
+  inline void set(std::size_t pos,std::size_t hash)
+  {
+    assert(pos<N);
+    reinterpret_cast<unsigned char*>(&mask)[pos]=adjust_hash(hash);
+  }
+
+  inline void set_sentinel()
+  {
+    reinterpret_cast<unsigned char*>(&mask)[N-1]=0x01; // occupied
+  }
+
+  inline bool is_sentinel(std::size_t pos)const
+  {
+    return pos==N-1&&
+      reinterpret_cast<const unsigned char*>(&mask)[N-1]==0x01;
+  }
+
+  inline void reset(std::size_t pos)
+  {
+    assert(pos<N);
+    reinterpret_cast<unsigned char*>(&mask)[pos]=0u;
+  }
+
+  inline int match(std::size_t hash)const
+  {
+    auto m=vdupq_n_s8(adjust_hash(hash));
+    return vmovmaskq_u8(vceqq_s8(mask,m))&0x7FFF;
+  }
+
+  inline auto is_not_overflowed(std::size_t hash)const
+  {
+#if defined(BOOST_MSVC)
+    return BOOST_LIKELY(!overflow())||!(overflow()&(1u<<(hash%8)));
+#else
+    return !(overflow()&(1u<<(hash%8)));
+#endif
+  }
+
+  inline void mark_overflow(std::size_t hash)
+  {
+    overflow()|=1u<<(hash%8);
+  }
+
+  inline int match_available()const
+  {
+    return vmovmaskq_u8(vceqq_s8(mask,vdupq_n_s8(0)))&0x7FFF;
+  }
+
+  inline int match_occupied()const
+  {
+    return (~match_available())&0x7FFF;
+  }
+
+  inline int match_really_occupied()const // excluding sentinel
+  {
+    return reinterpret_cast<const unsigned char*>(&mask)[N-1]==0x01?
+      match_occupied()&0x3FFF:match_occupied();
+  }
+
+private:
+  // https://stackoverflow.com/a/58381188/213114
+  static inline int vmovmaskq_u8(uint8x16_t input)
+  {
+    // Example input (half scale):
+    // 0x89 FF 1D C0 00 10 99 33
+
+    // Shift out everything but the sign bits
+    // 0x01 01 00 01 00 00 01 00
+    uint16x8_t high_bits = vreinterpretq_u16_u8(vshrq_n_u8(input, 7));
+
+    // Merge the even lanes together with vsra. The '??' bytes are garbage.
+    // vsri could also be used, but it is slightly slower on aarch64.
+    // 0x??03 ??02 ??00 ??01
+    uint32x4_t paired16 = vreinterpretq_u32_u16(
+                              vsraq_n_u16(high_bits, high_bits, 7));
+    // Repeat with wider lanes.
+    // 0x??????0B ??????04
+    uint64x2_t paired32 = vreinterpretq_u64_u32(
+                              vsraq_n_u32(paired16, paired16, 14));
+    // 0x??????????????4B
+    uint8x16_t paired64 = vreinterpretq_u8_u64(
+                              vsraq_n_u64(paired32, paired32, 28));
+    // Extract the low 8 bits from each lane and join.
+    // 0x4B
+    return vgetq_lane_u8(paired64, 0) | ((int)vgetq_lane_u8(paired64, 8) << 8);
+  }
+
+  inline static unsigned char adjust_hash(unsigned char hash)
+  {
+    return hash|(2*(hash<2));
+  }
+
+  inline unsigned char& overflow()
+  {
+    return reinterpret_cast<unsigned char*>(&mask)[N];
+  }
+
+  inline unsigned char overflow()const
+  {
+    return reinterpret_cast<const unsigned char*>(&mask)[N];
+  }
+
+  int8x16_t mask=vdupq_n_s8(0)  ;
+};
+
 #else
 
 struct group15
