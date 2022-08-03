@@ -114,7 +114,8 @@ protected:
   __m128i   mask=_mm_set1_epi8(empty_);
 };
 
-#elif __ARM_NEON
+#elif defined(__ARM_NEON)
+#error intentional error
 // TODO: check for little endianness
 
 struct group16
