@@ -146,13 +146,13 @@ struct group16
   inline int match(std::size_t hash)const
   {
     auto m=vdupq_n_s8(hash&0x7Fu);
-    return _mm_movemask_epi8_neon(vceqq_s8(mask,m));
+    return vmovmaskq_u8(vceqq_s8(mask,m));
   }
 
   inline int is_not_overflowed(std::size_t /* hash */)const
   {
     auto m=vdupq_n_s8(empty_);
-    return _mm_movemask_epi8_neon(vceqq_s8(mask,m));
+    return vmovmaskq_u8(vceqq_s8(mask,m));
   }
 
   inline void mark_overflow(std::size_t /* hash */){}
@@ -160,7 +160,7 @@ struct group16
   inline int match_available()const
   {
     auto m=vdupq_n_s8(sentinel_);
-    return _mm_movemask_epi8_neon(vcgtq_s8(m,mask));    
+    return vmovmaskq_u8(vcgtq_s8(m,mask));    
   }
 
   inline int match_occupied()const
@@ -170,7 +170,7 @@ struct group16
 
   inline int match_really_occupied()const // excluding sentinel
   {
-    return (~_mm_movemask_epi8_neon(reinterpret_cast<uint8x16_t>(mask)))&0xFFFFul;
+    return (~vmovmaskq_u8(reinterpret_cast<uint8x16_t>(mask)))&0xFFFFul;
   }
 
 protected:
@@ -179,31 +179,31 @@ protected:
                           deleted_=-2,
                           sentinel_=-1;
 
-  // https://stackoverflow.com/a/11873567/213114
-  static inline int32_t _mm_movemask_epi8_neon(uint8x16_t input)
+  // https://stackoverflow.com/a/58381188/213114
+  static inline int vmovmaskq_u8(uint8x16_t input)
   {
-    const int8_t __attribute__ ((aligned (16))) xr[8] = {-7,-6,-5,-4,-3,-2,-1,0};
-    uint8x8_t mask_and = vdup_n_u8(0x80);
-    int8x8_t mask_shift = vld1_s8(xr);
+    // Example input (half scale):
+    // 0x89 FF 1D C0 00 10 99 33
 
-    uint8x8_t lo = vget_low_u8(input);
-    uint8x8_t hi = vget_high_u8(input);
+    // Shift out everything but the sign bits
+    // 0x01 01 00 01 00 00 01 00
+    uint16x8_t high_bits = vreinterpretq_u16_u8(vshrq_n_u8(input, 7));
 
-    lo = vand_u8(lo, mask_and);
-    lo = vshl_u8(lo, mask_shift);
-
-    hi = vand_u8(hi, mask_and);
-    hi = vshl_u8(hi, mask_shift);
-
-    lo = vpadd_u8(lo,lo);
-    lo = vpadd_u8(lo,lo);
-    lo = vpadd_u8(lo,lo);
-
-    hi = vpadd_u8(hi,hi);
-    hi = vpadd_u8(hi,hi);
-    hi = vpadd_u8(hi,hi);
-
-    return ((hi[0] << 8) | (lo[0] & 0xFF));
+    // Merge the even lanes together with vsra. The '??' bytes are garbage.
+    // vsri could also be used, but it is slightly slower on aarch64.
+    // 0x??03 ??02 ??00 ??01
+    uint32x4_t paired16 = vreinterpretq_u32_u16(
+                              vsraq_n_u16(high_bits, high_bits, 7));
+    // Repeat with wider lanes.
+    // 0x??????0B ??????04
+    uint64x2_t paired32 = vreinterpretq_u64_u32(
+                              vsraq_n_u32(paired16, paired16, 14));
+    // 0x??????????????4B
+    uint8x16_t paired64 = vreinterpretq_u8_u64(
+                              vsraq_n_u64(paired32, paired32, 28));
+    // Extract the low 8 bits from each lane and join.
+    // 0x4B
+    return vgetq_lane_u8(paired64, 0) | ((int)vgetq_lane_u8(paired64, 8) << 8);
   }
 
   int8x16_t mask=vdupq_n_s8(empty_);
