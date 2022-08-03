@@ -26,6 +26,10 @@
 #include <vector>
 #include "fxa_common.hpp"
 
+#if defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
+
 namespace fxa_unordered{
 
 namespace rc{
@@ -108,6 +112,101 @@ protected:
   }
 
   __m128i   mask=_mm_set1_epi8(empty_);
+};
+
+#elif __ARM_NEON
+// TODO: check for little endianness
+
+struct group16
+{
+  static constexpr int N=16;
+
+  inline void set(std::size_t pos,std::size_t hash)
+  {
+    reinterpret_cast<unsigned char*>(&mask)[pos]=hash&0x7Fu;
+  }
+
+  inline void set_sentinel()
+  {
+    reinterpret_cast<unsigned char*>(&mask)[N-1]=sentinel_;
+  }
+
+  inline bool is_sentinel(std::size_t pos)const
+  {
+    return pos==N-1&&
+      reinterpret_cast<const unsigned char*>(&mask)[N-1]==(unsigned char)sentinel_;
+  }
+
+  inline void reset(std::size_t pos)
+  {
+    assert(pos<N);
+    reinterpret_cast<unsigned char*>(&mask)[pos]=deleted_;
+  }
+
+  inline int match(std::size_t hash)const
+  {
+    auto m=vdupq_n_s8(hash&0x7Fu);
+    return _mm_movemask_epi8_neon(vceqq_s8(mask,m));
+  }
+
+  inline int is_not_overflowed(std::size_t /* hash */)const
+  {
+    auto m=vdupq_n_s8(empty_);
+    return _mm_movemask_epi8_neon(vceqq_s8(mask,m));
+  }
+
+  inline void mark_overflow(std::size_t /* hash */){}
+
+  inline int match_available()const
+  {
+    auto m=vdupq_n_s8(sentinel_);
+    return _mm_movemask_epi8_neon(vcgtq_s8(m,mask));    
+  }
+
+  inline int match_occupied()const
+  {
+    return (~match_available())&0xFFFFul;
+  }
+
+  inline int match_really_occupied()const // excluding sentinel
+  {
+    return (~_mm_movemask_epi8_neon(reinterpret_cast<uint8x16_t>(mask)))&0xFFFFul;
+  }
+
+protected:
+  // exact values as per Abseil rationale
+  static constexpr int8_t empty_=-128,
+                          deleted_=-2,
+                          sentinel_=-1;
+
+  // https://stackoverflow.com/a/11873567/213114
+  static inline int32_t _mm_movemask_epi8_neon(uint8x16_t input)
+  {
+    const int8_t __attribute__ ((aligned (16))) xr[8] = {-7,-6,-5,-4,-3,-2,-1,0};
+    uint8x8_t mask_and = vdup_n_u8(0x80);
+    int8x8_t mask_shift = vld1_s8(xr);
+
+    uint8x8_t lo = vget_low_u8(input);
+    uint8x8_t hi = vget_high_u8(input);
+
+    lo = vand_u8(lo, mask_and);
+    lo = vshl_u8(lo, mask_shift);
+
+    hi = vand_u8(hi, mask_and);
+    hi = vshl_u8(hi, mask_shift);
+
+    lo = vpadd_u8(lo,lo);
+    lo = vpadd_u8(lo,lo);
+    lo = vpadd_u8(lo,lo);
+
+    hi = vpadd_u8(hi,hi);
+    hi = vpadd_u8(hi,hi);
+    hi = vpadd_u8(hi,hi);
+
+    return ((hi[0] << 8) | (lo[0] & 0xFF));
+  }
+
+  int8x16_t mask=vdupq_n_s8(empty_);
 };
 
 #else
