@@ -115,7 +115,6 @@ protected:
 };
 
 #elif defined(__ARM_NEON)
-#error intentional error
 // TODO: check for little endianness
 
 struct group16
