@@ -215,6 +215,13 @@ protected:
 
     uint8x16_t ma=vandq_u8(vld1q_u8(md),m);
 
+#if defined(__SIZEOF_INT128__)
+    unsigned __int128 u=reinterpret_cast<unsigned __int128>(ma);
+    u|=u>>32;
+    u|=u>>16;
+    u|=u>>8;
+    return (u&0xFFu)|((u>>56)&0xFF00u);
+#else
     uint64_t lo=reinterpret_cast<uint64_t>(vget_low_u8(ma)); 
     uint64_t hi=reinterpret_cast<uint64_t>(vget_high_u8(ma));
     lo|=lo>>32;
@@ -224,6 +231,7 @@ protected:
     hi|=hi>>16;
     hi|=hi>>8;
     return (lo&0xFFu)|((hi&0xFFu)<<8);
+#endif
   }
 
   int8x16_t mask=vdupq_n_s8(empty_);
