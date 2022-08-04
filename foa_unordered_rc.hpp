@@ -146,13 +146,13 @@ struct group16
   inline int match(std::size_t hash)const
   {
     auto m=vdupq_n_s8(hash&0x7Fu);
-    return vmovmaskq_u8(vceqq_s8(mask,m));
+    return _mm_movemask_aarch64(vceqq_s8(mask,m));
   }
 
   inline int is_not_overflowed(std::size_t /* hash */)const
   {
     auto m=vdupq_n_s8(empty_);
-    return vmovmaskq_u8(vceqq_s8(mask,m));
+    return _mm_movemask_aarch64(vceqq_s8(mask,m));
   }
 
   inline void mark_overflow(std::size_t /* hash */){}
@@ -160,7 +160,7 @@ struct group16
   inline int match_available()const
   {
     auto m=vdupq_n_s8(sentinel_);
-    return vmovmaskq_u8(vcgtq_s8(m,mask));    
+    return _mm_movemask_aarch64(vcgtq_s8(m,mask));    
   }
 
   inline int match_occupied()const
@@ -170,7 +170,7 @@ struct group16
 
   inline int match_really_occupied()const // excluding sentinel
   {
-    return (~vmovmaskq_u8(reinterpret_cast<uint8x16_t>(mask)))&0xFFFFul;
+    return (~_mm_movemask_aarch64(reinterpret_cast<uint8x16_t>(mask)))&0xFFFFul;
   }
 
 protected:
@@ -179,31 +179,19 @@ protected:
                           deleted_=-2,
                           sentinel_=-1;
 
-  // https://stackoverflow.com/a/58381188/213114
-  static inline int vmovmaskq_u8(uint8x16_t input)
-  {
-    // Example input (half scale):
-    // 0x89 FF 1D C0 00 10 99 33
-
-    // Shift out everything but the sign bits
-    // 0x01 01 00 01 00 00 01 00
-    uint16x8_t high_bits = vreinterpretq_u16_u8(vshrq_n_u8(input, 7));
-
-    // Merge the even lanes together with vsra. The '??' bytes are garbage.
-    // vsri could also be used, but it is slightly slower on aarch64.
-    // 0x??03 ??02 ??00 ??01
-    uint32x4_t paired16 = vreinterpretq_u32_u16(
-                              vsraq_n_u16(high_bits, high_bits, 7));
-    // Repeat with wider lanes.
-    // 0x??????0B ??????04
-    uint64x2_t paired32 = vreinterpretq_u64_u32(
-                              vsraq_n_u32(paired16, paired16, 14));
-    // 0x??????????????4B
-    uint8x16_t paired64 = vreinterpretq_u8_u64(
-                              vsraq_n_u64(paired32, paired32, 28));
-    // Extract the low 8 bits from each lane and join.
-    // 0x4B
-    return vgetq_lane_u8(paired64, 0) | ((int)vgetq_lane_u8(paired64, 8) << 8);
+  // https://stackoverflow.com/a/68694558/213114
+  int _mm_movemask_aarch64(uint8x16_t input)
+  {   
+      const uint8_t __attribute__ ((aligned (16))) ucShift[] = {(uint8_t)-7,(uint8_t)-6,(uint8_t)-5,(uint8_t)-4,(uint8_t)-3,(uint8_t)-2,(uint8_t)-1,0,(uint8_t)-7,(uint8_t)-6,(uint8_t)-5,(uint8_t)-4,(uint8_t)-3,(uint8_t)-2,(uint8_t)-1,0};
+      uint8x16_t vshift = vld1q_u8(ucShift);
+      uint8x16_t vmask = vandq_u8(input, vdupq_n_u8(0x80));
+      int out;
+    
+      vmask = vshlq_u8(vmask, vshift);
+      out = vaddv_u8(vget_low_u8(vmask));
+      out += (vaddv_u8(vget_high_u8(vmask)) << 8);
+    
+      return out;
   }
 
   int8x16_t mask=vdupq_n_s8(empty_);
