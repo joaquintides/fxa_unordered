@@ -180,7 +180,7 @@ protected:
                           sentinel_=-1;
 
   // https://stackoverflow.com/a/68694558/213114
-  int _mm_movemask_aarch64(uint8x16_t input)
+  static inline int _mm_movemask_aarch64(uint8x16_t input)
   {   
       const uint8_t __attribute__ ((aligned (16))) ucShift[] = {(uint8_t)-7,(uint8_t)-6,(uint8_t)-5,(uint8_t)-4,(uint8_t)-3,(uint8_t)-2,(uint8_t)-1,0,(uint8_t)-7,(uint8_t)-6,(uint8_t)-5,(uint8_t)-4,(uint8_t)-3,(uint8_t)-2,(uint8_t)-1,0};
       uint8x16_t vshift = vld1q_u8(ucShift);
