@@ -146,13 +146,13 @@ struct group16
   inline int match(std::size_t hash)const
   {
     auto m=vdupq_n_s8(hash&0x7Fu);
-    return vmovmaskq_u8(vceqq_s8(mask,m));
+    return reduce_match(vceqq_s8(mask,m));
   }
 
   inline int is_not_overflowed(std::size_t /* hash */)const
   {
     auto m=vdupq_n_s8(empty_);
-    return vmovmaskq_u8(vceqq_s8(mask,m));
+    return reduce_match(vceqq_s8(mask,m));
   }
 
   inline void mark_overflow(std::size_t /* hash */){}
@@ -160,7 +160,7 @@ struct group16
   inline int match_available()const
   {
     auto m=vdupq_n_s8(sentinel_);
-    return vmovmaskq_u8(vcgtq_s8(m,mask));    
+    return reduce_match(vcgtq_s8(m,mask));    
   }
 
   inline int match_occupied()const
@@ -170,7 +170,7 @@ struct group16
 
   inline int match_really_occupied()const // excluding sentinel
   {
-    return (~vmovmaskq_u8(reinterpret_cast<uint8x16_t>(mask)))&0xFFFFul;
+    return (~reduce_match(reinterpret_cast<uint8x16_t>(mask)))&0xFFFFul;
   }
 
 protected:
@@ -179,35 +179,38 @@ protected:
                           deleted_=-2,
                           sentinel_=-1;
 
-  // https://stackoverflow.com/a/58381188/213114
-  static inline int vmovmaskq_u8(uint8x16_t input)
-  {
-    // Example input (half scale):
-    // 0x89 FF 1D C0 00 10 99 33
+    static inline int reduce_match(uint8x16_t m)
+    {
+      static const uint8_t md[16]={
+        1<<0,1<<1,1<<2,1<<3,1<<4,1<<5,1<<6,1<<7,
+        1<<0,1<<1,1<<2,1<<3,1<<4,1<<5,1<<6,1<<7,
+      };
 
-    // Shift out everything but the sign bits
-    // 0x01 01 00 01 00 00 01 00
-    uint16x8_t high_bits = vreinterpretq_u16_u8(vshrq_n_u8(input, 7));
+      uint8x16_t ma=vandq_u8(vld1q_u8(md),m);
 
-    // Merge the even lanes together with vsra. The '??' bytes are garbage.
-    // vsri could also be used, but it is slightly slower on aarch64.
-    // 0x??03 ??02 ??00 ??01
-    uint32x4_t paired16 = vreinterpretq_u32_u16(
-                              vsraq_n_u16(high_bits, high_bits, 7));
-    // Repeat with wider lanes.
-    // 0x??????0B ??????04
-    uint64x2_t paired32 = vreinterpretq_u64_u32(
-                              vsraq_n_u32(paired16, paired16, 14));
-    // 0x??????????????4B
-    uint8x16_t paired64 = vreinterpretq_u8_u64(
-                              vsraq_n_u64(paired32, paired32, 28));
-    // Extract the low 8 bits from each lane and join.
-    // 0x4B
-    return vgetq_lane_u8(paired64, 0) | ((int)vgetq_lane_u8(paired64, 8) << 8);
-  }
+#if defined(__SIZEOF_INT128__)
+      unsigned __int128 u=reinterpret_cast<unsigned __int128>(ma);
+      uint64_t w=u|(u>>64);
+      w|=w>>32;
+      w|=w>>16;
+      w|=w>>8;
+      return w&0xFFFFu;
+#else
+      uint64_t   lo=reinterpret_cast<uint64_t>(vget_low_u8(ma)); 
+      uint64_t   hi=reinterpret_cast<uint64_t>(vget_high_u8(ma));
+      lo|=lo>>32;
+      lo|=lo>>16;
+      lo|=lo>>8;
+      hi|=hi>>32;
+      hi|=hi>>16;
+      hi|=hi>>8;
+      return (lo&0xFFu)|((hi&0xFFu)<<8);
+#endif    
+    }
 
   int8x16_t mask=vdupq_n_s8(empty_);
 };
+
 
 #else
 
