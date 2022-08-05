@@ -146,13 +146,13 @@ struct group16
   inline int match(std::size_t hash)const
   {
     auto m=vdupq_n_s8(hash&0x7Fu);
-    return _mm_movemask_aarch64(vceqq_s8(mask,m));
+    return simde_mm_movemask_epi8(vceqq_s8(mask,m));
   }
 
   inline int is_not_overflowed(std::size_t /* hash */)const
   {
     auto m=vdupq_n_s8(empty_);
-    return _mm_movemask_aarch64(vceqq_s8(mask,m));
+    return simde_mm_movemask_epi8(vceqq_s8(mask,m));
   }
 
   inline void mark_overflow(std::size_t /* hash */){}
@@ -160,7 +160,7 @@ struct group16
   inline int match_available()const
   {
     auto m=vdupq_n_s8(sentinel_);
-    return _mm_movemask_aarch64(vcgtq_s8(m,mask));    
+    return simde_mm_movemask_epi8(vcgtq_s8(m,mask));    
   }
 
   inline int match_occupied()const
@@ -173,11 +173,34 @@ struct group16
     return (~_mm_movemask_aarch64(reinterpret_cast<uint8x16_t>(mask)))&0xFFFFul;
   }
 
-protected:
+private:
   // exact values as per Abseil rationale
   static constexpr int8_t empty_=-128,
                           deleted_=-2,
                           sentinel_=-1;
+
+  // https://github.com/simd-everywhere/simde/blob/e1bc968696e6533d6b0bf8dddb0614737c983479/simde/x86/sse2.h#L3755
+  // (adapted)
+  int simde_mm_movemask_epi8(uint8x16_t a)
+  {
+    /* https://github.com/WebAssembly/simd/pull/201#issue-380682845 */
+    static const uint8_t md[16] = {
+    1 << 0, 1 << 1, 1 << 2, 1 << 3,
+    1 << 4, 1 << 5, 1 << 6, 1 << 7,
+    1 << 0, 1 << 1, 1 << 2, 1 << 3,
+    1 << 4, 1 << 5, 1 << 6, 1 << 7,
+    };
+
+    /* Extend sign bit over entire lane */
+    // we omit this op as lanes are 00/FF 
+    // uint8x16_t extended = vreinterpretq_u8_s8(vshrq_n_s8(a, 7));
+    /* Clear all but the bit we're interested in. */
+    uint8x16_t masked = vandq_u8(vld1q_u8(md), a);
+    /* Alternate bytes from low half and high half */
+    uint8x8x2_t tmp = vzip_u8(vget_low_u8(masked), vget_high_u8(masked));
+    uint16x8_t x = vreinterpretq_u16_u8(vcombine_u8(tmp.val[0], tmp.val[1]));
+    return vaddvq_u16(x);
+  }
 
   // https://stackoverflow.com/a/68694558/213114
   static inline int _mm_movemask_aarch64(uint8x16_t input)
@@ -263,7 +286,7 @@ struct group16
       (~himask & uint64_t(0xFFFF000000000000ull))>>48;
   }
 
-protected:
+private:
   static constexpr int empty_=   0xE, // 1110
                        deleted_= 0xA, // 1010
                        sentinel_=0x8; // 1000
@@ -401,7 +424,7 @@ struct group15
   inline int match(std::size_t hash)const
   {
     auto m=vdupq_n_s8(adjust_hash(hash));
-    return _mm_movemask_aarch64(vceqq_s8(mask,m))&0x7FFF;
+    return simde_mm_movemask_epi8(vceqq_s8(mask,m))&0x7FFF;
   }
 
   inline auto is_not_overflowed(std::size_t hash)const
@@ -420,7 +443,7 @@ struct group15
 
   inline int match_available()const
   {
-    return _mm_movemask_aarch64(vceqq_s8(mask,vdupq_n_s8(0)))&0x7FFF;
+    return simde_mm_movemask_epi8(vceqq_s8(mask,vdupq_n_s8(0)))&0x7FFF;
   }
 
   inline int match_occupied()const
@@ -435,19 +458,27 @@ struct group15
   }
 
 private:
-  // https://stackoverflow.com/a/68694558/213114
-  static inline int _mm_movemask_aarch64(uint8x16_t input)
-  {   
-      const uint8_t __attribute__ ((aligned (16))) ucShift[] = {(uint8_t)-7,(uint8_t)-6,(uint8_t)-5,(uint8_t)-4,(uint8_t)-3,(uint8_t)-2,(uint8_t)-1,0,(uint8_t)-7,(uint8_t)-6,(uint8_t)-5,(uint8_t)-4,(uint8_t)-3,(uint8_t)-2,(uint8_t)-1,0};
-      uint8x16_t vshift = vld1q_u8(ucShift);
-      uint8x16_t vmask = vandq_u8(input, vdupq_n_u8(0x80));
-      int out;
-    
-      vmask = vshlq_u8(vmask, vshift);
-      out = vaddv_u8(vget_low_u8(vmask));
-      out += (vaddv_u8(vget_high_u8(vmask)) << 8);
-    
-      return out;
+  // https://github.com/simd-everywhere/simde/blob/e1bc968696e6533d6b0bf8dddb0614737c983479/simde/x86/sse2.h#L3755
+  // (adapted)
+  int simde_mm_movemask_epi8(uint8x16_t a)
+  {
+    /* https://github.com/WebAssembly/simd/pull/201#issue-380682845 */
+    static const uint8_t md[16] = {
+    1 << 0, 1 << 1, 1 << 2, 1 << 3,
+    1 << 4, 1 << 5, 1 << 6, 1 << 7,
+    1 << 0, 1 << 1, 1 << 2, 1 << 3,
+    1 << 4, 1 << 5, 1 << 6, 1 << 7,
+    };
+
+    /* Extend sign bit over entire lane */
+    // we omit this op as lanes are 00/FF 
+    // uint8x16_t extended = vreinterpretq_u8_s8(vshrq_n_s8(a, 7));
+    /* Clear all but the bit we're interested in. */
+    uint8x16_t masked = vandq_u8(vld1q_u8(md), a);
+    /* Alternate bytes from low half and high half */
+    uint8x8x2_t tmp = vzip_u8(vget_low_u8(masked), vget_high_u8(masked));
+    uint16x8_t x = vreinterpretq_u16_u8(vcombine_u8(tmp.val[0], tmp.val[1]));
+    return vaddvq_u16(x);
   }
 
   inline static unsigned char adjust_hash(unsigned char hash)
