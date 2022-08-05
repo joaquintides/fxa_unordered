@@ -181,7 +181,7 @@ private:
 
   // https://github.com/simd-everywhere/simde/blob/e1bc968696e6533d6b0bf8dddb0614737c983479/simde/x86/sse2.h#L3755
   // (adapted)
-  int simde_mm_movemask_epi8(uint8x16_t a)
+  static inline int simde_mm_movemask_epi8(uint8x16_t a)
   {
     /* https://github.com/WebAssembly/simd/pull/201#issue-380682845 */
     static const uint8_t md[16] = {
@@ -460,7 +460,7 @@ struct group15
 private:
   // https://github.com/simd-everywhere/simde/blob/e1bc968696e6533d6b0bf8dddb0614737c983479/simde/x86/sse2.h#L3755
   // (adapted)
-  int simde_mm_movemask_epi8(uint8x16_t a)
+  static inline int simde_mm_movemask_epi8(uint8x16_t a)
   {
     /* https://github.com/WebAssembly/simd/pull/201#issue-380682845 */
     static const uint8_t md[16] = {
