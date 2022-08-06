@@ -27,7 +27,7 @@ static void print_time( std::chrono::steady_clock::time_point & t1, char const* 
     t1 = t2;
 }
 
-constexpr unsigned N = 2'500'000;
+constexpr unsigned N = 2'000'000;
 constexpr int K = 10;
 
 static std::vector< std::uint32_t > indices1, indices2, indices3;
