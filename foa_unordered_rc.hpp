@@ -345,15 +345,15 @@ struct group15
   inline auto is_not_overflowed(std::size_t hash)const
   {
 #if defined(BOOST_MSVC)
-    return BOOST_LIKELY(!overflow())||!(overflow()&(1u<<(adjust_hash(hash)%8)));
+    return BOOST_LIKELY(!overflow())||!(overflow()&(1u<<(hash%8)));
 #else
-    return !(overflow()&(1u<<(adjust_hash(hash)%8)));
+    return !(overflow()&(1u<<(hash%8)));
 #endif
   }
 
   inline void mark_overflow(std::size_t hash)
   {
-    overflow()|=1u<<(adjust_hash(hash)%8);
+    overflow()|=1u<<(hash%8);
   }
 
   inline int match_available()const
