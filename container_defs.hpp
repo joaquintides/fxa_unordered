@@ -827,10 +827,7 @@ using foa_absl_unordered_rc15_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
-    fxa_unordered::rc::group15,
-    fxa_unordered::pow2_size,
-    fxa_unordered::rc::pow2_prober,
-    fxa_unordered::shift_hash_rc15>;
+    fxa_unordered::rc::group15>;
 
 template<class K, class V, class H=mulx_hash<K>>
 using foa_mulx_unordered_rc16_map =
@@ -844,10 +841,7 @@ using foa_mulx_unordered_rc15_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
-    fxa_unordered::rc::group15,
-    fxa_unordered::pow2_size,
-    fxa_unordered::rc::pow2_prober,
-    fxa_unordered::shift_hash_rc15>;
+    fxa_unordered::rc::group15>;
 
 template<class K, class V, class H=xmxmx_hash<K>>
 using foa_xmxmx_unordered_rc16_map =
@@ -861,10 +855,7 @@ using foa_xmxmx_unordered_rc15_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
-    fxa_unordered::rc::group15,
-    fxa_unordered::pow2_size,
-    fxa_unordered::rc::pow2_prober,
-    fxa_unordered::shift_hash_rc15>;
+    fxa_unordered::rc::group15>;
 
 template<class K, class V, class H=mxm_hash<K>>
 using foa_mxm_unordered_rc16_map =
@@ -878,10 +869,7 @@ using foa_mxm_unordered_rc15_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
-    fxa_unordered::rc::group15,
-    fxa_unordered::pow2_size,
-    fxa_unordered::rc::pow2_prober,
-    fxa_unordered::shift_hash_rc15>;
+    fxa_unordered::rc::group15>;
 
 template<class K, class V, class H=mxm2_hash<K>>
 using foa_mxm2_unordered_rc16_map =
@@ -895,10 +883,7 @@ using foa_mxm2_unordered_rc15_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
-    fxa_unordered::rc::group15,
-    fxa_unordered::pow2_size,
-    fxa_unordered::rc::pow2_prober,
-    fxa_unordered::shift_hash_rc15>;
+    fxa_unordered::rc::group15>;
 
 template<class K, class V, class H=xmx_hash<K>>
 using foa_xmx_unordered_rc16_map =
@@ -912,10 +897,7 @@ using foa_xmx_unordered_rc15_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
-    fxa_unordered::rc::group15,
-    fxa_unordered::pow2_size,
-    fxa_unordered::rc::pow2_prober,
-    fxa_unordered::shift_hash_rc15>;
+    fxa_unordered::rc::group15>;
 
 template<class K, class V, class H=xmx2_hash<K>>
 using foa_xmx2_unordered_rc16_map =
@@ -929,10 +911,7 @@ using foa_xmx2_unordered_rc15_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
-    fxa_unordered::rc::group15,
-    fxa_unordered::pow2_size,
-    fxa_unordered::rc::pow2_prober,
-    fxa_unordered::shift_hash_rc15>;
+    fxa_unordered::rc::group15>;
 
 template<class K, class V, class H=xm_hash<K>>
 using foa_xm_unordered_rc16_map =
@@ -946,10 +925,7 @@ using foa_xm_unordered_rc15_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
-    fxa_unordered::rc::group15,
-    fxa_unordered::pow2_size,
-    fxa_unordered::rc::pow2_prober,
-    fxa_unordered::shift_hash_rc15>;
+    fxa_unordered::rc::group15>;
 
 template<class K, class V, class H=xm_hash<K>>
 using foa_hxm_unordered_rc16_map =

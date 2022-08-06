@@ -358,12 +358,6 @@ struct shift_hash
   static inline std::size_t short_hash(std::size_t hash){return hash;}
 };
 
-struct shift_hash_rc15
-{
-  static inline std::size_t long_hash(std::size_t hash){return hash;}
-  static inline std::size_t short_hash(unsigned char hash){return hash|(2*(hash<2));}
-};
-
 template<unsigned N>
 struct rshift_hash
 {
