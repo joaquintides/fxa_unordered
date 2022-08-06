@@ -62,12 +62,14 @@ static void init_indices()
 
 template<class Map> void test_insert( Map& map, std::chrono::steady_clock::time_point & t1 )
 {
+#if 0
     for( unsigned i = 1; i <= N; ++i )
     {
         map.insert( { indices1[ i ], i } );
     }
 
     print_time( t1, "Consecutive insert",  0, map.size() );
+#endif
 
     for( unsigned i = 1; i <= N; ++i )
     {
@@ -90,6 +92,7 @@ template<class Map> void test_lookup( Map& map, std::chrono::steady_clock::time_
 {
     std::uint32_t s;
     
+#if 0
     s = 0;
 
     for( int j = 0; j < K; ++j )
@@ -102,6 +105,7 @@ template<class Map> void test_lookup( Map& map, std::chrono::steady_clock::time_
     }
 
     print_time( t1, "Consecutive lookup",  s, map.size() );
+#endif
 
     s = 0;
 
@@ -162,12 +166,14 @@ template<class Map> void test_iteration( Map& map, std::chrono::steady_clock::ti
 
 template<class Map> void test_erase( Map& map, std::chrono::steady_clock::time_point & t1 )
 {
+#if 0
     for( unsigned i = 1; i <= N; ++i )
     {
         map.erase( indices1[ i ] );
     }
 
     print_time( t1, "Consecutive erase",  0, map.size() );
+#endif
 
     for( unsigned i = 1; i <= N; ++i )
     {
