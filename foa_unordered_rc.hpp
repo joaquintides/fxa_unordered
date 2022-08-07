@@ -443,7 +443,8 @@ struct group15
 private:
   inline static unsigned char adjust_hash(unsigned char hash)
   {
-    return hash|(2*(hash<2));
+    int x=int(hash)+2;
+    return x^(x>>1);
   }
 
   inline unsigned char& overflow()
@@ -551,7 +552,8 @@ private:
 
   inline static unsigned char adjust_hash(unsigned char hash)
   {
-    return hash|(2*(hash<2));
+    int x=int(hash)+2;
+    return x^(x>>1);
   }
 
   inline unsigned char& overflow()
@@ -628,7 +630,8 @@ struct group15
 protected:
   inline static unsigned char adjust_hash(unsigned char hash)
   {
-    return hash|(2*(hash<2));
+    int x=int(hash)+2;
+    return x^(x>>1);
   }
 
   inline void set_impl(std::size_t pos,std::size_t m)
