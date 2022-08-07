@@ -94,14 +94,13 @@ struct group16b
 
   inline int match_really_occupied()const // excluding sentinel
   {
-    return
-      (_mm_movemask_epi8(mask)&0xFFFE)|
-      ((reinterpret_cast<const unsigned char*>(&mask)[0]&0x81u)!=0);
+    return _mm_movemask_epi8(mask);
   }
 
 private:
   __m128i mask=_mm_setzero_si128();
 };
+
 #endif /* FXA_UNORDERED_SSE2 */
 
 #ifdef FXA_UNORDERED_SSE2
