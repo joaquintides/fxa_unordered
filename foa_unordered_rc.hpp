@@ -443,8 +443,7 @@ struct group15
 private:
   inline static unsigned char adjust_hash(unsigned char hash)
   {
-    //return hash|(2*(hash<2));
-    return hash|0x80;
+    return hash|(2*(hash<2));
   }
 
   inline unsigned char& overflow()
