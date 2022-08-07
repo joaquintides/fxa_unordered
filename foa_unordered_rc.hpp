@@ -34,6 +34,75 @@ namespace fxa_unordered{
 
 namespace rc{
 
+#ifdef FXA_UNORDERED_SSE2
+
+struct group16b
+{
+  static constexpr int N=16;
+
+  inline void set(std::size_t pos,std::size_t hash)
+  {
+    if(pos==0)hash&=0xFEu;
+    reinterpret_cast<unsigned char*>(&mask)[pos]|=hash|0x80u;
+  }
+
+  inline void set_sentinel()
+  {
+    reinterpret_cast<unsigned char*>(&mask)[N-1]=0x01u;
+  }
+
+  inline bool is_sentinel(std::size_t pos)const
+  {
+    return pos==N-1&&
+      reinterpret_cast<const unsigned char*>(&mask)[N-1]==0x01u;
+  }
+
+  inline void reset(std::size_t pos)
+  {
+    assert(pos<N);
+    reinterpret_cast<unsigned char*>(&mask)[pos]&=pos==0?0x01u:0;
+  }
+
+  inline int match(unsigned char hash)const
+  {
+    const auto one=_mm_setr_epi8(1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0);
+    auto m=_mm_set1_epi8(hash|0x80u);
+    return _mm_movemask_epi8(_mm_cmpeq_epi8(_mm_or_si128(mask,one),_mm_or_si128(m,one)));
+  }
+
+  inline auto is_not_overflowed(std::size_t /* hash */)const
+  {
+    return !(reinterpret_cast<const unsigned char*>(&mask)[0]&0x01u);
+  }
+
+  inline void mark_overflow(std::size_t /* hash */)
+  {
+    reinterpret_cast<unsigned char*>(&mask)[0]|=0x01u;
+  }
+
+  inline int match_available()const
+  {
+    return
+      _mm_movemask_epi8(_mm_cmpeq_epi8(mask,_mm_setzero_si128()))|
+      (reinterpret_cast<const unsigned char*>(&mask)[0]==0x01u);    
+  }
+
+  inline int match_occupied()const
+  {
+    return (~match_available())&0xFFFF;
+  }
+
+  inline int match_really_occupied()const // excluding sentinel
+  {
+    return
+      (_mm_movemask_epi8(mask)&0xFFFE)|
+      ((reinterpret_cast<const unsigned char*>(&mask)[0]&0x81u)!=0);
+  }
+
+private:
+  __m128i mask=_mm_setzero_si128();
+};
+#endif /* FXA_UNORDERED_SSE2 */
 
 #ifdef FXA_UNORDERED_SSE2
 

@@ -820,7 +820,11 @@ using foa_absl_unordered_rc16_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+#ifdef FXA_UNORDERED_SSE2
+    fxa_unordered::rc::group16b>;
+#else
     fxa_unordered::rc::group16>;
+#endif
 
 template<class K, class V, class H=absl::container_internal::hash_default_hash<K>>
 using foa_absl_unordered_rc15_map =
@@ -834,7 +838,11 @@ using foa_mulx_unordered_rc16_map =
   foa_unordered_rc_map<
     K, V, H,std::equal_to<K>,
     ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+#ifdef FXA_UNORDERED_SSE2
+    fxa_unordered::rc::group16b>;
+#else
     fxa_unordered::rc::group16>;
+#endif
 
 template<class K, class V, class H=mulx_hash<K>>
 using foa_mulx_unordered_rc15_map =
