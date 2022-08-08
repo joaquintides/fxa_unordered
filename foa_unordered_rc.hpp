@@ -394,8 +394,7 @@ struct group15
 
   inline bool is_sentinel(std::size_t pos)const
   {
-    return pos==N-1&&
-      reinterpret_cast<const unsigned char*>(&mask)[N-1]==0x01;
+    return reinterpret_cast<const unsigned char*>(&mask)[pos]==0x01;
   }
 
   inline void reset(std::size_t pos)
@@ -480,8 +479,7 @@ struct group15
 
   inline bool is_sentinel(std::size_t pos)const
   {
-    return pos==N-1&&
-      reinterpret_cast<const unsigned char*>(&mask)[N-1]==0x01;
+    return reinterpret_cast<const unsigned char*>(&mask)[pos]==0x01;
   }
 
   inline void reset(std::size_t pos)
