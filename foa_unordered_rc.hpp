@@ -329,23 +329,21 @@ struct group16
 
   inline int match_empty()const
   {
-    return
-      (himask & uint64_t(0x0000FFFF00000000ull))>>32&
-      (himask & uint64_t(0xFFFF000000000000ull))>>48;
+    auto m=(himask & uint64_t(0xFFFFFFFF00000000ull))>>32;
+    return m&(m>>16);
   }
 
   inline int match_available()const
   {
-    return
-      (himask & uint64_t(0x00000000FFFF0000ull))>>16&
-      (himask & uint64_t(0xFFFF000000000000ull))>>48;
+    auto m=(himask & uint64_t(0xFFFF0000FFFF0000ull))>>16;
+    return m&(m>>32);
   }
 
   inline int match_occupied()const
   {
-    return // ~match_available()
-      ((~himask | uint64_t(0xFFFFFFFF0000FFFFull))>>16|
-       (~himask | uint64_t(0x0000FFFFFFFFFFFFull))>>48)&0xFFFF;
+    // ~match_available()
+    auto m=(~himask | uint64_t(0x0000FFFF0000FFFFull))>>16;
+    return (m|(m>>32))&0xFFFF;
   }
 
   inline int match_really_occupied()const // excluding sentinel
