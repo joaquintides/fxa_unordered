@@ -764,19 +764,18 @@ public:
     void increment()noexcept
     {
       group_type  *pg=group();
-      std::size_t n0=offset(),
-                  n;
+      std::size_t n0=offset();
 
-      if((n=boost::core::countr_zero((unsigned int)(
-          pg->match_occupied()&reset_first_bits(n0+1))))>=N){
+      auto mask=pg->match_occupied()&reset_first_bits(n0+1);
+      if(!mask){
         do{
           ++pg;
           pe+=N;
         }
-        while((n=boost::core::countr_zero(
-          (unsigned int)((pg)->match_occupied())))>=N);
+        while(!(mask=pg->match_occupied()));
       }
 
+      auto n=boost::core::countr_zero((unsigned int)mask);
       if(BOOST_UNLIKELY(pg->is_sentinel(n))){
         pe=nullptr;
       }
