@@ -344,8 +344,8 @@ struct group16
   inline int match_occupied()const
   {
     return // ~match_available()
-      (~himask | uint64_t(0xFFFFFFFF0000FFFFull))>>16|
-      (~himask | uint64_t(0x0000FFFFFFFFFFFFull))>>48;
+      ((~himask | uint64_t(0xFFFFFFFF0000FFFFull))>>16|
+       (~himask | uint64_t(0x0000FFFFFFFFFFFFull))>>48)&0xFFFF;
   }
 
   inline int match_really_occupied()const // excluding sentinel
