@@ -610,12 +610,19 @@ struct group15
 
   inline int match_available()const
   {
-    return match_impl(0);
+    auto x=(~mask[0])&(~mask[1]);
+    uint32_t y=x&(x>>32);
+    y&=y>>16;
+    return y&0x7FFF;
   }
 
   inline int match_occupied()const
   {
-    return ~match_available()&0x7FFF;
+    // ~match_available()
+    auto x=mask[0]|mask[1];
+    uint32_t y=x|(x>>32);
+    y|=y>>16;
+    return y&0x7FFF;
   }
 
   inline int match_really_occupied()const // excluding sentinel
