@@ -610,7 +610,7 @@ struct group15
 
   inline int match_available()const
   {
-    auto x=(~mask[0])&(~mask[1]);
+    auto x=~(mask[0]|mask[1]);
     uint32_t y=x&(x>>32);
     y&=y>>16;
     return y&0x7FFF;
