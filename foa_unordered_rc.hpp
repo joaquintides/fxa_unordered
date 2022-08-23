@@ -859,8 +859,16 @@ public:
       hash_split_policy::short_hash(hash));
   }
 
+  void rehash(std::size_t nb)
+  {
+    std::size_t n=static_cast<std::size_t>(1.0f+static_cast<float>(nb)/mlf);
+    if(n>ml)unchecked_reserve(n);
+  }
+
+  float max_load_factor()const{return mlf;}
+
 private:
-  // used only on rehash
+  // used only on unchecked_reserve
   foa_unordered_rc_set(std::size_t n,Allocator al):
     al{al},size_{n}
   {
@@ -948,7 +956,7 @@ private:
       };
     }
     else{
-      rehash(size_+1);
+      unchecked_reserve(size_+1);
       return {
         unchecked_insert(
           std::forward<Value>(x),position_for(long_hash),short_hash),
@@ -957,7 +965,7 @@ private:
     }
   }
 
-  void rehash(size_type new_size)
+  void unchecked_reserve(size_type new_size)
   {
     std::size_t nc =(std::numeric_limits<std::size_t>::max)();
     float       fnc=1.0f+static_cast<float>(new_size)/mlf;
