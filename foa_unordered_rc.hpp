@@ -861,7 +861,7 @@ public:
 
   void rehash(std::size_t nb)
   {
-    std::size_t n=static_cast<std::size_t>(1.0f+static_cast<float>(nb)/mlf);
+    std::size_t n=static_cast<std::size_t>(1.0f+static_cast<float>(nb)*mlf);
     if(n>ml)unchecked_reserve(n);
   }
 
