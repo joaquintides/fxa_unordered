@@ -949,7 +949,7 @@ private:
     if(it!=end()){
       return {it,false};
     }
-    else if(BOOST_LIKELY(size_+1<=ml)){
+    else if(BOOST_LIKELY(size_<ml)){
       return {
         unchecked_insert(std::forward<Value>(x),pos0,short_hash),
         true
