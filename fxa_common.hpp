@@ -302,19 +302,20 @@ struct pow2_size
 {
   static inline std::size_t size_index(std::size_t n)
   {
-    return n<=32?
-      5:
-      static_cast<std::size_t>(boost::core::bit_width(n-1));
+    return sizeof(std::size_t)*8-(
+      n<=32?
+        5:
+        static_cast<std::size_t>(boost::core::bit_width(n-1)));
   }
 
   static inline std::size_t size(std::size_t size_index)
   {
-     return std::size_t(1)<<size_index;  
+     return std::size_t(1)<<sizeof(std::size_t)*8-size_index;  
   }
     
   static inline std::size_t position(std::size_t hash,std::size_t size_index)
   {
-    return hash>>(sizeof(std::size_t)*8-size_index);
+    return hash>>size_index;
   }
 };
 
