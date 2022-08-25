@@ -1017,8 +1017,10 @@ private:
       auto pg=groups.data()+pos;
       auto mask=pg->match_available();
       if(BOOST_LIKELY(mask)){
+        auto pe=elements.data()+pos*N;
+        prefetch_elements(pe);
         int n=countr_zero((unsigned int)mask);
-        auto pe=elements.data()+pos*N+n;
+        pe+=n;
         construct_element(std::forward<Value>(x),pe->data());
         pg->set(n,short_hash);
         ++size_;
