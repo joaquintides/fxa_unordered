@@ -622,7 +622,7 @@ struct group15
 
   static void reset(unsigned char* pc)
   {
-    std::size_t pos=reinterpret_cast<uintptr_t>(pc)%sizeof(group16);
+    std::size_t pos=reinterpret_cast<uintptr_t>(pc)%sizeof(group15);
     pc-=pos;
     reinterpret_cast<group16*>(pc)->reset(pos);
   }
