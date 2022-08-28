@@ -624,7 +624,7 @@ struct group15
   {
     std::size_t pos=reinterpret_cast<uintptr_t>(pc)%sizeof(group15);
     pc-=pos;
-    reinterpret_cast<group16*>(pc)->reset(pos);
+    reinterpret_cast<group15*>(pc)->reset(pos);
   }
 
   inline int match(std::size_t hash)const
