@@ -327,8 +327,8 @@ struct group16
 
   static void reset(unsigned char* pc)
   {
-    std::size_t off=reinterpret_cast<uintptr_t>(pc)%sizeof(group16);
-    pc-=off;
+    std::size_t pos=reinterpret_cast<uintptr_t>(pc)%sizeof(group16);
+    pc-=pos;
     reinterpret_cast<group16*>(pc)->reset(pos);
   }
 
@@ -622,9 +622,9 @@ struct group15
 
   static void reset(unsigned char* pc)
   {
-    std::size_t off=reinterpret_cast<uintptr_t>(pc)%sizeof(group15);
-    pc-=off;
-    reinterpret_cast<group15*>(pc)->reset(pos);
+    std::size_t pos=reinterpret_cast<uintptr_t>(pc)%sizeof(group16);
+    pc-=pos;
+    reinterpret_cast<group16*>(pc)->reset(pos);
   }
 
   inline int match(std::size_t hash)const
