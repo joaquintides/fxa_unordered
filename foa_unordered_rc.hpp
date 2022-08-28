@@ -131,6 +131,11 @@ struct group16
     reinterpret_cast<unsigned char*>(&mask)[pos]=deleted_;
   }
 
+  static void reset(unsigned char* pc)
+  {
+    *pc=deleted_;
+  }
+
   inline int match(std::size_t hash)const
   {
     auto m=_mm_set1_epi8(hash&0x7Fu);
@@ -209,6 +214,11 @@ struct group16
   {
     assert(pos<N);
     reinterpret_cast<unsigned char*>(&mask)[pos]=deleted_;
+  }
+
+  static void reset(unsigned char* pc)
+  {
+    *pc=deleted_;
   }
 
   inline int match(std::size_t hash)const
@@ -315,6 +325,13 @@ struct group16
     uint64_ops::set(himask,pos,deleted_);
   }
 
+  static void reset(unsigned char* pc)
+  {
+    std::size_t off=reinterpret_cast<uintptr_t>(pc)%sizeof(group16);
+    pc-=off;
+    reinterpret_cast<group16*>(pc)->reset(pos);
+  }
+
   inline int match(std::size_t hash)const
   {
     return match_impl(hash&0x7Fu);
@@ -401,6 +418,11 @@ struct group15
     reinterpret_cast<unsigned char*>(&mask)[pos]=0u;
   }
 
+  static void reset(unsigned char* pc)
+  {
+    *pc=0u;
+  }
+
   inline int match(std::size_t hash)const
   {
     auto m=_mm_set1_epi8(adjust_hash(hash));
@@ -484,6 +506,11 @@ struct group15
   {
     assert(pos<N);
     reinterpret_cast<unsigned char*>(&mask)[pos]=0u;
+  }
+
+  static void reset(unsigned char* pc)
+  {
+    *pc=0u;
   }
 
   inline int match(std::size_t hash)const
@@ -591,6 +618,13 @@ struct group15
   inline void reset(std::size_t pos)
   {
     set_impl(pos,0);
+  }
+
+  static void reset(unsigned char* pc)
+  {
+    std::size_t off=reinterpret_cast<uintptr_t>(pc)%sizeof(group15);
+    pc-=off;
+    reinterpret_cast<group15*>(pc)->reset(pos);
   }
 
   inline int match(std::size_t hash)const
@@ -756,6 +790,13 @@ public:
         pc-reinterpret_cast<unsigned char*>(group()));
     }
 
+    std::size_t rebase()
+    {
+      std::size_t off=reinterpret_cast<uintptr_t>(pc)%sizeof(group_type);
+      pc-=off;
+      return off;
+    }
+
     const value_type& dereference()const noexcept
     {
       return pe->value();
@@ -768,24 +809,24 @@ public:
 
     void increment()noexcept
     {
-      group_type  *pg=group();
-      std::size_t n0=offset();
+      std::size_t n0=rebase();
 
-      auto mask=pg->match_occupied()&reset_first_bits(n0+1);
+      auto mask=reinterpret_cast<group_type*>(pc)->match_occupied()&
+                reset_first_bits(n0+1);
       if(!mask){
         do{
-          ++pg;
+          pc+=sizeof(group_type);
           pe+=N;
         }
-        while(!(mask=pg->match_occupied()));
+        while(!(mask=reinterpret_cast<group_type*>(pc)->match_occupied()));
       }
 
       auto n=boost::core::countr_zero((unsigned int)mask);
-      if(BOOST_UNLIKELY(pg->is_sentinel(n))){
+      if(BOOST_UNLIKELY(reinterpret_cast<group_type*>(pc)->is_sentinel(n))){
         pe=nullptr;
       }
       else{
-        pc=reinterpret_cast<unsigned char*>(pg)+n;
+        pc+=n;
         pe+=n-n0;
       }
     }
@@ -831,7 +872,7 @@ public:
   void erase(const_iterator pos)
   {
     destroy_element(pos.pe->data());
-    pos.group()->reset(pos.offset());
+    group_type::reset(pos.pc);
     --size_;
   }
 
