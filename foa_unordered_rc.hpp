@@ -738,6 +738,19 @@ private:
   std::size_t pos,step=0;
 };
 
+inline int unchecked_countr_zero(unsigned int x)
+{
+#if !defined(USE_BOOST_CORE_COUNTR_ZERO)&&defined(_MSC_VER)&&!defined(__clang__)
+  unsigned long r;
+  _BitScanForward(&r,x);
+  return (int)r;
+#else
+  FXA_ASSUME(x);
+  return boost::core::countr_zero(x);
+#endif
+}
+
+
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
@@ -821,7 +834,7 @@ public:
         while(!(mask=reinterpret_cast<group_type*>(pc)->match_occupied()));
       }
 
-      auto n=boost::core::countr_zero((unsigned int)mask);
+      auto n=unchecked_countr_zero((unsigned int)mask);
       if(BOOST_UNLIKELY(reinterpret_cast<group_type*>(pc)->is_sentinel(n))){
         pe=nullptr;
       }
@@ -971,7 +984,7 @@ private:
         auto pe=elements.data()+pos*N;
         prefetch_elements(pe);
         do{
-          auto n=countr_zero((unsigned int)mask);
+          auto n=unchecked_countr_zero((unsigned int)mask);
           if(BOOST_LIKELY(pred(x,pe[n].value()))){
             return {pg,(std::size_t)(n),pe+n};
           }
@@ -1026,7 +1039,7 @@ private:
         auto pg=groups.data()+pos;
         auto mask=pg->match_really_occupied();
         while(mask){
-          auto n=countr_zero((unsigned int)mask);
+          auto n=unchecked_countr_zero((unsigned int)mask);
           auto& x=elements[pos*N+(std::size_t)n];
           new_container.unchecked_insert(std::move(x.value()));
           destroy_element(x.data());
@@ -1067,7 +1080,7 @@ private:
       if(BOOST_LIKELY(mask)){
         auto pe=elements.data()+pos*N;
         prefetch_elements(pe,std::true_type{}); /* write access */
-        int n=countr_zero((unsigned int)mask);
+        int n=unchecked_countr_zero((unsigned int)mask);
         pe+=n;
         construct_element(std::forward<Value>(x),pe->data());
         pg->set(n,short_hash);
@@ -1085,18 +1098,6 @@ private:
     if(res>fml)res=static_cast<size_type>(fml);
     return res;
   }  
-
-  static inline int countr_zero(unsigned int x)
-  {
-#if !defined(USE_BOOST_CORE_COUNTR_ZERO)&&defined(_MSC_VER)&&!defined(__clang__)
-    unsigned long r;
-    _BitScanForward(&r,x);
-    return (int)r;
-#else
-    FXA_ASSUME(x);
-    return boost::core::countr_zero(x);
-#endif
-  }
 
   Hash                                     h;
   Pred                                     pred;
