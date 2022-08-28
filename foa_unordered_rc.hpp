@@ -886,21 +886,28 @@ private:
     alloc_traits::destroy(al,p);
   }
 
-  static void prefetch(const void* p)
+  template<typename IntegralConstant>
+  static void prefetch(const void* p,IntegralConstant)
   {
 #if defined(BOOST_GCC)||defined(BOOST_CLANG)
-    __builtin_prefetch((const char*)p,0);
+    __builtin_prefetch((const char*)p,IntegralConstant::value);
 #elif defined(FXA_UNORDERED_SSE2)
-    _mm_prefetch((const char*)p,_MM_HINT_T0);
+    if constexpr(!IntegralConstant::value){ /* read access*/
+      _mm_prefetch((const char*)p,_MM_HINT_T0);
+    }
+    else{
+      _m_prefetchw((const char*)p);
+    }
 #endif    
   }
 
-  static void prefetch_elements(const element_type* pe)
+  template<typename IntegralConstant=std::false_type>
+  static void prefetch_elements(const element_type* pe,IntegralConstant rw={})
   {
     constexpr int cache_line=64;
     const char    *p0=reinterpret_cast<const char*>(pe),
                   *p1=p0+sizeof(element_type)*N/2;
-    for(auto p=p0;p<p1;p+=cache_line)prefetch(p);
+    for(auto p=p0;p<p1;p+=cache_line)prefetch(p,rw);
   }
 
   std::size_t position_for(std::size_t hash)const
@@ -1018,7 +1025,7 @@ private:
       auto mask=pg->match_available();
       if(BOOST_LIKELY(mask)){
         auto pe=elements.data()+pos*N;
-        prefetch_elements(pe);
+        prefetch_elements(pe,std::true_type{}); /* write access */
         int n=countr_zero((unsigned int)mask);
         pe+=n;
         construct_element(std::forward<Value>(x),pe->data());
