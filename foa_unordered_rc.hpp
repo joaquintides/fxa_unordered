@@ -987,7 +987,7 @@ private:
       auto mask=pg->match(short_hash);
       if(mask){
         auto pe=elements.data()+pos*N;
-        prefetch_elements(pe);
+        //prefetch_elements(pe);
         do{
           auto n=unchecked_countr_zero((unsigned int)mask);
           if(BOOST_LIKELY(pred(x,pe[n].value()))){
@@ -1084,7 +1084,7 @@ private:
       auto mask=pg->match_available();
       if(BOOST_LIKELY(mask)){
         auto pe=elements.data()+pos*N;
-        prefetch_elements(pe,std::true_type{}); /* write access */
+        //prefetch_elements(pe,std::true_type{}); /* write access */
         int n=unchecked_countr_zero((unsigned int)mask);
         pe+=n;
         construct_element(std::forward<Value>(x),pe->data());
