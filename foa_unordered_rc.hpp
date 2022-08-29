@@ -243,7 +243,9 @@ struct group16
 
   inline int match_occupied()const
   {
-    return (~match_available())&0xFFFFul;
+    /* ~match_available() */
+    auto m=vdupq_n_s8(sentinel_);
+    return simde_mm_movemask_epi8(vcleq_s8(m,mask));    
   }
 
   inline int match_really_occupied()const // excluding sentinel
@@ -540,7 +542,9 @@ struct group15
 
   inline int match_occupied()const
   {
-    return (~match_available())&0x7FFF;
+    /* ~match_available() */
+    return simde_mm_movemask_epi8(
+      vcgtq_u8(vreinterpret_u8_s8(mask),vdupq_n_u8(0)))&0x7FFF;
   }
 
   inline int match_really_occupied()const // excluding sentinel
@@ -589,7 +593,7 @@ private:
     return reinterpret_cast<const unsigned char*>(&mask)[N];
   }
 
-  int8x16_t mask=vdupq_n_s8(0)  ;
+  int8x16_t mask=vdupq_n_s8(0);
 };
 
 #else
