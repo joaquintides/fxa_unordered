@@ -544,7 +544,7 @@ struct group15
   {
     /* ~match_available() */
     return simde_mm_movemask_epi8(
-      vcgtq_u8(vreinterpret_u8_s8(mask),vdupq_n_u8(0)))&0x7FFF;
+      vcgtq_u8(vreinterpretq_u8_s8(mask),vdupq_n_u8(0)))&0x7FFF;
   }
 
   inline int match_really_occupied()const // excluding sentinel
