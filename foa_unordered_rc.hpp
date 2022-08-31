@@ -984,10 +984,10 @@ private:
     for(prober pb(pos0);;){
       auto pos=pb.get();
       auto pg=groups.data()+pos;
-      auto pe=elements.data()+pos*N;
-      prefetch(pe,std::false_type{});
       auto mask=pg->match(short_hash);
       if(mask){
+        auto pe=elements.data()+pos*N;
+        prefetch(pe,std::false_type{});
         do{
           auto n=unchecked_countr_zero((unsigned int)mask);
           if(BOOST_LIKELY(pred(x,pe[n].value()))){
