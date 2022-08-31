@@ -14,6 +14,7 @@
 #include <boost/container_hash/hash.hpp>
 #include <boost/core/bit.hpp>
 #include <boost/iterator/iterator_facade.hpp>
+#include <boost/predef.h>
 #include <cassert>
 #include <climits>
 #include <cmath>
@@ -987,7 +988,11 @@ private:
       auto mask=pg->match(short_hash);
       if(mask){
         auto pe=elements.data()+pos*N;
+#if BOOST_ARCH_ARM
         prefetch_elements(pe);
+#else
+        prefetch(pe,std::false_type{});
+#endif
         do{
           auto n=unchecked_countr_zero((unsigned int)mask);
           if(BOOST_LIKELY(pred(x,pe[n].value()))){
