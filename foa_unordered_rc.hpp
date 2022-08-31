@@ -772,7 +772,7 @@ class foa_unordered_rc_set
   using alloc_traits=std::allocator_traits<Allocator>;
   using group_type=Group;
   using element_type=element<T>;
-  static constexpr auto N=group_type::N;
+  static constexpr auto N=16; //group_type::N;
 
 public:
   using key_type=T;
