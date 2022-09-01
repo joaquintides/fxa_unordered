@@ -1088,10 +1088,8 @@ private:
       auto pg=groups.data()+pos;
       auto mask=pg->match_available();
       if(BOOST_LIKELY(mask)){
-        auto pe=elements.data()+pos*N;
-        prefetch_elements(pe,std::true_type{}); /* write access */
         int n=unchecked_countr_zero((unsigned int)mask);
-        pe+=n;
+        auto pe=elements.data()+pos*N+n;
         construct_element(std::forward<Value>(x),pe->data());
         pg->set(n,short_hash);
         ++size_;
