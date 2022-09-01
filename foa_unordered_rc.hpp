@@ -13,6 +13,7 @@
 #include <boost/config.hpp>
 #include <boost/container_hash/hash.hpp>
 #include <boost/core/bit.hpp>
+#include <boost/core/no_exceptions_support.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/predef.h>
 #include <cassert>
@@ -1079,6 +1080,42 @@ private:
       hash_split_policy::short_hash(hash));
   }
 
+#if 1
+  template<typename Value>
+  iterator unchecked_insert(
+    Value&& x,std::size_t pos0,std::size_t short_hash)
+  {
+    auto it=unchecked_insert_position(pos0,short_hash);
+    BOOST_TRY{
+      construct_element(std::forward<Value>(x),it.pe->data());
+      return it;
+    }
+    BOOST_CATCH(...){
+      group_type::reset(it.pc);
+      --size_;
+      BOOST_RETHROW;
+    }
+    BOOST_CATCH_END
+  }
+
+  iterator unchecked_insert_position(std::size_t pos0,std::size_t short_hash)
+  {
+    for(prober pb(pos0);;pb.next(groups.size())){
+      auto pos=pb.get();
+      auto pg=groups.data()+pos;
+      auto mask=pg->match_available();
+      if(BOOST_LIKELY(mask)){
+        auto pe=elements.data()+pos*N;
+        prefetch_elements(pe,std::true_type{}); /* write access */
+        int n=unchecked_countr_zero((unsigned int)mask);
+        pg->set(n,short_hash);
+        ++size_;
+        return {pg,std::size_t(n),pe+n};
+      }
+      else pg->mark_overflow(short_hash);
+    }
+  }
+#else
   template<typename Value>
   iterator unchecked_insert(
     Value&& x,std::size_t pos0,std::size_t short_hash)
@@ -1100,6 +1137,7 @@ private:
       else pg->mark_overflow(short_hash);
     }
   }
+#endif
 
   size_type max_load()const
   {
