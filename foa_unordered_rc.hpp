@@ -756,6 +756,12 @@ inline int unchecked_countr_zero(unsigned int x)
 #endif
 }
 
+template<typename T>
+inline const T& extract_key(const T& x){return x;}
+
+template<class Key,class Value>
+inline const Key& extract_key(const map_value_adaptor<Key,Value>& x)
+{return x.first;}
 
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
@@ -1015,7 +1021,7 @@ private:
     auto long_hash=hash_split_policy::long_hash(hash);
     auto pos0=position_for(long_hash);
     auto short_hash=hash_split_policy::short_hash(hash);
-    auto it=find_impl(x,pos0,short_hash);
+    auto it=find_impl(extract_key(x),pos0,short_hash);
 
     if(it!=end()){
       return {it,false};
