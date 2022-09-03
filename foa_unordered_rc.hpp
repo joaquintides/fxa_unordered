@@ -1014,6 +1014,37 @@ private:
     }
   }
 
+  template<typename Key>
+#if defined(BOOST_MSVC)
+  BOOST_FORCEINLINE 
+#endif
+  iterator find_impl_for_insert(
+    const Key& x,std::size_t pos0,std::size_t short_hash)const
+  {    
+    for(prober pb(pos0);;){
+      auto pos=pb.get();
+      auto pg=groups.data()+pos;
+      auto pe=elements.data()+pos*N;
+#if BOOST_ARCH_ARM
+      prefetch_elements(pe,std::true_type{});
+#else
+      prefetch(pe,std::true_type{});
+#endif
+      auto mask=pg->match(short_hash);
+      while(mask){
+        auto n=unchecked_countr_zero((unsigned int)mask);
+        if(BOOST_LIKELY(pred(x,pe[n].value()))){
+          return {pg,(std::size_t)(n),pe+n};
+        }
+        mask&=mask-1;
+      }
+      if(BOOST_LIKELY(
+        pg->is_not_overflowed(short_hash)||!pb.next(groups.size()))){
+        return end();
+      }
+    }
+  }
+
   template<typename Value>
   std::pair<iterator,bool> insert_impl(Value&& x)
   {
@@ -1021,7 +1052,7 @@ private:
     auto long_hash=hash_split_policy::long_hash(hash);
     auto pos0=position_for(long_hash);
     auto short_hash=hash_split_policy::short_hash(hash);
-    auto it=find_impl(extract_key(x),pos0,short_hash);
+    auto it=find_impl_for_insert(extract_key(x),pos0,short_hash);
 
     if(it!=end()){
       return {it,false};
