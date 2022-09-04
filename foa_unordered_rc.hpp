@@ -167,6 +167,11 @@ struct group16
     return (~_mm_movemask_epi8(mask))&0xFFFFul;
   }
 
+  bool is_really_occupied(std::size_t pos)const
+  {
+    return reinterpret_cast<const signed char*>(&mask)[pos]>=0;
+  }
+
 protected:
   // exact values as per Abseil rationale
   static constexpr int8_t empty_=-128,
@@ -252,6 +257,11 @@ struct group16
   inline int match_really_occupied()const // excluding sentinel
   {
     return (~_mm_movemask_aarch64(reinterpret_cast<uint8x16_t>(mask)))&0xFFFFul;
+  }
+
+  bool is_really_occupied(std::size_t pos)const
+  {
+    return reinterpret_cast<const signed char*>(&mask)[pos]>=0;
   }
 
 private:
@@ -372,6 +382,11 @@ struct group16
       (~himask)>>48;
   }
 
+  bool is_really_occupied(std::size_t pos)const
+  {
+    return !(himask&(uint64_t(1)<<(48+pos)));
+  }
+
 private:
   static constexpr int empty_=   0xE, // 1110
                        deleted_= 0xA, // 1010
@@ -460,6 +475,11 @@ struct group15
   {
     return reinterpret_cast<const unsigned char*>(&mask)[N-1]==0x01?
       match_occupied()&0x3FFF:match_occupied();
+  }
+
+  bool is_really_occupied(std::size_t pos)const
+  {
+    return reinterpret_cast<const unsigned char*>(&mask)[pos]>0x01;
   }
 
 private:
@@ -553,6 +573,11 @@ struct group15
   {
     return reinterpret_cast<const unsigned char*>(&mask)[N-1]==0x01?
       match_occupied()&0x3FFF:match_occupied();
+  }
+
+  bool is_really_occupied(std::size_t pos)const
+  {
+    return reinterpret_cast<const unsigned char*>(&mask)[pos]>0x01;
   }
 
 private:
@@ -668,6 +693,12 @@ struct group15
   inline int match_really_occupied()const // excluding sentinel
   {
     return ~(match_impl(0)|match_impl(1))&0x7FFF;
+  }
+
+  bool is_really_occupied(std::size_t pos)const
+  {
+    // need to optimize this
+    return match_really_occupied()&(1<<pos);
   }
 
 protected:
@@ -1082,17 +1113,16 @@ private:
     foa_unordered_rc_set new_container{nc,al};
     std::size_t          num_tx=0;
     try{
-      for(std::size_t pos=0,last=groups.size();pos!=last;++pos){
-        auto pg=groups.data()+pos;
-        auto mask=pg->match_really_occupied();
-        while(mask){
-          auto n=unchecked_countr_zero((unsigned int)mask);
-          auto& x=elements[pos*N+(std::size_t)n];
-          new_container.unchecked_insert(std::move(x.value()));
-          destroy_element(x.data());
-          pg->reset(n);
-          ++num_tx;
-          mask&=mask-1;
+      auto pe=elements.data();
+      for(auto pg=groups.data(),last=pg+groups.size();pg!=last;pe+=N,++pg){
+        for(std::size_t n=0;n<N;++n){
+          if(pg->is_really_occupied(n)){
+            auto& x=pe[n];
+            new_container.unchecked_insert(std::move(x.value()));
+            destroy_element(x.data());
+            pg->reset(n);
+            ++num_tx;
+          }
         }
       }
     }
