@@ -794,6 +794,19 @@ template<class Key,class Value>
 inline const Key& extract_key(const map_value_adaptor<Key,Value>& x)
 {return x.first;}
 
+template<typename T,typename Allocator>
+void clean_without_destruction(std::vector<T,Allocator>& x)
+{
+  using vector_type=std::vector<T,Allocator>;
+  using alloc_traits=std::allocator_traits<Allocator>;
+  
+  std::aligned_storage_t<sizeof(vector_type),alignof(vector_type)> storage;
+  auto pv=::new (reinterpret_cast<vector_type*>(&storage))
+    vector_type(std::move(x));
+  auto a=pv->get_allocator();
+  alloc_traits::deallocate(a,pv->data(),pv->capacity());
+}
+
 template<
   typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
   typename Allocator=std::allocator<T>,
@@ -1130,7 +1143,9 @@ private:
       throw;
     }
     group_size_index=new_container.group_size_index;
+    clean_without_destruction(groups);
     groups=std::move(new_container.groups);
+    clean_without_destruction(elements);
     elements=std::move(new_container.elements);
     ml=max_load();
   }
