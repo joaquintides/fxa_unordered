@@ -1119,7 +1119,7 @@ private:
           if(pg->is_really_occupied(n)){
             new_container.unchecked_insert(std::move(pe->value()));
             destroy_element(pe->data());
-            //pg->reset(n);
+            pg->reset(n);
             ++num_tx;
           }
         }
@@ -1127,16 +1127,6 @@ private:
     }
     catch(...){
       size_-=num_tx;
-      for(auto pg=groups.data();;++pg){
-        for(std::size_t n=0;n<N;++n){
-          if(!num_tx)goto end;
-          if(pg->is_really_occupied(n)){
-            pg->reset(n);
-            --num_tx;
-          }
-        }
-      }
-    end:;
       throw;
     }
     group_size_index=new_container.group_size_index;
