@@ -1114,12 +1114,11 @@ private:
     std::size_t          num_tx=0;
     try{
       auto pe=elements.data();
-      for(auto pg=groups.data(),last=pg+groups.size();pg!=last;pe+=N,++pg){
-        for(std::size_t n=0;n<N;++n){
+      for(auto pg=groups.data(),last=pg+groups.size();pg!=last;++pg){
+        for(std::size_t n=0;n<N;++n,++pe){
           if(pg->is_really_occupied(n)){
-            auto& x=pe[n];
-            new_container.unchecked_insert(std::move(x.value()));
-            destroy_element(x.data());
+            new_container.unchecked_insert(std::move(pe->value()));
+            destroy_element(pe->data());
             pg->reset(n);
             ++num_tx;
           }
