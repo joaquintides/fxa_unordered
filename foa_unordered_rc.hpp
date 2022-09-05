@@ -1115,17 +1115,24 @@ private:
   iterator unchecked_insert(
     Value&& x,std::size_t pos0,std::size_t short_hash)
   {
+    auto [pos,n]=unchecked_insert_position(pos0,short_hash);
+    auto pg=groups.data()+pos;
+    auto pe=elements.data()+pos*N+n;
+    construct_element(std::forward<Value>(x),pe->data());
+    pg->set(n,short_hash);
+    ++size_;
+    return {pg,std::size_t(n),pe};
+  }
+
+  std::pair<std::size_t,std::size_t>
+  unchecked_insert_position(std::size_t pos0,std::size_t short_hash)
+  {
     for(prober pb(pos0);;pb.next(groups.size())){
       auto pos=pb.get();
       auto pg=groups.data()+pos;
       auto mask=pg->match_available();
       if(BOOST_LIKELY(mask)){
-        int n=unchecked_countr_zero((unsigned int)mask);
-        auto pe=elements.data()+pos*N+n;
-        construct_element(std::forward<Value>(x),pe->data());
-        pg->set(n,short_hash);
-        ++size_;
-        return {pg,std::size_t(n),pe};
+        return {pos,unchecked_countr_zero((unsigned int)mask)};
       }
       else pg->mark_overflow(short_hash);
     }
