@@ -1055,7 +1055,7 @@ private:
     }
   }
 
-  void unchecked_reserve(size_type new_size)
+  BOOST_NOINLINE void unchecked_reserve(size_type new_size)
   {
     std::size_t nc =(std::numeric_limits<std::size_t>::max)();
     float       fnc=1.0f+static_cast<float>(new_size)/mlf;
