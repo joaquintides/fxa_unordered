@@ -1007,7 +1007,7 @@ private:
       auto mask=pg->match(short_hash);
       if(mask){
         auto pe=elements.data()+pos*N;
-#if BOOST_ARCH_ARM
+#if BOOST_CLANG
         prefetch_elements(pe);
 #else
         prefetch(pe,std::false_type{});
