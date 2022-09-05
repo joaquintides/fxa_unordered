@@ -1073,7 +1073,6 @@ private:
           auto& x=pe[(std::size_t)n];
           new_container.unchecked_insert(std::move(x.value()));
           destroy_element(x.data());
-          pg->reset(n);
           ++num_tx;
           mask&=mask-1;
         }
@@ -1081,6 +1080,17 @@ private:
     }
     catch(...){
       size_-=num_tx;
+      if(num_tx){
+        for(auto pg=groups.data();;++pg){
+          auto mask=pg->match_really_occupied();
+          while(mask){
+            auto n=unchecked_countr_zero((unsigned int)mask);
+            pg->reset(n);
+            if(!(--num_tx))goto end;
+          }
+        }
+      }
+    end:;
       throw;
     }
     group_size_index=new_container.group_size_index;
