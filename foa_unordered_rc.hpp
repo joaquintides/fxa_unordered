@@ -926,9 +926,9 @@ public:
   }
   
   template<typename Key>
-#if defined(BOOST_MSVC)
+//#if defined(BOOST_MSVC)
   BOOST_FORCEINLINE 
-#endif
+//#endif
   iterator find(const Key& x)const
   {
     auto   hash=h(x);
@@ -995,9 +995,9 @@ private:
   }
 
   template<typename Key>
-#if defined(BOOST_MSVC)
+//#if defined(BOOST_MSVC)
   BOOST_FORCEINLINE 
-#endif
+//#endif
   iterator find_impl(
     const Key& x,std::size_t pos0,std::size_t short_hash)const
   {    
