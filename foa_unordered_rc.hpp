@@ -1039,20 +1039,14 @@ private:
     if(it!=end()){
       return {it,false};
     }
-    else if(BOOST_LIKELY(size_<ml)){
-      return {
-        unchecked_insert(std::forward<Value>(x),pos0,short_hash),
-        true
-      };
-    }
-    else{
+    else if(BOOST_UNLIKELY(size_>=ml)){
       unchecked_reserve(size_+1);
-      return {
-        unchecked_insert(
-          std::forward<Value>(x),position_for(long_hash),short_hash),
-        true
-      };
+      pos0=position_for(long_hash);
     }
+    return {
+      unchecked_insert(std::forward<Value>(x),pos0,short_hash),
+      true
+    };
   }
 
   BOOST_NOINLINE void unchecked_reserve(size_type new_size)
