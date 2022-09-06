@@ -904,8 +904,8 @@ public:
 
   size_type size()const noexcept{return size_;};
 
-  inline auto insert(const T& x){return insert_impl(x);}
-  inline auto insert(T&& x){return insert_impl(std::move(x));}
+  BOOST_FORCEINLINE auto insert(const T& x){return insert_impl(x);}
+  BOOST_FORCEINLINE auto insert(T&& x){return insert_impl(std::move(x));}
 
   void erase(const_iterator pos)
   {
@@ -1028,7 +1028,7 @@ private:
   }
 
   template<typename Value>
-  inline std::pair<iterator,bool> insert_impl(Value&& x)
+  BOOST_FORCEINLINE std::pair<iterator,bool> insert_impl(Value&& x)
   {
     auto hash=h(x);
     auto long_hash=hash_split_policy::long_hash(hash);
