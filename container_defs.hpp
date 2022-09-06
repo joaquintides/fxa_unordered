@@ -132,7 +132,7 @@ struct mulx_hash
   {
     boost::uint64_t z = boost::hash<T>()(x);
 
-	z = mulx( z, 0x9DDFEA08EB382D69ull );
+	z = mulx( z, 0x9DDFEA08EB382D69ull ); // should be 0xCC9E2D51 for 32 bit
 
     return (std::size_t)z; // good results only in 64 bits
   }
