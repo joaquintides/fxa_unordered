@@ -125,12 +125,12 @@ inline std::uint64_t mulx( std::uint64_t x, std::uint64_t y )
 
 #endif
 
-template<class T>
+template<class T, class H = boost::hash<T> >
 struct mulx_hash
 {
   std::size_t operator()(const T& x) const
   {
-    boost::uint64_t z = boost::hash<T>()(x);
+    boost::uint64_t z = H()(x);
 
 	z = mulx( z, 0x9DDFEA08EB382D69ull ); // should be 0xCC9E2D51 for 32 bit
 
@@ -193,12 +193,12 @@ struct mxm2_hash
 
 // xmx
 
-template<class T>
+template<class T, class H = boost::hash<T> >
 struct xmx_hash
 {
   std::size_t operator()(const T& x) const
   {
-    boost::uint64_t z = boost::hash<T>()(x);
+    boost::uint64_t z = H()(x);
 
     z ^= z >> 23;
     z *= 0xff51afd7ed558ccdull;
@@ -243,12 +243,12 @@ struct xm_hash
 
 // xm2
 
-template<class T>
+template<class T, class H = boost::hash<T> >
 struct xm2_hash
 {
   std::size_t operator()(const T& x) const
   {
-    boost::uint64_t z = boost::hash<T>()(x);
+    boost::uint64_t z = H()(x);
 
     z ^= z >> 31;
     z *= 0xbf58476d1ce4e5b9ull;
@@ -334,12 +334,12 @@ struct xmx32_hash
 
 // xmx33
 
-template<class T>
+template<class T, class H = boost::hash<T> >
 struct xmx33_hash
 {
   std::size_t operator()(const T& x) const
   {
-    std::size_t z = boost::hash<T>()(x);
+    std::size_t z = H()(x);
 
     // score = 333.7934929677524
     z ^= z >> 18;
@@ -423,12 +423,12 @@ struct xm32_hash
 
 // xm33
 
-template<class T>
+template<class T, class H = boost::hash<T> >
 struct xm33_hash
 {
   std::size_t operator()(const T& t) const
   {
-    std::size_t x = boost::hash<T>()(t);
+    std::size_t x = H()(t);
 
     // score = 597.07647040752659
     x ^= x >> 14;
@@ -1471,6 +1471,47 @@ template<class K, class V> using foa_absl_unordered_rc16_map_fnv1a =
 
 template<class K, class V> using foa_absl_unordered_rc15_map_fnv1a =
   foa_absl_unordered_rc15_map<K, V, fnv1a_hash>;
+
+template<class K, class V>
+using foa_mulx_unordered_rc15_map_fnv1a =
+  foa_unordered_rc_map<
+    K, V, mulx_hash<K, fnv1a_hash>, std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group15>;
+
+template<class K, class V>
+using foa_xmx_unordered_rc15_map_fnv1a =
+  foa_unordered_rc_map<
+    K, V, xmx_hash<K, fnv1a_hash>, std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group15>;
+
+template<class K, class V>
+using foa_hxm2_unordered_rc15_map_fnv1a =
+  foa_unordered_rc_map<
+    K, V, xm2_hash<K, fnv1a_hash>, std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group15,
+    fxa_unordered::pow2_size,
+    fxa_unordered::rc::pow2_prober,
+    fxa_unordered::rshift_hash<8>>;
+
+template<class K, class V>
+using foa_xmx33_unordered_rc15_map_fnv1a =
+  foa_unordered_rc_map<
+    K, V, xmx33_hash<K, fnv1a_hash>, std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group15>;
+
+template<class K, class V>
+using foa_hxm33_unordered_rc15_map_fnv1a =
+  foa_unordered_rc_map<
+    K, V, xm33_hash<K, fnv1a_hash>, std::equal_to<K>,
+    ::allocator<fxa_unordered::map_value_adaptor<K, V>>,
+    fxa_unordered::rc::group15,
+    fxa_unordered::pow2_size,
+    fxa_unordered::rc::pow2_prober,
+    fxa_unordered::rshift_hash<8>>;
 
 #ifdef HAVE_ABSEIL
 
