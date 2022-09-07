@@ -366,6 +366,10 @@ int main()
     test<foa_hxm33_unordered_rc15_map>( "foa_hxm33_unordered_rc15_map" );
 #endif
 
+#ifdef HAVE_ANKERL_UNORDERED_DENSE
+   test<ankerl_unordered_dense_map>( "ankerl::unordered_dense::map" );
+#endif
+
 #ifdef HAVE_ABSEIL
     test<absl_node_hash_map>( "absl::node_hash_map" );
     test<absl_flat_hash_map>( "absl::flat_hash_map" );

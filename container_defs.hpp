@@ -29,6 +29,9 @@
 # include "absl/container/node_hash_map.h"
 # include "absl/container/flat_hash_map.h"
 #endif
+#ifdef HAVE_ANKERL_UNORDERED_DENSE
+# include "ankerl/unordered_dense.h"
+#endif
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -1307,6 +1310,11 @@ template<class K, class V> using absl_flat_hash_map =
 
 #endif
 
+#ifdef HAVE_ANKERL_UNORDERED_DENSE
+template<class K, class V> using ankerl_unordered_dense_map =
+    ankerl::unordered_dense::map<K, V, ankerl::unordered_dense::hash<K>, std::equal_to<K>, ::allocator< std::pair<K, V>>>;
+#endif
+
 template<class K, class V> using std_unordered_map_fnv1a =
     std::unordered_map<K, V, fnv1a_hash, std::equal_to<K>, allocator_for<K, V>>;
 
@@ -1521,6 +1529,13 @@ template<class K, class V> using absl_node_hash_map_fnv1a =
 template<class K, class V> using absl_flat_hash_map_fnv1a =
     absl::flat_hash_map<K, V, fnv1a_hash, std::equal_to<K>, allocator_for<K, V>>;
 
+#endif
+
+#ifdef HAVE_ANKERL_UNORDERED_DENSE
+
+template<class K, class V> using ankerl_unordered_dense_map_fnv1a =
+    ankerl::unordered_dense::map<K, V, fnv1a_hash, std::equal_to<K>, ::allocator< std::pair<K, V>>>;
+ 
 #endif
 
 #ifdef HAVE_ABSEIL
