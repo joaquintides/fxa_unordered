@@ -283,6 +283,15 @@ int main()
     // test<foa_fmodxm_unordered_rc15_map_fnv1a>( "foa_fmodxm_unordered_rc15_map, FNV-1a" );
     // test<foa_absl_unordered_rc16_map_fnv1a>( "foa_absl_unordered_rc16_map, FNV-1a" );
     test<foa_absl_unordered_rc15_map_fnv1a>( "foa_absl_unordered_rc15_map, FNV-1a" );
+    test<foa_mulx_unordered_rc15_map_fnv1a>( "foa_mulx_unordered_rc15_map, FNV-1a" );
+
+#if !defined(IN_32BIT_ARCHITECTURE)
+    test<foa_xmx_unordered_rc15_map_fnv1a>( "foa_xmx_unordered_rc15_map, FNV-1a" );
+    test<foa_hxm2_unordered_rc15_map_fnv1a>( "foa_hxm2_unordered_rc15_map, FNV-1a" );
+#else
+    test<foa_xmx33_unordered_rc15_map_fnv1a>( "foa_xmx33_unordered_rc15_map, FNV-1a" );
+    test<foa_hxm33_unordered_rc15_map_fnv1a>( "foa_hxm33_unordered_rc15_map, FNV-1a" );
+#endif
 
 #ifdef HAVE_ABSEIL
     test<absl_node_hash_map_fnv1a>( "absl::node_hash_map, FNV-1a" );
