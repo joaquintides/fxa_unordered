@@ -548,6 +548,7 @@ jobs:
           cd %GITHUB_WORKSPACE%
           git clone https://github.com/lemire/fastrange.git fastrange-root
       - name: Install ankerl::unordered_dense
+        shell: cmd
         run: |
           cd %GITHUB_WORKSPACE%
           git clone -b v1.3.0 https://github.com/martinus/unordered_dense.git ankerl-unordered_dense-root
