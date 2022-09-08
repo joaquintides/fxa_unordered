@@ -375,7 +375,7 @@ jobs:
       - name: Install ankerl::unordered_dense
         run: |
           cd $GITHUB_WORKSPACE
-          git clone -b v1.3.0 https://github.com/martinus/unordered_dense.git ankerl-unordered_dense-root
+          git clone -b v1.3.1 https://github.com/martinus/unordered_dense.git ankerl-unordered_dense-root
       - name: Compile
         run: |
           cd $GITHUB_WORKSPACE
@@ -551,7 +551,7 @@ jobs:
         shell: cmd
         run: |
           cd %GITHUB_WORKSPACE%
-          git clone -b v1.3.0 https://github.com/martinus/unordered_dense.git ankerl-unordered_dense-root
+          git clone -b v1.3.1 https://github.com/martinus/unordered_dense.git ankerl-unordered_dense-root
       - name: Compile
         shell: cmd
         run: |
