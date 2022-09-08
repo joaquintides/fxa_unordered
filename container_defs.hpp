@@ -72,10 +72,8 @@ template<class T> struct allocator
 
     void deallocate( T* p, std::size_t n ) const noexcept
     {
-        if ( n ) {
-            s_alloc_bytes -= n * sizeof(T);
-            s_alloc_count--;
-        }
+        s_alloc_bytes -= n * sizeof(T);
+        s_alloc_count--;
 
         std::allocator<T>().deallocate( p, n );
     }
