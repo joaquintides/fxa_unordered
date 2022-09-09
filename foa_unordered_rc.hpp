@@ -395,6 +395,12 @@ private:
 
 #ifdef FXA_UNORDERED_SSE2
 
+constexpr unsigned char adjust_hash(unsigned char hash)
+{
+  int x=int(hash)+2;
+  return x^(x>>1);
+}
+
 struct group15
 {
   static constexpr int N=15;
@@ -402,7 +408,7 @@ struct group15
   inline void set(std::size_t pos,std::size_t hash)
   {
     assert(pos<N);
-    reinterpret_cast<unsigned char*>(&mask)[pos]=adjust_hash(hash);
+    reinterpret_cast<unsigned char*>(&mask)[pos]=adjust_hash_table[(unsigned char)hash];
   }
 
   inline void set_sentinel()
@@ -428,12 +434,7 @@ struct group15
 
   inline int match(std::size_t hash)const
   {
-#if defined(BOOST_GCC)||defined(BOOST_CLANG)
-    __builtin_prefetch(&mask);
-#elif defined(FXA_UNORDERED_SSE2)
-    _mm_prefetch((const char*)&mask,_MM_HINT_T0);
-#endif    
-    auto m=_mm_set1_epi8(adjust_hash(hash));
+    auto m=_mm_set1_epi8(adjust_hash_table[(unsigned char)hash]);
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m))&0x7FFF;
   }
 
@@ -468,11 +469,40 @@ struct group15
   }
 
 private:
-  inline static unsigned char adjust_hash(unsigned char hash)
-  {
-    int x=int(hash)+2;
-    return x^(x>>1);
-  }
+  static constexpr unsigned char adjust_hash_table[]={
+    adjust_hash(0),adjust_hash(1),adjust_hash(2),adjust_hash(3),adjust_hash(4),adjust_hash(5),adjust_hash(6),adjust_hash(7),
+    adjust_hash(8),adjust_hash(9),adjust_hash(10),adjust_hash(11),adjust_hash(12),adjust_hash(13),adjust_hash(14),adjust_hash(15),
+    adjust_hash(16),adjust_hash(17),adjust_hash(18),adjust_hash(19),adjust_hash(20),adjust_hash(21),adjust_hash(22),adjust_hash(23),
+    adjust_hash(24),adjust_hash(25),adjust_hash(26),adjust_hash(27),adjust_hash(28),adjust_hash(29),adjust_hash(30),adjust_hash(31),
+    adjust_hash(32),adjust_hash(33),adjust_hash(34),adjust_hash(35),adjust_hash(36),adjust_hash(37),adjust_hash(38),adjust_hash(39),
+    adjust_hash(40),adjust_hash(41),adjust_hash(42),adjust_hash(43),adjust_hash(44),adjust_hash(45),adjust_hash(46),adjust_hash(47),
+    adjust_hash(48),adjust_hash(49),adjust_hash(50),adjust_hash(51),adjust_hash(52),adjust_hash(53),adjust_hash(54),adjust_hash(55),
+    adjust_hash(56),adjust_hash(57),adjust_hash(58),adjust_hash(59),adjust_hash(60),adjust_hash(61),adjust_hash(62),adjust_hash(63),
+    adjust_hash(64),adjust_hash(65),adjust_hash(66),adjust_hash(67),adjust_hash(68),adjust_hash(69),adjust_hash(70),adjust_hash(71),
+    adjust_hash(72),adjust_hash(73),adjust_hash(74),adjust_hash(75),adjust_hash(76),adjust_hash(77),adjust_hash(78),adjust_hash(79),
+    adjust_hash(80),adjust_hash(81),adjust_hash(82),adjust_hash(83),adjust_hash(84),adjust_hash(85),adjust_hash(86),adjust_hash(87),
+    adjust_hash(88),adjust_hash(89),adjust_hash(90),adjust_hash(91),adjust_hash(92),adjust_hash(93),adjust_hash(94),adjust_hash(95),
+    adjust_hash(96),adjust_hash(97),adjust_hash(98),adjust_hash(99),adjust_hash(100),adjust_hash(101),adjust_hash(102),adjust_hash(103),
+    adjust_hash(104),adjust_hash(105),adjust_hash(106),adjust_hash(107),adjust_hash(108),adjust_hash(109),adjust_hash(110),adjust_hash(111),
+    adjust_hash(112),adjust_hash(113),adjust_hash(114),adjust_hash(115),adjust_hash(116),adjust_hash(117),adjust_hash(118),adjust_hash(119),
+    adjust_hash(120),adjust_hash(121),adjust_hash(122),adjust_hash(123),adjust_hash(124),adjust_hash(125),adjust_hash(126),adjust_hash(127),
+    adjust_hash(128),adjust_hash(129),adjust_hash(130),adjust_hash(131),adjust_hash(132),adjust_hash(133),adjust_hash(134),adjust_hash(135),
+    adjust_hash(136),adjust_hash(137),adjust_hash(138),adjust_hash(139),adjust_hash(140),adjust_hash(141),adjust_hash(142),adjust_hash(143),
+    adjust_hash(144),adjust_hash(145),adjust_hash(146),adjust_hash(147),adjust_hash(148),adjust_hash(149),adjust_hash(150),adjust_hash(151),
+    adjust_hash(152),adjust_hash(153),adjust_hash(154),adjust_hash(155),adjust_hash(156),adjust_hash(157),adjust_hash(158),adjust_hash(159),
+    adjust_hash(160),adjust_hash(161),adjust_hash(162),adjust_hash(163),adjust_hash(164),adjust_hash(165),adjust_hash(166),adjust_hash(167),
+    adjust_hash(168),adjust_hash(169),adjust_hash(170),adjust_hash(171),adjust_hash(172),adjust_hash(173),adjust_hash(174),adjust_hash(175),
+    adjust_hash(176),adjust_hash(177),adjust_hash(178),adjust_hash(179),adjust_hash(180),adjust_hash(181),adjust_hash(182),adjust_hash(183),
+    adjust_hash(184),adjust_hash(185),adjust_hash(186),adjust_hash(187),adjust_hash(188),adjust_hash(189),adjust_hash(190),adjust_hash(191),
+    adjust_hash(192),adjust_hash(193),adjust_hash(194),adjust_hash(195),adjust_hash(196),adjust_hash(197),adjust_hash(198),adjust_hash(199),
+    adjust_hash(200),adjust_hash(201),adjust_hash(202),adjust_hash(203),adjust_hash(204),adjust_hash(205),adjust_hash(206),adjust_hash(207),
+    adjust_hash(208),adjust_hash(209),adjust_hash(210),adjust_hash(211),adjust_hash(212),adjust_hash(213),adjust_hash(214),adjust_hash(215),
+    adjust_hash(216),adjust_hash(217),adjust_hash(218),adjust_hash(219),adjust_hash(220),adjust_hash(221),adjust_hash(222),adjust_hash(223),
+    adjust_hash(224),adjust_hash(225),adjust_hash(226),adjust_hash(227),adjust_hash(228),adjust_hash(229),adjust_hash(230),adjust_hash(231),
+    adjust_hash(232),adjust_hash(233),adjust_hash(234),adjust_hash(235),adjust_hash(236),adjust_hash(237),adjust_hash(238),adjust_hash(239),
+    adjust_hash(240),adjust_hash(241),adjust_hash(242),adjust_hash(243),adjust_hash(244),adjust_hash(245),adjust_hash(246),adjust_hash(247),
+    adjust_hash(248),adjust_hash(249),adjust_hash(250),adjust_hash(251),adjust_hash(252),adjust_hash(253),adjust_hash(254),adjust_hash(255),
+  };
 
   inline unsigned char& overflow()
   {
