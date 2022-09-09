@@ -428,6 +428,11 @@ struct group15
 
   inline int match(std::size_t hash)const
   {
+#if defined(BOOST_GCC)||defined(BOOST_CLANG)
+    __builtin_prefetch(&mask);
+#elif defined(FXA_UNORDERED_SSE2)
+    _mm_prefetch((const char*)&mask,_MM_HINT_T0);
+#endif    
     auto m=_mm_set1_epi8(adjust_hash(hash));
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m))&0x7FFF;
   }
