@@ -847,6 +847,28 @@ public:
 
     void increment()noexcept
     {
+#if 1
+      std::size_t n0=reinterpret_cast<uintptr_t>(pc)%sizeof(group_type);
+
+      auto mask=reinterpret_cast<group_type*>(pc-n0)->match_occupied()&
+                reset_first_bits(n0+1);
+      if(!mask){
+        do{
+          pc+=sizeof(group_type);
+          pe+=N;
+        }
+        while(!(mask=reinterpret_cast<group_type*>(pc-n0)->match_occupied()));
+      }
+
+      auto n=unchecked_countr_zero((unsigned int)mask);
+      if(BOOST_UNLIKELY(reinterpret_cast<group_type*>(pc-n0)->is_sentinel(n))){
+        pe=nullptr;
+      }
+      else{
+        pc+=n-n0;
+        pe+=n-n0;
+      }
+#else
       std::size_t n0=rebase();
 
       auto mask=reinterpret_cast<group_type*>(pc)->match_occupied()&
@@ -867,6 +889,7 @@ public:
         pc+=n;
         pe+=n-n0;
       }
+#endif
     }
 
     unsigned char *pc=nullptr;
