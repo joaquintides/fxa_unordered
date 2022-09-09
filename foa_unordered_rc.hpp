@@ -931,11 +931,7 @@ public:
 //#endif
   iterator find(const Key& x)const
   {
-    auto   hash=h(x);
-    return find_impl(
-      x,
-      position_for(hash_split_policy::long_hash(hash)),
-      hash_split_policy::short_hash(hash));
+    return find_impl(x,h(x));
   }
 
   void rehash(std::size_t nb)
@@ -998,13 +994,12 @@ private:
 //#if defined(BOOST_MSVC)
   BOOST_FORCEINLINE 
 //#endif
-  iterator find_impl(
-    const Key& x,std::size_t pos0,std::size_t short_hash)const
+  iterator find_impl(const Key& x,std::size_t hash)const
   {    
-    for(prober pb(pos0);;){
+    for(prober pb(position_for(hash_split_policy::long_hash(hash)));;){
       auto pos=pb.get();
       auto pg=groups.data()+pos;
-      auto mask=pg->match(short_hash);
+      auto mask=pg->match(hash_split_policy::short_hash(hash));
       if(mask){
         auto pe=elements.data()+pos*N;
 #if BOOST_ARCH_ARM
@@ -1021,7 +1016,8 @@ private:
         }while(mask);
       }
       if(BOOST_LIKELY(
-        pg->is_not_overflowed(short_hash)||!pb.next(groups.size()))){
+        pg->is_not_overflowed(
+          hash_split_policy::short_hash(hash))||!pb.next(groups.size()))){
         return end();
       }
     }
@@ -1034,7 +1030,7 @@ private:
     auto long_hash=hash_split_policy::long_hash(hash);
     auto pos0=position_for(long_hash);
     auto short_hash=hash_split_policy::short_hash(hash);
-    auto it=find_impl(extract_key(x),pos0,short_hash);
+    auto it=find_impl(extract_key(x),hash);
 
     if(it!=end()){
       return {it,false};
