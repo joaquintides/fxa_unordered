@@ -931,7 +931,11 @@ public:
 //#endif
   iterator find(const Key& x)const
   {
-    return find_impl(x,h(x));
+    auto   hash=h(x);
+    return find_impl(
+      x,
+      position_for(hash_split_policy::long_hash(hash)),
+      hash_split_policy::short_hash(hash));
   }
 
   void rehash(std::size_t nb)
@@ -994,12 +998,13 @@ private:
 //#if defined(BOOST_MSVC)
   BOOST_FORCEINLINE 
 //#endif
-  iterator find_impl(const Key& x,std::size_t hash)const
+  iterator find_impl(
+    const Key& x,std::size_t pos0,std::size_t short_hash)const
   {    
-    for(prober pb(position_for(hash_split_policy::long_hash(hash)));;){
+    for(prober pb(pos0);;){
       auto pos=pb.get();
       auto pg=groups.data()+pos;
-      auto mask=pg->match(hash_split_policy::short_hash(hash));
+      auto mask=pg->match(short_hash);
       if(mask){
         auto pe=elements.data()+pos*N;
 #if BOOST_ARCH_ARM
@@ -1016,8 +1021,7 @@ private:
         }while(mask);
       }
       if(BOOST_LIKELY(
-        pg->is_not_overflowed(
-          hash_split_policy::short_hash(hash))||!pb.next(groups.size()))){
+        pg->is_not_overflowed(short_hash)||!pb.next(groups.size()))){
         return end();
       }
     }
@@ -1027,16 +1031,20 @@ private:
   BOOST_FORCEINLINE std::pair<iterator,bool> insert_impl(Value&& x)
   {
     auto hash=h(x);
-    auto it=find_impl(extract_key(x),hash);
+    auto long_hash=hash_split_policy::long_hash(hash);
+    auto pos0=position_for(long_hash);
+    auto short_hash=hash_split_policy::short_hash(hash);
+    auto it=find_impl(extract_key(x),pos0,short_hash);
 
     if(it!=end()){
       return {it,false};
     }
     else if(BOOST_UNLIKELY(size_>=ml)){
       unchecked_reserve(size_+1);
+      pos0=position_for(long_hash);
     }
     return {
-      unchecked_insert(std::forward<Value>(x),hash),
+      unchecked_insert(std::forward<Value>(x),pos0,short_hash),
       true
     };
   }
@@ -1090,33 +1098,37 @@ private:
   template<typename Value>
   iterator unchecked_insert(Value&& x)
   {
-    return unchecked_insert(std::forward<Value>(x),h(x));
+    auto hash=h(x);
+    return unchecked_insert(
+      std::forward<Value>(x),
+      position_for(hash_split_policy::long_hash(hash)),
+      hash_split_policy::short_hash(hash));
   }
 
   template<typename Value>
-  iterator unchecked_insert(Value&& x,std::size_t hash)
+  iterator unchecked_insert(
+    Value&& x,std::size_t pos0,std::size_t short_hash)
   {
-    auto [pos,n]=unchecked_insert_position(hash);
+    auto [pos,n]=unchecked_insert_position(pos0,short_hash);
     auto pg=groups.data()+pos;
     auto pe=elements.data()+pos*N+n;
     construct_element(std::forward<Value>(x),pe->data());
-    pg->set(n,hash_split_policy::short_hash(hash));
+    pg->set(n,short_hash);
     ++size_;
     return {pg,std::size_t(n),pe};
   }
 
   std::pair<std::size_t,std::size_t>
-  unchecked_insert_position(std::size_t hash)
+  unchecked_insert_position(std::size_t pos0,std::size_t short_hash)
   {
-    for(prober pb(position_for(hash_split_policy::long_hash(hash)));;
-        pb.next(groups.size())){
+    for(prober pb(pos0);;pb.next(groups.size())){
       auto pos=pb.get();
       auto pg=groups.data()+pos;
       auto mask=pg->match_available();
       if(BOOST_LIKELY(mask)){
         return {pos,unchecked_countr_zero((unsigned int)mask)};
       }
-      else pg->mark_overflow(hash_split_policy::short_hash(hash));
+      else pg->mark_overflow(short_hash);
     }
   }
 
