@@ -463,10 +463,9 @@ struct group15
   }
 
 private:
-  inline static unsigned char adjust_hash(unsigned char hash)
+  inline static std::size_t adjust_hash(std::size_t hash)
   {
-    int x=int(hash)+2;
-    return x^(x>>1);
+    return hash<2?2:hash;
   }
 
   inline unsigned char& overflow()
@@ -579,10 +578,9 @@ private:
     return vaddvq_u16(x);
   }
 
-  inline static unsigned char adjust_hash(unsigned char hash)
+  inline static std::size_t adjust_hash(std::size_t hash)
   {
-    int x=int(hash)+2;
-    return x^(x>>1);
+    return hash<2?2:hash;
   }
 
   inline unsigned char& overflow()
@@ -671,10 +669,9 @@ struct group15
   }
 
 protected:
-  inline static unsigned char adjust_hash(unsigned char hash)
+  inline static std::size_t adjust_hash(std::size_t hash)
   {
-    int x=int(hash)+2;
-    return x^(x>>1);
+    return hash<2?2:hash;
   }
 
   inline void set_impl(std::size_t pos,std::size_t m)
