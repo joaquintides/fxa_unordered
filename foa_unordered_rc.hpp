@@ -987,10 +987,14 @@ public:
   iterator find(const Key& x)const
   {
     auto   hash=h(x);
+#if 1
+    return find_impl(x,hash);
+#else
     return find_impl(
       x,
       position_for(hash_split_policy::long_hash(hash)),
       hash_split_policy::short_hash(hash));
+#endif
   }
 
   void rehash(std::size_t nb)
@@ -1049,6 +1053,39 @@ private:
     return size_policy::position(hash,group_size_index);
   }
 
+#if 1
+  template<typename Key>
+//#if defined(BOOST_MSVC)
+  BOOST_FORCEINLINE 
+//#endif
+  iterator find_impl(const Key& x,std::size_t hash)const
+  {    
+    for(prober pb(position_for(hash_split_policy::long_hash(hash)));;){
+      auto pos=pb.get();
+      auto pg=groups.data()+pos;
+      auto mask=pg->match(hash_split_policy::short_hash(hash));
+      if(mask){
+        auto pe=elements.data()+pos*N;
+#if BOOST_ARCH_ARM
+        prefetch_elements(pe);
+#else
+        prefetch(pe,std::false_type{});
+#endif
+        do{
+          auto n=unchecked_countr_zero((unsigned int)mask);
+          if(BOOST_LIKELY(pred(x,pe[n].value()))){
+            return {pg,(std::size_t)(n),pe+n};
+          }
+          mask&=mask-1;
+        }while(mask);
+      }
+      if(BOOST_LIKELY(
+        pg->is_not_overflowed(hash_split_policy::short_hash(hash))||!pb.next(groups.size()))){
+        return end();
+      }
+    }
+  }
+#else
   template<typename Key>
 //#if defined(BOOST_MSVC)
   BOOST_FORCEINLINE 
@@ -1081,6 +1118,7 @@ private:
       }
     }
   }
+#endif
 
   template<typename Value>
   BOOST_FORCEINLINE std::pair<iterator,bool> insert_impl(Value&& x)
@@ -1089,7 +1127,11 @@ private:
     auto long_hash=hash_split_policy::long_hash(hash);
     auto pos0=position_for(long_hash);
     auto short_hash=hash_split_policy::short_hash(hash);
+#if 1
+    auto it=find_impl(extract_key(x),hash);
+#else
     auto it=find_impl(extract_key(x),pos0,short_hash);
+#endif
 
     if(it!=end()){
       return {it,false};
