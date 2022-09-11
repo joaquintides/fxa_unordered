@@ -1065,8 +1065,7 @@ private:
 #if BOOST_ARCH_ARM
         prefetch_elements(pe);
 #else
-        prefetch(pe,std::false_type{});
-        prefetch(reinterpret_cast<const unsigned char*>(pe)+64,std::false_type{});
+        //prefetch(pe,std::false_type{});
 #endif
         do{
           auto n=unchecked_countr_zero((unsigned int)mask);
