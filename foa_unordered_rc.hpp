@@ -457,7 +457,8 @@ struct group15
   inline void set(std::size_t pos,std::size_t hash)
   {
     assert(pos<N);
-    reinterpret_cast<unsigned char*>(&mask)[pos]=adjust_hash(hash);
+    //reinterpret_cast<unsigned char*>(&mask)[pos]=adjust_hash(hash);
+    reinterpret_cast<unsigned char*>(&mask)[pos]=hash|2;
   }
 
   inline void set_sentinel()
@@ -485,7 +486,8 @@ struct group15
   {
     //auto m=_mm_set1_epi8(adjust_hash(hash));
     //return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m))&0x7FFF;
-    auto m=_mm_set1_epi32((int)match_table[(unsigned char)hash]);
+    //auto m=_mm_set1_epi32((int)match_table[(unsigned char)hash]);
+    auto m=_mm_set1_epi8(hash|2);
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m))&0x7FFF;
   }
 
