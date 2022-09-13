@@ -1058,7 +1058,8 @@ private:
   iterator find_impl(
     const Key& x,std::size_t pos0,std::size_t short_hash)const
   {    
-    for(prober pb(pos0);;){
+    prober pb(pos0);
+    do{
       auto pos=pb.get();
       auto pg=groups.data()+pos;
       auto mask=pg->match(short_hash);
@@ -1077,11 +1078,12 @@ private:
           mask&=mask-1;
         }while(mask);
       }
-      if(BOOST_LIKELY(pg->is_not_overflowed(short_hash))||
-         BOOST_UNLIKELY(!pb.next(groups.size()))){
+      if(BOOST_LIKELY(pg->is_not_overflowed(short_hash))){
         return end();
       }
     }
+    while(BOOST_LIKELY(pb.next(groups.size())));
+    return end();
   }
 
   template<typename Value>
