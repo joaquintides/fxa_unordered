@@ -491,18 +491,28 @@ struct group15
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m))&0x7FFF;
   }
 
-  inline auto is_not_overflowed(std::size_t hash)const
+//  inline auto is_not_overflowed(std::size_t hash)const
+//  {
+//#if defined(BOOST_MSVC)
+//    return BOOST_LIKELY(!overflow())||!(overflow()&(1u<<(hash%8)));
+//#else
+//    return !(overflow()&(1u<<(hash%8)));
+//#endif
+//  }
+
+  inline auto is_not_overflowed(std::size_t /*hash*/)const
   {
-#if defined(BOOST_MSVC)
-    return BOOST_LIKELY(!overflow())||!(overflow()&(1u<<(hash%8)));
-#else
-    return !(overflow()&(1u<<(hash%8)));
-#endif
+    return !(overflow());
   }
 
-  inline void mark_overflow(std::size_t hash)
+//  inline void mark_overflow(std::size_t hash)
+//  {
+//    overflow()|=1u<<(hash%8);
+//  }
+
+  inline void mark_overflow(std::size_t /*hash*/)
   {
-    overflow()|=1u<<(hash%8);
+    overflow()=1;
   }
 
   inline int match_available()const
