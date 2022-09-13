@@ -1077,8 +1077,8 @@ private:
           mask&=mask-1;
         }while(mask);
       }
-      if(BOOST_LIKELY(
-        pg->is_not_overflowed(short_hash)||!pb.next(groups.size()))){
+      if(BOOST_LIKELY(pg->is_not_overflowed(short_hash))||
+         BOOST_UNLIKELY(!pb.next(groups.size()))){
         return end();
       }
     }
