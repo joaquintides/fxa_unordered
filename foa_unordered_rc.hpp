@@ -492,7 +492,7 @@ struct group15
 
   __attribute__((noinline)) auto is_not_overflowed_fine(std::size_t hash)const
   {
-    return !(overflow&(1u<<(hash%8)));
+    return !(overflow()&(1u<<(hash%8)));
   }
 
   inline auto is_not_overflowed(std::size_t hash)const
@@ -592,7 +592,7 @@ struct group15
 
   __attribute__((noinline)) auto is_not_overflowed_fine(std::size_t hash)const
   {
-    return !(overflow&(1u<<(hash%8)));
+    return !(overflow()&(1u<<(hash%8)));
   }
 
   inline auto is_not_overflowed(std::size_t hash)const
