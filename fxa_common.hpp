@@ -310,7 +310,7 @@ struct pow2_size
 
   static inline std::size_t size(std::size_t size_index)
   {
-     return std::size_t(1)<<sizeof(std::size_t)*8-size_index;  
+     return std::size_t(1)<<(sizeof(std::size_t)*8-size_index);  
   }
     
   static inline std::size_t position(std::size_t hash,std::size_t size_index)
