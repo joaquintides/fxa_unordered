@@ -457,8 +457,7 @@ struct group15
   inline void set(std::size_t pos,std::size_t hash)
   {
     assert(pos<N);
-    //reinterpret_cast<unsigned char*>(&mask)[pos]=adjust_hash(hash);
-    reinterpret_cast<unsigned char*>(&mask)[pos]=hash|2;
+    reinterpret_cast<unsigned char*>(&mask)[pos]=adjust_hash(hash);
   }
 
   inline void set_sentinel()
@@ -484,35 +483,22 @@ struct group15
 
   inline int match(std::size_t hash)const
   {
-    //auto m=_mm_set1_epi8(adjust_hash(hash));
-    //return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m))&0x7FFF;
-    //auto m=_mm_set1_epi32((int)match_table[(unsigned char)hash]);
-    auto m=_mm_set1_epi8(hash|2);
+    auto m=_mm_set1_epi32((int)match_table[(unsigned char)hash]);
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m))&0x7FFF;
   }
 
-//  inline auto is_not_overflowed(std::size_t hash)const
-//  {
-//#if defined(BOOST_MSVC)
-//    return BOOST_LIKELY(!overflow())||!(overflow()&(1u<<(hash%8)));
-//#else
-//    return !(overflow()&(1u<<(hash%8)));
-//#endif
-//  }
-
-  inline auto is_not_overflowed(std::size_t /*hash*/)const
+  inline auto is_not_overflowed(std::size_t hash)const
   {
-    return !(overflow());
+#if defined(BOOST_MSVC)
+    return BOOST_LIKELY(!overflow())||!(overflow()&(1u<<(hash%8)));
+#else
+    return !(overflow()&(1u<<(hash%8)));
+#endif
   }
 
-//  inline void mark_overflow(std::size_t hash)
-//  {
-//    overflow()|=1u<<(hash%8);
-//  }
-
-  inline void mark_overflow(std::size_t /*hash*/)
+  inline void mark_overflow(std::size_t hash)
   {
-    overflow()=1;
+    overflow()|=1u<<(hash%8);
   }
 
   inline int match_available()const
@@ -534,8 +520,7 @@ struct group15
 private:
   inline static unsigned char adjust_hash(unsigned char hash)
   {
-    //return adjust_hash_table[hash];
-    return (unsigned char)match_table[hash];
+    return adjust_hash_table[hash];
   }
 
   inline unsigned char& overflow()
@@ -859,7 +844,7 @@ class foa_unordered_rc_set
   using alloc_traits=std::allocator_traits<Allocator>;
   using group_type=Group;
   using element_type=element<T>;
-  static constexpr auto N=16;//group_type::N;
+  static constexpr auto N=group_type::N;
 
 public:
   using key_type=T;
