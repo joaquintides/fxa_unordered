@@ -520,7 +520,7 @@ struct group15
 private:
   inline static unsigned char adjust_hash(unsigned char hash)
   {
-    return adjust_hash_table[hash];
+    return (unsigned char)match_table[hash];
   }
 
   inline unsigned char& overflow()
@@ -1053,7 +1053,7 @@ private:
   iterator find_impl(
     const Key& x,std::size_t pos0,std::size_t short_hash)const
   {    
-    prober pb(pos0);
+     prober pb(pos0);
     do{
       auto pos=pb.get();
       auto pg=groups.data()+pos;
