@@ -487,24 +487,11 @@ struct group15
     return _mm_movemask_epi8(_mm_cmpeq_epi8(mask,m))&0x7FFF;
   }
 
-#if BOOST_WORKAROUND(BOOST_CLANG,>=1)&&__clang_major__<=12
-  // https://godbolt.org/z/fnsh4Me6c
-
-  __attribute__((noinline)) auto is_not_overflowed_fine(std::size_t hash)const
-  {
-    return !(overflow()&(1u<<(hash%8)));
-  }
-
   inline auto is_not_overflowed(std::size_t hash)const
   {
-    return BOOST_LIKELY(!overflow())||is_not_overflowed_fine(hash);
+    constexpr unsigned char shift[]={1u,2u,4u,8u,16u,32u,64u,128u};
+    return !(overflow()&shift[hash%8]);
   }
-#else
-  inline auto is_not_overflowed(std::size_t hash)const
-  {
-    return BOOST_LIKELY(!overflow())||!(overflow()&(1u<<(hash%8)));
-  }
-#endif
 
   inline void mark_overflow(std::size_t hash)
   {
@@ -587,24 +574,11 @@ struct group15
     return simde_mm_movemask_epi8(vceqq_s8(mask,m))&0x7FFF;
   }
 
-#if BOOST_WORKAROUND(BOOST_CLANG,>=1)&&__clang_major__<=12
-  // https://godbolt.org/z/fnsh4Me6c
-
-  __attribute__((noinline)) auto is_not_overflowed_fine(std::size_t hash)const
-  {
-    return !(overflow()&(1u<<(hash%8)));
-  }
-
   inline auto is_not_overflowed(std::size_t hash)const
   {
-    return BOOST_LIKELY(!overflow())||is_not_overflowed_fine(hash);
+    constexpr unsigned char shift[]={1u,2u,4u,8u,16u,32u,64u,128u};
+    return !(overflow()&shift[hash%8]);
   }
-#else
-  inline auto is_not_overflowed(std::size_t hash)const
-  {
-    return BOOST_LIKELY(!overflow())||!(overflow()&(1u<<(hash%8)));
-  }
-#endif
 
   inline void mark_overflow(std::size_t hash)
   {
