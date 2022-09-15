@@ -412,6 +412,8 @@ constexpr unsigned char adjust_hash_table[]={
   240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255,
 };
 
+constexpr unsigned char overflow_table[]={1u,2u,4u,8u,16u,32u,64u,128u};
+
 #ifdef FXA_UNORDERED_SSE2
 
 constexpr uint32_t match_table[]=
@@ -489,13 +491,12 @@ struct group15
 
   inline auto is_not_overflowed(std::size_t hash)const
   {
-    constexpr unsigned char shift[]={1u,2u,4u,8u,16u,32u,64u,128u};
-    return !(overflow()&shift[hash%8]);
+    return !(overflow()&overflow_table[hash%8]);
   }
 
   inline void mark_overflow(std::size_t hash)
   {
-    overflow()|=1u<<(hash%8);
+    overflow()|=overflow_table[hash%8];
   }
 
   inline int match_available()const
@@ -576,13 +577,12 @@ struct group15
 
   inline auto is_not_overflowed(std::size_t hash)const
   {
-    constexpr unsigned char shift[]={1u,2u,4u,8u,16u,32u,64u,128u};
-    return !(overflow()&shift[hash%8]);
+    return !(overflow()&overflow_table[hash%8]);
   }
 
   inline void mark_overflow(std::size_t hash)
   {
-    overflow()|=1u<<(hash%8);
+    overflow()|=overflow_table[hash%8];
   }
 
   inline int match_available()const
