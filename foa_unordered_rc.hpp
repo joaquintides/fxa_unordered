@@ -496,7 +496,7 @@ struct group15
 
   inline void mark_overflow(std::size_t hash)
   {
-    overflow()|=overflow_table[hash%8];
+    overflow()|=1<<(hash%8);
   }
 
   inline int match_available()const
@@ -582,7 +582,7 @@ struct group15
 
   inline void mark_overflow(std::size_t hash)
   {
-    overflow()|=overflow_table[hash%8];
+    overflow()|=1<<(hash%8);
   }
 
   inline int match_available()const
