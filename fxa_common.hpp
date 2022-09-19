@@ -408,6 +408,10 @@ struct xm_hash
 template<class Key,class Value>
 struct map_value_adaptor
 {
+  template<typename T,typename Q>
+  map_value_adaptor(T&& first,Q&& second):
+    first(std::forward<T>(first)),second(std::forward<Q>(second)){}
+
   Key           first;
   mutable Value second;
 };

@@ -925,6 +925,11 @@ public:
     groups.back().set_sentinel();
   }
 
+  foa_unordered_rc_set(std::size_t n):foa_unordered_rc_set()
+  {
+    this->rehash(n);
+  }
+
   foa_unordered_rc_set(const foa_unordered_rc_set&)=default;
   foa_unordered_rc_set(foa_unordered_rc_set&&)=default;
 
