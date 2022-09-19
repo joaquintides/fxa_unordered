@@ -206,7 +206,7 @@ of 2 (it can only be used with these).
 Controls how hash values are split into a "long" value for group assignment
 and a "short" value for probing. Which actual bits of the long value are used is
 determined by the size policy, whereas for the short value,
-`fca_unordered_rc_set`/`fca_unordered_rc_map` uses the 8 or 7 least significant
+`foa_unordered_rc_set`/`foa_unordered_rc_map` uses the 8 or 7 least significant
 bits depending on whether `Group` is `group15` or `group16`, respectively.
 
 * `shift_mod_hash<N>`: the long value is the original hash right-shifted `N`
