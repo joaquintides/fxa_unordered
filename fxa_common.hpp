@@ -17,13 +17,14 @@
 #include <iterator>
 #include "fastrange.h"
 
-#if __SSE2__
-#include <emmintrin.h>
+#if defined(_MSC_VER)
+# include <intrin.h>
 #endif
 
 #if defined(__SSE2__) || \
     defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)
-#define FXA_UNORDERED_SSE2
+# define FXA_UNORDERED_SSE2
+# include <emmintrin.h>
 #endif
 
 // ripped from
@@ -140,8 +141,7 @@ struct prime_switch_size:prime_size
 #  endif
 #endif
 
-#if !defined(BOOST_NO_INT64_T)&&\
-    (defined(BOOST_HAS_INT128) || (defined(BOOST_MSVC)&&defined(_WIN64)))
+#if defined(__SIZEOF_INT128__) || (defined(_MSC_VER) && defined(_WIN64))
 #define FCA_FASTMOD_SUPPORT
 #endif
 
@@ -150,7 +150,7 @@ struct prime_fmod_size
   constexpr static std::size_t sizes[]={
     13ul,29ul,53ul,97ul,193ul,389ul,769ul,
     1543ul,3079ul,6151ul,12289ul,24593ul,
-    49157ul,98317ul,196613ul,393241ul,786433ul,
+    49157ul,98317ul,196613ul,393241ul,786449ul /* 786433ul */,
     1572869ul,3145739ul,6291469ul,12582917ul,25165843ul,
     50331653ul,100663319ul,201326611ul,402653189ul,805306457ul,
     1610612741ul,3221225473ul,
@@ -170,7 +170,7 @@ struct prime_fmod_size
     23987963684927896ull,11955116055547344ull,5991147799191151ull,
     2998982941588287ull,1501077717772769ull,750081082979285ull,
     375261795343686ull,187625172388393ull,93822606204624ull,
-    46909513691883ull,23456218233098ull,11728086747027ull,
+    46909513691883ull,23455741025432ull /* 23456218233098ull */,11728086747027ull,
     5864041509391ull,2932024948977ull,1466014921160ull,
     733007198436ull,366503839517ull,183251896093ull,
     91625960335ull,45812983922ull,22906489714ull,
@@ -220,23 +220,28 @@ struct prime_fmod_size
 #if defined(FCA_FASTMOD_SUPPORT)
   // https://github.com/lemire/fastmod
 
-#  if defined(_MSC_VER)
-  static inline uint64_t mul128_u32(uint64_t lowbits, uint32_t d)
-  {
-    return __umulh(lowbits, d);
-  }
-#  else
+#if defined(__SIZEOF_INT128__)
+
   static inline uint64_t mul128_u32(uint64_t lowbits, uint32_t d)
   {
     return ((unsigned __int128)lowbits * d) >> 64;
   }
-#  endif /* defined(_MSC_VER) */
+
+#else
+
+  static inline uint64_t mul128_u32(uint64_t lowbits, uint32_t d)
+  {
+    return __umulh(lowbits, d);
+  }
+
+#endif
 
   static inline uint32_t fastmod_u32(uint32_t a, uint64_t M, uint32_t d)
   {
     uint64_t lowbits = M * a;
     return (uint32_t)(mul128_u32(lowbits, d));
   }
+
 #endif /* defined(FCA_FASTMOD_SUPPORT) */
 
   static inline std::size_t position(std::size_t hash,std::size_t size_index)
@@ -262,13 +267,6 @@ struct prime_fmod_size
 #endif /* defined(FCA_FASTMOD_SUPPORT) */
   }
 };
-
-#ifdef FCA_FASTMOD_SUPPORT
-#undef FCA_FASTMOD_SUPPORT
-#endif
-#ifdef FCA_HAS_64B_SIZE_T
-#undef FCA_HAS_64B_SIZE_T
-#endif
 
 struct prime_frng_size:prime_size
 {      
@@ -304,19 +302,20 @@ struct pow2_size
 {
   static inline std::size_t size_index(std::size_t n)
   {
-    return n<=32?
-      5:
-      static_cast<std::size_t>(boost::core::bit_width(n-1));
+    return sizeof(std::size_t)*8-(
+      n<=32?
+        5:
+        static_cast<std::size_t>(boost::core::bit_width(n-1)));
   }
 
   static inline std::size_t size(std::size_t size_index)
   {
-     return std::size_t(1)<<size_index;  
+     return std::size_t(1)<<(sizeof(std::size_t)*8-size_index);  
   }
     
   static inline std::size_t position(std::size_t hash,std::size_t size_index)
   {
-    return hash>>(sizeof(std::size_t)*8-size_index);
+    return hash>>size_index;
   }
 };
 
@@ -361,15 +360,58 @@ struct shift_hash
 };
 
 template<unsigned N>
+struct rshift_hash
+{
+  static inline std::size_t long_hash(std::size_t hash){return hash<<N;}
+
+  static inline std::size_t short_hash(std::size_t hash)
+  {
+    return hash>>(sizeof(std::size_t)*8-N);
+  }
+};
+
+template<unsigned N,unsigned Mod=127>
 struct shift_mod_hash
 {
   static inline std::size_t long_hash(std::size_t hash){return hash>>N;}
-  static inline std::size_t short_hash(std::size_t hash){return hash%127;}
+  static inline std::size_t short_hash(std::size_t hash){return hash%Mod;}
+};
+
+struct xm_hash
+{
+  static inline std::size_t long_hash(std::size_t hash){return hash;}
+
+  static inline std::size_t short_hash(std::size_t hash)
+  {
+#ifdef FCA_HAS_64B_SIZE_T
+
+    std::size_t z = hash;
+
+    z ^= z >> 23;
+    z *= 0xff51afd7ed558ccdull;
+
+    return z >> 56;
+
+#else
+
+    std::size_t x = hash;
+
+    x ^= x >> 15;
+    x *= 0xc92adaabU;
+
+    return x >> 24;
+
+#endif
+  }
 };
 
 template<class Key,class Value>
 struct map_value_adaptor
 {
+  template<typename T,typename Q>
+  map_value_adaptor(T&& first,Q&& second):
+    first(std::forward<T>(first)),second(std::forward<Q>(second)){}
+
   Key           first;
   mutable Value second;
 };

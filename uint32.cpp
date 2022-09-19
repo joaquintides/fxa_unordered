@@ -7,6 +7,7 @@
 // https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/algorithm/minmax_element.hpp>
+#include <boost/endian/conversion.hpp>
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
@@ -55,7 +56,7 @@ static void init_indices()
 
     for( unsigned i = 1; i <= N*2; ++i )
     {
-        indices3.push_back( (std::uint32_t)i << 11 );
+        indices3.push_back( boost::endian::endian_reverse( static_cast<std::uint32_t>( i ) ) );
     }
 }
 
@@ -80,7 +81,7 @@ template<class Map> void test_insert( Map& map, std::chrono::steady_clock::time_
         map.insert( { indices3[ i ], i } );
     }
 
-    print_time( t1, "Consecutive shifted insert",  0, map.size() );
+    print_time( t1, "Consecutive reversed insert",  0, map.size() );
 
     std::cout << std::endl;
 }
@@ -126,7 +127,7 @@ template<class Map> void test_lookup( Map& map, std::chrono::steady_clock::time_
         }
     }
 
-    print_time( t1, "Consecutive shifted lookup",  s, map.size() );
+    print_time( t1, "Consecutive reversed lookup",  s, map.size() );
 
     std::cout << std::endl;
 }
@@ -168,13 +169,9 @@ template<class Map> void test_erase( Map& map, std::chrono::steady_clock::time_p
 
     print_time( t1, "Consecutive erase",  0, map.size() );
 
+    for( unsigned i = 1; i <= N; ++i )
     {
-        boost::detail::splitmix64 rng;
-
-        for( unsigned i = 1; i <= N; ++i )
-        {
-            map.erase( indices2[ i ] );
-        }
+        map.erase( indices2[ i ] );
     }
 
     print_time( t1, "Random erase",  0, map.size() );
@@ -184,7 +181,7 @@ template<class Map> void test_erase( Map& map, std::chrono::steady_clock::time_p
         map.erase( indices3[ i ] );
     }
 
-    print_time( t1, "Consecutive shifted erase",  0, map.size() );
+    print_time( t1, "Consecutive reversed erase",  0, map.size() );
 
     std::cout << std::endl;
 }
@@ -246,8 +243,6 @@ int main()
     test<fca_simple_unordered_map_>( "fca_simple_unordered_map" );
     test<fca_unordered_map_>( "fca_unordered_map" );
     test<fca_switch_unordered_map>( "fca_switch_unordered_map" );
-#endif
-
     test<fca_fmod_unordered_map>( "fca_fmod_unordered_map" );
 
     // frng is spectacularly slow for consecutive uint64 insertion
@@ -263,47 +258,23 @@ int main()
     
     test<fca_pow2_fib_unordered_map>( "fca_pow2_fib_unordered_map" );
     test<fca_fmod_unordered_bucket_map>( "fca_fmod_unordered_bucket_map" );
-
-#ifdef BENCHMARK_EVERYTHING
     test<fca_fmod_bcached_unordered_bucket_map>( "fca_fmod_bcached_unordered_bucket_map" );
     test<fca_fmod_unordered_hybrid_map>( "fca_fmod_unordered_hybrid_map" );
-#endif
-    
     test<fca_fmod_unordered_hybrid_bucket_map>( "fca_fmod_unordered_hybrid_bucket_map" );
-
-#ifdef BENCHMARK_EVERYTHING    
     test<fca_fmod_bcached_unordered_hybrid_bucket_map>( "fca_fmod_bcached_unordered_hybrid_bucket_map" );
     test<fca_fmod_unordered_linear_map>( "fca_fmod_unordered_linear_map" );
-#endif
-    
     test<fca_fmod_unordered_linear_bucket_map>( "fca_fmod_unordered_linear_bucket_map" );
-
-#ifdef BENCHMARK_EVERYTHING    
     test<fca_fmod_bcached_unordered_linear_bucket_map>( "fca_fmod_bcached_unordered_linear_bucket_map" );
     test<fca_fmod_unordered_pool_map>( "fca_fmod_unordered_pool_map" );
-#endif
-    
     test<fca_fmod_unordered_pool_bucket_map>( "fca_fmod_unordered_pool_bucket_map" );
-
-#ifdef BENCHMARK_EVERYTHING    
     test<fca_fmod_bcached_unordered_pool_bucket_map>( "fca_fmod_bcached_unordered_pool_bucket_map" );
     test<fca_fmod_unordered_embedded_map>( "fca_fmod_unordered_embedded_map" );
-#endif
-
     test<fca_fmod_unordered_embedded_bucket_map>( "fca_fmod_unordered_embedded_bucket_map" );
-
-#ifdef BENCHMARK_EVERYTHING    
     test<fca_fmod_bcached_unordered_embedded_bucket_map>( "fca_fmod_bcached_unordered_embedded_bucket_map" );
-#endif
-
     test<foa_fmod_unordered_coalesced_map>( "foa_fmod_unordered_coalesced_map" );
     test<foa_absl_unordered_coalesced_map>( "foa_absl_unordered_coalesced_map" );
     test<foa_fmod_hcached_unordered_coalesced_map>( "foa_fmod_hcached_unordered_coalesced_map" );
-    
-#ifdef BENCHMARK_EVERYTHING    
     test<foa_pow2_fib_unordered_nway_map>( "foa_pow2_fib_unordered_nway_map" );
-#endif
-
     test<foa_fmod_unordered_nwayplus_map>( "foa_fmod_unordered_nwayplus_map" );
     test<foa_pow2_fib_unordered_nwayplus_map>( "foa_pow2_fib_unordered_nwayplus_map" );
     test<foa_absl_unordered_nwayplus_map>( "foa_absl_unordered_nwayplus_map" );
@@ -315,14 +286,76 @@ int main()
     test<foa_absl_unordered_intersoa_nwayplus_map>( "foa_absl_unordered_intersoa_nwayplus_map" );
     test<foa_absl_unordered_soa15_nwayplus_map>( "foa_absl_unordered_soa15_nwayplus_map" );
     test<foa_absl_unordered_intersoa15_nwayplus_map>( "foa_absl_unordered_intersoa15_nwayplus_map" );
-
-#ifdef BENCHMARK_EVERYTHING    
     test<foa_pow2_fib_unordered_coalesced_nwayplus_map>( "foa_pow2_fib_unordered_coalesced_nwayplus_map" );
     test<foa_pow2_fib_unordered_soa_coalesced_nwayplus_map>( "foa_pow2_fib_unordered_soa_coalesced_nwayplus_map" );
     test<foa_frng_fib_unordered_hopscotch_map>( "foa_frng_fib_unordered_hopscotch_map" );
     test<foa_absl_unordered_hopscotch_map>( "foa_absl_unordered_hopscotch_map" );
     test<foa_frng_fib_unordered_longhop_map>( "foa_frng_fib_unordered_longhop_map" );
     test<foa_absl_unordered_longhop_map>( "foa_absl_unordered_longhop_map" );
+#endif
+
+    // test<foa_fmod_unordered_rc16_map>( "foa_fmod_unordered_rc16_map" );
+    // test<foa_fmod_unordered_rc15_map>( "foa_fmod_unordered_rc15_map" );
+    // test<foa_fmodxm_unordered_rc16_map>( "foa_fmodxm_unordered_rc16_map" );
+    // test<foa_fmodxm_unordered_rc15_map>( "foa_fmodxm_unordered_rc15_map" );
+
+    // test<foa_absl_unordered_rc16_map>( "foa_absl_unordered_rc16_map" );
+    // test<foa_absl_unordered_rc15_map>( "foa_absl_unordered_rc15_map" );
+    test<foa_mulx_unordered_rc16_map>( "foa_mulx_unordered_rc16_map" );
+    test<foa_mulx_unordered_rc15_map>( "foa_mulx_unordered_rc15_map" );
+
+#if !defined(IN_32BIT_ARCHITECTURE)
+    // test<foa_xmxmx_unordered_rc16_map>( "foa_xmxmx_unordered_rc16_map" );
+    // test<foa_xmxmx_unordered_rc15_map>( "foa_xmxmx_unordered_rc15_map" );
+    // test<foa_mxm_unordered_rc16_map>( "foa_mxm_unordered_rc16_map" );
+    // test<foa_mxm_unordered_rc15_map>( "foa_mxm_unordered_rc15_map" );
+    // test<foa_mxm2_unordered_rc16_map>( "foa_mxm2_unordered_rc16_map" );
+    // test<foa_mxm2_unordered_rc15_map>( "foa_mxm2_unordered_rc15_map" );
+    // test<foa_xmx_unordered_rc16_map>( "foa_xmx_unordered_rc16_map" );
+    test<foa_xmx_unordered_rc15_map>( "foa_xmx_unordered_rc15_map" );
+    // test<foa_xmx2_unordered_rc16_map>( "foa_xmx2_unordered_rc16_map" );
+    // test<foa_xmx2_unordered_rc15_map>( "foa_xmx2_unordered_rc15_map" );
+    // test<foa_xm_unordered_rc16_map>( "foa_xm_unordered_rc16_map" );
+    // test<foa_xm_unordered_rc15_map>( "foa_xm_unordered_rc15_map" );
+    // test<foa_hxm_unordered_rc16_map>( "foa_hxm_unordered_rc16_map" );
+    // test<foa_hxm_unordered_rc15_map>( "foa_hxm_unordered_rc15_map" );
+    // test<foa_xm2_unordered_rc16_map>( "foa_xm2_unordered_rc16_map" );
+    // test<foa_xm2_unordered_rc15_map>( "foa_xm2_unordered_rc15_map" );
+    // test<foa_hxm2_unordered_rc16_map>( "foa_hxm2_unordered_rc16_map" );
+    test<foa_hxm2_unordered_rc15_map>( "foa_hxm2_unordered_rc15_map" );
+#else
+    // test<foa_xmxmx32_unordered_rc16_map>( "foa_xmxmx32_unordered_rc16_map" );
+    // test<foa_xmxmx32_unordered_rc15_map>( "foa_xmxmx32_unordered_rc15_map" );
+    // test<foa_mxm32_unordered_rc16_map>( "foa_mxm32_unordered_rc16_map" );
+    // test<foa_mxm32_unordered_rc15_map>( "foa_mxm32_unordered_rc15_map" );
+    // test<foa_mxm33_unordered_rc16_map>( "foa_mxm33_unordered_rc16_map" );
+    // test<foa_mxm33_unordered_rc15_map>( "foa_mxm33_unordered_rc15_map" );
+    // test<foa_xmx32_unordered_rc16_map>( "foa_xmx32_unordered_rc16_map" );
+    // test<foa_xmx32_unordered_rc15_map>( "foa_xmx32_unordered_rc15_map" );
+    // test<foa_hxmx32_unordered_rc16_map>( "foa_hxmx32_unordered_rc16_map" );
+    // test<foa_hxmx32_unordered_rc15_map>( "foa_hxmx32_unordered_rc15_map" );
+    // test<foa_xmx33_unordered_rc16_map>( "foa_xmx33_unordered_rc16_map" );
+    test<foa_xmx33_unordered_rc15_map>( "foa_xmx33_unordered_rc15_map" );
+    // test<foa_hxmx33_unordered_rc16_map>( "foa_hxmx33_unordered_rc16_map" );
+    // test<foa_hxmx33_unordered_rc15_map>( "foa_hxmx33_unordered_rc15_map" );
+    // test<foa_xmx34_unordered_rc16_map>( "foa_xmx34_unordered_rc16_map" );
+    // test<foa_xmx34_unordered_rc15_map>( "foa_xmx34_unordered_rc15_map" );
+    // test<foa_rmr32_unordered_rc16_map>( "foa_rmr32_unordered_rc16_map" );
+    // test<foa_rmr32_unordered_rc15_map>( "foa_rmr32_unordered_rc15_map" );
+    // test<foa_rmr33_unordered_rc16_map>( "foa_rmr33_unordered_rc16_map" );
+    // test<foa_rmr33_unordered_rc15_map>( "foa_rmr33_unordered_rc15_map" );
+    // test<foa_xm32_unordered_rc16_map>( "foa_xm32_unordered_rc16_map" );
+    // test<foa_xm32_unordered_rc15_map>( "foa_xm32_unordered_rc15_map" );
+    // test<foa_hxm32_unordered_rc16_map>( "foa_hxm32_unordered_rc16_map" );
+    // test<foa_hxm32_unordered_rc15_map>( "foa_hxm32_unordered_rc15_map" );
+    // test<foa_xm33_unordered_rc16_map>( "foa_xm33_unordered_rc16_map" );
+    // test<foa_xm33_unordered_rc15_map>( "foa_xm33_unordered_rc15_map" );
+    // test<foa_hxm33_unordered_rc16_map>( "foa_hxm33_unordered_rc16_map" );
+    test<foa_hxm33_unordered_rc15_map>( "foa_hxm33_unordered_rc15_map" );
+#endif
+
+#ifdef HAVE_ANKERL_UNORDERED_DENSE
+   test<ankerl_unordered_dense_map>( "ankerl::unordered_dense::map" );
 #endif
 
 #ifdef HAVE_ABSEIL
@@ -335,13 +368,16 @@ int main()
     int label_witdh = 0;
     for( auto const& x: times ) label_witdh = (std::max)((int)( x.label_ + ": " ).size(), label_witdh);
     
-    for( auto const& x: times )
-    {
-        std::cout << std::setw( label_witdh ) << ( x.label_ + ": " ) << std::setw( 5 ) << x.time_ << " ms, " << std::setw( 9 ) << x.bytes_ << " bytes in " << x.count_ << " allocations\n";
-    }
-
     auto precision = std::cout.precision();
-    std::cout << std::fixed <<std::setprecision(2);
+    std::cout << std::fixed << std::setprecision(2);
+
+    for (auto const& x : times)
+    {
+        std::cout << std::setw(label_witdh) << (x.label_ + ": ") <<
+        std::setw( 5 ) << x.time_ << " ms, " <<
+        std::setw( 7 ) << (double)x.time_ * x.bytes_ / 1'048'576 / 1'000 << " us*MB, " <<
+        std::setw( 9 ) << x.bytes_ << " bytes in " << x.count_ << " allocations\n";
+    }
 
     auto [pmint, pmaxt] = boost::minmax_element(
         times.begin(), times.end(), [](const record& x, const record& y){ return x.time_< y.time_; });

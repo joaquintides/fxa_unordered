@@ -5,6 +5,7 @@ Proof of concept of closed- and open-addressing unordered associative containers
   * [`fca_unordered_set`, `fca_unordered_map`](#fca_unordered)
   * [`fca_simple_unordered_set`, `fca_simple_unordered_map`](#fca_simple_unordered)
 * [Open addressing](#open-addressing)
+  * [`foa_unordered_rc_set`, `foa_unordered_rc_map`](#foa_unordered_rc)
   * [`foa_unordered_coalesced_set`, `foa_unordered_coalesced_map`](#foa_unordered_coalesced)
   * [`foa_unordered_nwayplus_set`, `foa_unordered_nwayplus_map`](#foa_unordered_nwayplus)
   * [`foa_unordered_nway_set`, `foa_unordered_nway_map`](#foa_unordered_nway)
@@ -142,6 +143,87 @@ capabilities.
   element.
 * `begin()` is not constant time (hopping to the first occupied node is required).
 
+<a name="foa_unordered_rc"></a>
+```cpp
+template<
+  typename T,typename Hash=boost::hash<T>,typename Pred=std::equal_to<T>,
+  typename Allocator=std::allocator<T>,
+  typename Group=group15,
+  typename SizePolicy=pow2_size,
+  typename Prober=pow2_prober,
+  typename HashSplitPolicy=shift_hash<0>
+>
+class foa_unordered_rc_set;
+
+template<
+  typename Key,typename Value,
+  typename Hash=boost::hash<Key>,typename Pred=std::equal_to<Key>,
+  typename Allocator=std::allocator</* equivalent to std::pair<const Key,Value> */>,
+  typename Group=group15,
+  typename SizePolicy=pow2_size,
+  typename Prober=pow2_prober,
+  typename HashSplitPolicy=shift_hash<0>
+>
+class foa_unordered_rc_map;
+```
+Release candidate containers based on the best configuration results for
+[`foa_unordered_nwayplus_set`/`foa_unordered_nwayplus_map`](#foa_unordered_nwayplus).
+Elements are divided into logical groups of N = 15 or 16 elements, and each group has an
+associated 128-bit control holding lookup information. Probing is done at the group level.
+Intragroup lookup uses [SSE2](https://en.wikipedia.org/wiki/SSE2) or
+[Neon](https://en.wikipedia.org/wiki/ARM_architecture_family#Advanced_SIMD_(Neon)) when available.
+
+**`Group`**
+* `group15`: groups consist of 15 consecutive elements. 128-bit control words hold a
+reduced hash value for each element with a range of 254 (7.99 bits): values 0 and 1 indicate
+no element at the position and a sentinel, respectively. The last byte of the control word
+is a bit mask where the `n`-th bit indicates if some element with reduced hash value `h`
+such that `h % 8 == n` has *overflowed* this group, i.e. its probing sequence went past the group.
+The overflow byte allows us to dispense with tombstones and speeds up unsuccessful lookup
+operations. When SSE2/Neon is not available, a different but equivalent layout is used
+where the `n`-th bits of "logical" bytes are packed into the `n`-th physical 16-bit word.
+* `group16`: groups consist of 16 consecutive elements. 128-bit control words
+use the same layout as [Abseil Swiss tables](https://abseil.io/about/design/swisstables).
+When SSE2/Neon is not available, a different but equivalent layout is used
+where the `n`-th bits of "logical" bytes are packed into the `n`-th physical 16-bit word
+—in this case, the special values for deleted slots, tombstones and the sentinel are not
+the same as in Abseil.
+
+**`SizePolicy`**
+
+As with [`fca_unordered_set`/`fca_unordered_map`](#fca_unordered). The sizes returned
+refer to the number of *groups*, not the element slots.
+
+**`Prober`**
+
+Group prober.
+* `pow2_prober`: quadratic prober optimized for size policies where sizes are always powers
+of 2 (it can only be used with these).
+* `nonpow2_prober`: generic quadratic prober.
+
+**`HashSplitPolicy`**
+
+Controls how hash values are split into a "long" value for group assignment
+and a "short" value for probing. Which actual bits of the long value are used is
+determined by the size policy, whereas for the short value,
+`fca_unordered_rc_set`/`fca_unordered_rc_map` uses the 8 or 7 least significant
+bits depending on whether `Group` is `group15` or `group16`, respectively.
+
+* `shift_mod_hash<N>`: the long value is the original hash right-shifted `N`
+positions; the short value is the original hash modulo 127.
+* `shift_hash<N>`: the long value is the original hash right-shifted `N`
+positions; the short value is just the original hash value.
+* `rshift_hash<N>`: the long value is the original hash left-shifted `N`
+positions; the short value is the original hash right-shifted
+`sizeof(std::size_t)*8-N` positions. 
+* `xm_hash`: the long value is just the original hash value; the short
+value is a mix of the original value `h` according to the following procedure:
+```cpp
+    h ^= h >> 23;                // 15 for 32 bits
+    h *= 0xff51afd7ed558ccdull;  // 0xc92adaabu for 32 bits
+    h >>= 56;                    // 24 for 32 bits
+```
+
 <a name="foa_unordered_coalesced"></a>
 ```cpp
 template<
@@ -232,14 +314,7 @@ in the first place).
 
 **`HashSplitPolicy`**
 
-Controls how hash values are split into a *long* value for bucket assignment
-and a reduced 7-bit *short* value for probing.
-* `shift_mod_hash<N>`: the long value is the original hash right-shifted `N`
-positions; the short value is the original hash modulo 127.
-* `shift_hash<N>`: the long value is the original hash right-shifted `N`
-positions; the short value uses the `N` rightmost bits of the
-original value (which can be further adjusted/transformed by the
-`GroupAllocationPolicy` selected).
+As with [`foa_unordered_rc_set`/`foa_unordered_rc_map`](#foa_unordered_rc).
 
 **`GroupAllocationPolicy`**
 * `regular_allocation`: N-groups are probed quadratically.

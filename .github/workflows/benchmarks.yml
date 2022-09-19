@@ -19,7 +19,7 @@ jobs:
             compiler: g++-11
             architecture: -m64
             sourcefile: string.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: [self-hosted, linux, x64]
             install: g++-11
@@ -28,7 +28,7 @@ jobs:
             compiler: g++-11
             architecture: -m64
             sourcefile: string_view.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: [self-hosted, linux, x64]
             install: g++-11
@@ -37,7 +37,7 @@ jobs:
             compiler: g++-11
             architecture: -m64
             sourcefile: uint32.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: [self-hosted, linux, x64]
             install: g++-11
@@ -46,7 +46,7 @@ jobs:
             compiler: g++-11
             architecture: -m64
             sourcefile: uint64.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: [self-hosted, linux, x64]
             install: g++-11
@@ -55,7 +55,7 @@ jobs:
             compiler: clang++-12
             architecture: -m64
             sourcefile: string.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: [self-hosted, linux, x64]
             command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
@@ -63,7 +63,7 @@ jobs:
             compiler: clang++-12
             architecture: -m64
             sourcefile: string_view.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: [self-hosted, linux, x64]
             command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
@@ -71,7 +71,7 @@ jobs:
             compiler: clang++-12
             architecture: -m64
             sourcefile: uint32.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: [self-hosted, linux, x64]
             command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
@@ -79,7 +79,7 @@ jobs:
             compiler: clang++-12
             architecture: -m64
             sourcefile: uint64.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: [self-hosted, linux, x64]
             command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
@@ -87,7 +87,7 @@ jobs:
             compiler: clang++-12
             architecture: -m32
             sourcefile: string.cpp
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: [self-hosted, linux, x64, 32-bit]
             install: libc++-12-dev:i386 libc++abi-12-dev:i386 gcc-multilib g++-multilib
@@ -96,7 +96,7 @@ jobs:
             compiler: clang++-12
             architecture: -m32
             sourcefile: string_view.cpp
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: [self-hosted, linux, x64, 32-bit]
             install: libc++-12-dev:i386 libc++abi-12-dev:i386 gcc-multilib g++-multilib
@@ -105,7 +105,7 @@ jobs:
             compiler: clang++-12
             architecture: -m32
             sourcefile: uint32.cpp
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: [self-hosted, linux, x64, 32-bit]
             install: libc++-12-dev:i386 libc++abi-12-dev:i386 gcc-multilib g++-multilib
@@ -114,172 +114,210 @@ jobs:
             compiler: clang++-12
             architecture: -m32
             sourcefile: uint64.cpp
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: [self-hosted, linux, x64, 32-bit]
             install: libc++-12-dev:i386 libc++abi-12-dev:i386 gcc-multilib g++-multilib
             command: sudo cset shield --exec -- nice -n -20 sudo -u gha ./benchmark
+
+          - name: macos
+            compiler: clang++
+            architecture: -m64
+            sourcefile: string.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
+            outputfile: benchmark
+            os: [self-hosted, macOS, ARM64]
+            command: ./benchmark
+            xcode_version: 13.4.1
+          - name: macos
+            compiler: clang++
+            architecture: -m64
+            sourcefile: string_view.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
+            outputfile: benchmark
+            os: [self-hosted, macOS, ARM64]
+            command: ./benchmark
+            xcode_version: 13.4.1
+          - name: macos
+            compiler: clang++
+            architecture: -m64
+            sourcefile: uint32.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
+            outputfile: benchmark
+            os: [self-hosted, macOS, ARM64]
+            command: ./benchmark
+            xcode_version: 13.4.1
+          - name: macos
+            compiler: clang++
+            architecture: -m64
+            sourcefile: uint64.cpp
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
+            outputfile: benchmark
+            os: [self-hosted, macOS, ARM64]
+            command: ./benchmark
+            xcode_version: 13.4.1
+
           - compiler: g++-11
             architecture: -m64
             sourcefile: string.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11
           - compiler: g++-11
             architecture: -m64
             sourcefile: string_view.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11
           - compiler: g++-11
             architecture: -m64
             sourcefile: uint32.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11
           - compiler: g++-11
             architecture: -m64
             sourcefile: uint64.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11
           - compiler: clang++-12
             architecture: -m64
             sourcefile: string.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
           - compiler: clang++-12
             architecture: -m64
             sourcefile: string_view.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
           - compiler: clang++-12
             architecture: -m64
             sourcefile: uint32.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
           - compiler: clang++-12
             architecture: -m64
             sourcefile: uint64.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
           - compiler: clang++-12
             architecture: -m64
             sourcefile: string.cpp
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: libc++-12-dev libc++abi-12-dev
           - compiler: clang++-12
             architecture: -m64
             sourcefile: string_view.cpp
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: libc++-12-dev libc++abi-12-dev
           - compiler: clang++-12
             architecture: -m64
             sourcefile: uint32.cpp
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: libc++-12-dev libc++abi-12-dev
           - compiler: clang++-12
             architecture: -m64
             sourcefile: uint64.cpp
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: libc++-12-dev libc++abi-12-dev
           - compiler: g++-11
             architecture: -m32
             sourcefile: string.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11 gcc-11-multilib g++-11-multilib
           - compiler: g++-11
             architecture: -m32
             sourcefile: string_view.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11 gcc-11-multilib g++-11-multilib
           - compiler: g++-11
             architecture: -m32
             sourcefile: uint32.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11 gcc-11-multilib g++-11-multilib
           - compiler: g++-11
             architecture: -m32
             sourcefile: uint64.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: g++-11 gcc-11-multilib g++-11-multilib
           - compiler: clang++-12
             architecture: -m32
             sourcefile: string.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: gcc-multilib g++-multilib
           - compiler: clang++-12
             architecture: -m32
             sourcefile: string_view.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: gcc-multilib g++-multilib
           - compiler: clang++-12
             architecture: -m32
             sourcefile: uint32.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: gcc-multilib g++-multilib
           - compiler: clang++-12
             architecture: -m32
             sourcefile: uint64.cpp
-            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: gcc-multilib g++-multilib
           - compiler: clang++-12
             architecture: -m32
             sourcefile: string.cpp
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: libc++-12-dev:i386 libc++abi-12-dev:i386 gcc-multilib g++-multilib
           - compiler: clang++-12
             architecture: -m32
             sourcefile: string_view.cpp
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: libc++-12-dev:i386 libc++abi-12-dev:i386 gcc-multilib g++-multilib
           - compiler: clang++-12
             architecture: -m32
             sourcefile: uint32.cpp
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: libc++-12-dev:i386 libc++abi-12-dev:i386 gcc-multilib g++-multilib
           - compiler: clang++-12
             architecture: -m32
             sourcefile: uint64.cpp
-            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL
+            compileroptions: -std=c++2a -O3 -stdlib=libc++ -DNDEBUG -DHAVE_ABSEIL -DHAVE_ANKERL_UNORDERED_DENSE
             outputfile: benchmark
             os: ubuntu-20.04
             install: libc++-12-dev:i386 libc++abi-12-dev:i386 gcc-multilib g++-multilib
@@ -301,11 +339,13 @@ jobs:
         run: |
           if [ -n "${{matrix.command}}" ]; then
             set -xe
-            export BOOST_BRANCH=boost-1.78.0
+            export BOOST_BRANCH=develop
+            export BOOST_COMMIT=67c074b249538cf441724f9bbb3929d0f6b4f333
             cd $HOME
             if [ ! -d boost-root ]; then
-              git clone -b $BOOST_BRANCH https://github.com/boostorg/boost.git boost-root --depth 1
+              git clone -b $BOOST_BRANCH https://github.com/boostorg/boost.git boost-root
               cd boost-root
+              git checkout $BOOST_COMMIT
               git submodule update --init --depth 1
               ./bootstrap.sh
               ./b2 headers
@@ -318,7 +358,7 @@ jobs:
             cd $GITHUB_WORKSPACE
             git clone https://github.com/boostorg/boost.git boost-root
             cd boost-root
-            git checkout boost-1.78.0
+            git checkout develop
             git submodule update --init
             ./bootstrap.sh
             ./b2 -d0 headers
@@ -327,18 +367,25 @@ jobs:
       - name: Install Abseil
         run: |
           cd $GITHUB_WORKSPACE
-          git clone -b lts_2021_11_02 https://github.com/abseil/abseil-cpp.git abseil-root
+          git clone -b lts_2022_06_23 https://github.com/abseil/abseil-cpp.git abseil-root
       - name: Install fastrange
         run: |
           cd $GITHUB_WORKSPACE
           git clone https://github.com/lemire/fastrange.git fastrange-root
+      - name: Install ankerl::unordered_dense
+        run: |
+          cd $GITHUB_WORKSPACE
+          git clone -b v1.3.1 https://github.com/martinus/unordered_dense.git ankerl-unordered_dense-root
       - name: Compile
         run: |
           cd $GITHUB_WORKSPACE
           ${{matrix.compiler}} --version
-          ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.architecture}} ${{matrix.compileroptions}} -o ${{matrix.outputfile}} -I$GITHUB_WORKSPACE/boost-root -I$GITHUB_WORKSPACE/abseil-root -I$GITHUB_WORKSPACE/fastrange-root
+          ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.architecture}} ${{matrix.compileroptions}} -o ${{matrix.outputfile}} -I$GITHUB_WORKSPACE/boost-root -I$GITHUB_WORKSPACE/abseil-root -I$GITHUB_WORKSPACE/fastrange-root -I$GITHUB_WORKSPACE/ankerl-unordered_dense-root/include
       - name: Run benchmarks
         run: |
+          if [ -n "${{matrix.xcode_version}}" ]; then
+              DEVELOPER_DIR=/Applications/Xcode-${{matrix.xcode_version}}.app/Contents/Developer
+          fi
           if [ -n "${{matrix.command}}" ]; then
               echo "running benchmarks"
               ${{matrix.command}}
@@ -355,104 +402,104 @@ jobs:
             compiler: cl
             architecture: x64
             sourcefile: string.cpp
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /D "HAVE_ANKERL_UNORDERED_DENSE" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe
             os: [self-hosted, Windows, X64]
           - name: dedicated-server
             compiler: cl
             architecture: x64
             sourcefile: string_view.cpp
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /D "HAVE_ANKERL_UNORDERED_DENSE" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe
             os: [self-hosted, Windows, X64]
           - name: dedicated-server
             compiler: cl
             architecture: x64
             sourcefile: uint32.cpp
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /D "HAVE_ANKERL_UNORDERED_DENSE" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe
             os: [self-hosted, Windows, X64]
           - name: dedicated-server
             compiler: cl
             architecture: x64
             sourcefile: uint64.cpp
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /D "HAVE_ANKERL_UNORDERED_DENSE" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe
             os: [self-hosted, Windows, X64]
           - name: dedicated-server
             compiler: cl
             architecture: x86
             sourcefile: string.cpp
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /D "HAVE_ANKERL_UNORDERED_DENSE" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe
             os: [self-hosted, Windows, X64]
           - name: dedicated-server
             compiler: cl
             architecture: x86
             sourcefile: string_view.cpp
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /D "HAVE_ANKERL_UNORDERED_DENSE" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe
             os: [self-hosted, Windows, X64]
           - name: dedicated-server
             compiler: cl
             architecture: x86
             sourcefile: uint32.cpp
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /D "HAVE_ANKERL_UNORDERED_DENSE" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe
             os: [self-hosted, Windows, X64]
           - name: dedicated-server
             compiler: cl
             architecture: x86
             sourcefile: uint64.cpp
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /D "HAVE_ANKERL_UNORDERED_DENSE" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe
             os: [self-hosted, Windows, X64]
           - compiler: cl
             architecture: x64
             sourcefile: string.cpp
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /D "HAVE_ANKERL_UNORDERED_DENSE" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe            
             os: windows-2019
           - compiler: cl
             architecture: x64
             sourcefile: string_view.cpp
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /D "HAVE_ANKERL_UNORDERED_DENSE" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe            
             os: windows-2019
           - compiler: cl
             architecture: x64
             sourcefile: uint32.cpp
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /D "HAVE_ANKERL_UNORDERED_DENSE" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe            
             os: windows-2019
           - compiler: cl
             architecture: x64
             sourcefile: uint64.cpp
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /D "HAVE_ANKERL_UNORDERED_DENSE" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe            
             os: windows-2019
           - compiler: cl
             architecture: x86
             sourcefile: string.cpp
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /D "HAVE_ANKERL_UNORDERED_DENSE" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe            
             os: windows-2019
           - compiler: cl
             architecture: x86
             sourcefile: string_view.cpp
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /D "HAVE_ANKERL_UNORDERED_DENSE" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe            
             os: windows-2019
           - compiler: cl
             architecture: x86
             sourcefile: uint32.cpp
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /D "HAVE_ANKERL_UNORDERED_DENSE" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe            
             os: windows-2019
           - compiler: cl
             architecture: x86
             sourcefile: uint64.cpp
-            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /EHsc /MD /Fe:benchmark.exe
+            compileroptions: /std:c++latest /O2 /D "NDEBUG" /D "HAVE_ABSEIL" /D "HAVE_ANKERL_UNORDERED_DENSE" /EHsc /MD /Fe:benchmark.exe
             outputfile: benchmark.exe            
             os: windows-2019
 
@@ -467,11 +514,13 @@ jobs:
           @ECHO ON
           setlocal enabledelayedexpansion
           if "${{matrix.name}}" == "dedicated-server" (
-              SET BOOST_BRANCH=boost-1.78.0
+              SET BOOST_BRANCH=develop
+              SET BOOST_COMMIT=67c074b249538cf441724f9bbb3929d0f6b4f333
               cd %userprofile%
               if not exist boost-root/ (
-                  git clone -b !BOOST_BRANCH! https://github.com/boostorg/boost.git boost-root --depth 1
+                  git clone -b !BOOST_BRANCH! https://github.com/boostorg/boost.git boost-root
                   cd boost-root
+                  git checkout !BOOST_COMMIT!
                   git submodule update --init --depth 1
                   cmd /c bootstrap.bat
                   .\b2.exe -d0 headers
@@ -482,7 +531,7 @@ jobs:
               cd %GITHUB_WORKSPACE%
               git clone https://github.com/boostorg/boost.git boost-root
               cd boost-root
-              git checkout boost-1.78.0
+              git checkout develop
               git submodule update --init
               cmd /c bootstrap.bat
               .\b2.exe -d0 headers
@@ -492,12 +541,17 @@ jobs:
         shell: cmd
         run: |
           cd %GITHUB_WORKSPACE%
-          git clone -b lts_2021_11_02 https://github.com/abseil/abseil-cpp.git abseil-root
+          git clone -b lts_2022_06_23 https://github.com/abseil/abseil-cpp.git abseil-root
       - name: Install fastrange
         shell: cmd
         run: |
           cd %GITHUB_WORKSPACE%
           git clone https://github.com/lemire/fastrange.git fastrange-root
+      - name: Install ankerl::unordered_dense
+        shell: cmd
+        run: |
+          cd %GITHUB_WORKSPACE%
+          git clone -b v1.3.1 https://github.com/martinus/unordered_dense.git ankerl-unordered_dense-root
       - name: Compile
         shell: cmd
         run: |
@@ -512,9 +566,10 @@ jobs:
               call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{matrix.architecture}}
           )
 
-          set INCLUDE=%INCLUDE%;!BOOST_ROOT!
+          set INCLUDE=%INCLUDE%;%BOOST_ROOT%
           set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\abseil-root
           set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\fastrange-root
+          set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\ankerl-unordered_dense-root\include
           echo %INCLUDE%
           ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.compileroptions}}
       - name: Run benchmark
