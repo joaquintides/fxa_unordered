@@ -895,8 +895,7 @@ public:
     {
       std::size_t n0=rebase();
 
-      auto mask=reinterpret_cast<group_type*>(pc)->match_occupied()&
-                reset_first_bits(n0+1);
+      auto mask=(reinterpret_cast<group_type*>(pc)->match_occupied()>>(n0+1))<<(n0+1);
       if(!mask){
         do{
           pc+=sizeof(group_type);
