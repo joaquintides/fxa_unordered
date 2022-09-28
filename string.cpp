@@ -87,6 +87,14 @@ template<class Map> void BOOST_NOINLINE test_insert( Map& map, std::chrono::stea
 
     print_time( t1, "Random insert",  0, map.size() );
 
+    std::cout << "Fingerprint: ";
+    std::size_t seed = 0;
+    for( const auto& x: map )
+    {
+      boost::hash_combine( seed, x.first );
+    }
+    std::cout << seed << std::endl;
+
     std::cout << std::endl;
 }
 
