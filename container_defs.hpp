@@ -14,6 +14,7 @@
 #define _SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING
 
 #include <boost/unordered_map.hpp>
+#include <boost/unordered/detail/foa.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
@@ -1204,6 +1205,22 @@ using foa_hxm33_unordered_rc15_map =
     fxa_unordered::rc::pow2_prober,
     fxa_unordered::rshift_hash<8>>;
 
+// Variations on boost::unordered::detail::foa::table
+
+template<typename Key,typename Value>
+struct boost_foa_table_map_types
+{
+  using key_type=Key;
+  using value_type=std::pair<const Key,Value>;
+  static auto& extract(const value_type& x){return x.first;}
+};
+
+template<class K, class V, class H=absl::container_internal::hash_default_hash<K>> 
+using boost_absl_foa_table=
+  boost::unordered::detail::foa::table<
+    boost_foa_table_map_types<K, V>,H,std::equal_to<K>,
+   ::allocator<typename boost_foa_table_map_types<K, V>::value_type>>;
+
 // fnv1a_hash
 
 template<int Bits> struct fnv1a_hash_impl;
@@ -1520,6 +1537,9 @@ using foa_hxm33_unordered_rc15_map_fnv1a =
     fxa_unordered::pow2_size,
     fxa_unordered::rc::pow2_prober,
     fxa_unordered::rshift_hash<8>>;
+
+template<class K, class V>
+using boost_foa_table_fnv1a = boost_absl_foa_table<K, V, fnv1a_hash>;
 
 #ifdef HAVE_ABSEIL
 

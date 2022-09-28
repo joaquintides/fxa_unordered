@@ -293,6 +293,8 @@ int main()
     test<foa_hxm33_unordered_rc15_map_fnv1a>( "foa_hxm33_unordered_rc15_map, FNV-1a" );
 #endif
 
+    test<boost_foa_table_fnv1a>( "boost_foa_table, FNV-1a" );    
+
 #ifdef HAVE_ANKERL_UNORDERED_DENSE
    test<ankerl_unordered_dense_map_fnv1a>( "ankerl::unordered_dense::map, FNV-1a" );
 #endif
