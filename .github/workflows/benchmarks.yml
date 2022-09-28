@@ -347,9 +347,6 @@ jobs:
               cd boost-root
               git checkout $BOOST_COMMIT
               git submodule update --init --depth 1
-              cd libs/unordered
-              git checkout -b feature/foa_rc
-              cd ../..
               ./bootstrap.sh
               ./b2 headers
               cd ..
@@ -363,13 +360,14 @@ jobs:
             cd boost-root
             git checkout develop
             git submodule update --init
-            cd libs/unordered
-            git checkout -b feature/foa_rc
-            cd ../..
             ./bootstrap.sh
             ./b2 -d0 headers
           fi
 
+      - name: Install Boost.Unordered branch feature/foa_rc
+        run: |
+           cd $GITHUB_WORKSPACE
+           git clone -b feature/foa_rc https://github.com/boostorg/unordered.git boost_unordered-root     
       - name: Install Abseil
         run: |
           cd $GITHUB_WORKSPACE
@@ -386,7 +384,7 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE
           ${{matrix.compiler}} --version
-          ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.architecture}} ${{matrix.compileroptions}} -o ${{matrix.outputfile}} -I$GITHUB_WORKSPACE/boost-root -I$GITHUB_WORKSPACE/abseil-root -I$GITHUB_WORKSPACE/fastrange-root -I$GITHUB_WORKSPACE/ankerl-unordered_dense-root/include
+          ${{matrix.compiler}} ${{matrix.sourcefile}} ${{matrix.architecture}} ${{matrix.compileroptions}} -o ${{matrix.outputfile}} -I$GITHUB_WORKSPACE/boost_unordered-root/include -I$GITHUB_WORKSPACE/boost-root -I$GITHUB_WORKSPACE/abseil-root -I$GITHUB_WORKSPACE/fastrange-root -I$GITHUB_WORKSPACE/ankerl-unordered_dense-root/include
       - name: Run benchmarks
         run: |
           if [ -n "${{matrix.xcode_version}}" ]; then
@@ -528,9 +526,6 @@ jobs:
                   cd boost-root
                   git checkout !BOOST_COMMIT!
                   git submodule update --init --depth 1
-                  cd libs\unordered
-                  git checkout -b feature/foa_rc
-                  cd ..\..
                   cmd /c bootstrap.bat
                   .\b2.exe -d0 headers
                   cd ..
@@ -542,13 +537,15 @@ jobs:
               cd boost-root
               git checkout develop
               git submodule update --init
-              cd libs\unordered
-              git checkout -b feature/foa_rc
-              cd ..\..
               cmd /c bootstrap.bat
               .\b2.exe -d0 headers
           )
 
+      - name: Install Boost.Unordered branch feature/foa_rc
+        shell: cmd
+        run: |
+          cd %GITHUB_WORKSPACE%
+          git clone -b feature/foa_rc https://github.com/boostorg/unordered.git boost_unordered-root     
       - name: Install Abseil
         shell: cmd
         run: |
@@ -578,6 +575,7 @@ jobs:
               call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{matrix.architecture}}
           )
 
+          set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\boost_unordered-root\include
           set INCLUDE=%INCLUDE%;%BOOST_ROOT%
           set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\abseil-root
           set INCLUDE=%INCLUDE%;%GITHUB_WORKSPACE%\fastrange-root
