@@ -347,6 +347,9 @@ jobs:
               cd boost-root
               git checkout $BOOST_COMMIT
               git submodule update --init --depth 1
+              cd libs/unordered
+              git checkout -b feature/foa_rc
+              cd ../..
               ./bootstrap.sh
               ./b2 headers
               cd ..
@@ -360,6 +363,9 @@ jobs:
             cd boost-root
             git checkout develop
             git submodule update --init
+            cd libs/unordered
+            git checkout -b feature/foa_rc
+            cd ../..
             ./bootstrap.sh
             ./b2 -d0 headers
           fi
@@ -522,6 +528,9 @@ jobs:
                   cd boost-root
                   git checkout !BOOST_COMMIT!
                   git submodule update --init --depth 1
+                  cd libs\unordered
+                  git checkout -b feature/foa_rc
+                  cd ..\..
                   cmd /c bootstrap.bat
                   .\b2.exe -d0 headers
                   cd ..
@@ -533,6 +542,9 @@ jobs:
               cd boost-root
               git checkout develop
               git submodule update --init
+              cd libs\unordered
+              git checkout -b feature/foa_rc
+              cd ..\..
               cmd /c bootstrap.bat
               .\b2.exe -d0 headers
           )
