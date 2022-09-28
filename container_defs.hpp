@@ -1212,7 +1212,7 @@ struct boost_foa_table_map_types
 {
   using key_type=Key;
   using value_type=std::pair<const Key,Value>;
-  static auto& extract(const value_type& x){return x.first;}
+  static inline auto& extract(const value_type& x){return x.first;}
 };
 
 template<class K, class V, class H=absl::container_internal::hash_default_hash<K>> 
