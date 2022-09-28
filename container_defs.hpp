@@ -1215,11 +1215,19 @@ struct boost_foa_table_map_types
   static inline auto& extract(const value_type& x){return x.first;}
 };
 
-template<class K, class V, class H=absl::container_internal::hash_default_hash<K>> 
-using boost_absl_foa_table=
+template<class K, class V, class H> 
+using boost_foa_table =
   boost::unordered::detail::foa::table<
     boost_foa_table_map_types<K, V>,H,std::equal_to<K>,
    ::allocator<typename boost_foa_table_map_types<K, V>::value_type>>;
+
+template<class K, class V> 
+using boost_absl_foa_table = 
+  boost_foa_table<K, V, absl::container_internal::hash_default_hash<K>>; 
+
+template<class K, class V> 
+using boost_mulx_foa_table = 
+  boost_foa_table<K, V, mulx_hash<K>>; 
 
 // fnv1a_hash
 
@@ -1539,7 +1547,7 @@ using foa_hxm33_unordered_rc15_map_fnv1a =
     fxa_unordered::rshift_hash<8>>;
 
 template<class K, class V>
-using boost_foa_table_fnv1a = boost_absl_foa_table<K, V, fnv1a_hash>;
+using boost_foa_table_fnv1a = boost_foa_table<K, V, fnv1a_hash>;
 
 #ifdef HAVE_ABSEIL
 
