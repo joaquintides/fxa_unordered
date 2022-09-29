@@ -1211,7 +1211,7 @@ template<typename Key,typename Value>
 struct boost_foa_table_map_types
 {
   using key_type=Key;
-  using value_type=std::pair<const Key,Value>;
+  using value_type=std::pair</*const*/ Key,Value>;
   static inline auto& extract(const value_type& x){return x.first;}
 };
 
