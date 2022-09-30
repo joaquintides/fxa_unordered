@@ -359,7 +359,7 @@ int main()
 #if !defined(IN_32BIT_ARCHITECTURE)
    test<boost_xmx_foa_table>( "boost_xmx_foa_table" );
 #else
-    test<boost_xmx33_foa_table>( "boost_xmx33_foa_table" );
+   test<boost_xmx33_foa_table>( "boost_xmx33_foa_table" );
 #endif
 
 #ifdef HAVE_ANKERL_UNORDERED_DENSE
