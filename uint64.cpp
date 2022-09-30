@@ -366,7 +366,13 @@ int main()
     test<foa_hxm33_unordered_rc15_map>( "foa_hxm33_unordered_rc15_map" );
 #endif
 
-   test<boost_mulx_foa_table>( "boost_mulx_foa_table" );    
+   // test<boost_mulx_foa_table>( "boost_mulx_foa_table" );
+
+#if !defined(IN_32BIT_ARCHITECTURE)
+   test<boost_xmx_foa_table>( "boost_xmx_foa_table" );
+#else
+    test<boost_xmx33_foa_table>( "boost_xmx33_foa_table" );
+#endif
 
 #ifdef HAVE_ANKERL_UNORDERED_DENSE
    test<ankerl_unordered_dense_map>( "ankerl::unordered_dense::map" );

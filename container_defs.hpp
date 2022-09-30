@@ -1229,6 +1229,14 @@ template<class K, class V>
 using boost_mulx_foa_table = 
   boost_foa_table<K, V, mulx_hash<K>>; 
 
+template<class K, class V> 
+using boost_xmx_foa_table = 
+  boost_foa_table<K, V, xmx_hash<K>>; 
+
+template<class K, class V> 
+using boost_xmx33_foa_table = 
+  boost_foa_table<K, V, xmx33_hash<K>>; 
+
 // fnv1a_hash
 
 template<int Bits> struct fnv1a_hash_impl;
