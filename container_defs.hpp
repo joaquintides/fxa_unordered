@@ -1206,16 +1206,6 @@ using foa_hxm33_unordered_rc15_map =
     fxa_unordered::rc::pow2_prober,
     fxa_unordered::rshift_hash<8>>;
 
-// Variations on boost::unordered_flat_map
-
-template<class K, class V> 
-using boost_xmx_unordered_flat_map = 
-  boost_unordered_flat_map<K, V, xmx_hash<K>>; 
-
-template<class K, class V> 
-using boost_xmx33unordered_flat_map = 
-  boost_unordered_flat_map<K, V, xmx33_hash<K>>; 
-
 // Variations on boost::unordered::detail::foa::table
 
 template<typename Key,typename Value>
@@ -1361,6 +1351,17 @@ template<class K, class V> using absl_flat_hash_map =
 template<class K, class V> using ankerl_unordered_dense_map =
     ankerl::unordered_dense::map<K, V, ankerl::unordered_dense::hash<K>, std::equal_to<K>, ::allocator< std::pair<K, V>>>;
 #endif
+
+// Variations on boost::unordered_flat_map
+
+template<class K, class V> 
+using boost_xmx_unordered_flat_map = 
+  boost_unordered_flat_map<K, V, xmx_hash<K>>; 
+
+template<class K, class V> 
+using boost_xmx33unordered_flat_map = 
+  boost_unordered_flat_map<K, V, xmx33_hash<K>>; 
+
 
 template<class K, class V> using std_unordered_map_fnv1a =
     std::unordered_map<K, V, fnv1a_hash, std::equal_to<K>, allocator_for<K, V>>;
