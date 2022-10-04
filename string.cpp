@@ -234,6 +234,8 @@ int main()
     test<std_unordered_map_fnv1a>( "std::unordered_map, FNV-1a" );
     test<boost_unordered_map_fnv1a>( "boost::unordered_map, FNV-1a" );
     test<multi_index_map_fnv1a>( "multi_index_map, FNV-1a" );
+    test<boost_unordered_flat_map_fnv1a>( "boost_unordered_flat_map, FNV-1a" );    
+    test<boost_foa_table_fnv1a>( "boost_foa_table, FNV-1a" );    
 
 #ifdef BENCHMARK_EVERYTHING
     test<fca_simple_unordered_map_fnv1a>( "fca_simple_unordered_map, FNV-1a" );
@@ -300,8 +302,6 @@ int main()
     test<foa_xmx33_unordered_rc15_map_fnv1a>( "foa_xmx33_unordered_rc15_map, FNV-1a" );
     test<foa_hxm33_unordered_rc15_map_fnv1a>( "foa_hxm33_unordered_rc15_map, FNV-1a" );
 #endif
-
-    test<boost_foa_table_fnv1a>( "boost_foa_table, FNV-1a" );    
 
 #ifdef HAVE_ANKERL_UNORDERED_DENSE
    test<ankerl_unordered_dense_map_fnv1a>( "ankerl::unordered_dense::map, FNV-1a" );

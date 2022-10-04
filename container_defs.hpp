@@ -14,6 +14,7 @@
 #define _SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING
 
 #include <boost/unordered_map.hpp>
+#include <boost/unordered/unordered_flat_map.hpp>
 #include <boost/unordered/detail/foa.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/hashed_index.hpp>
@@ -1205,6 +1206,16 @@ using foa_hxm33_unordered_rc15_map =
     fxa_unordered::rc::pow2_prober,
     fxa_unordered::rshift_hash<8>>;
 
+// Variations on boost::unordered_flat_map
+
+template<class K, class V> 
+using boost_xmx_unordered_flat_map = 
+  boost_unordered_flat_map<K, V, xmx_hash<K>>; 
+
+template<class K, class V> 
+using boost_xmx33unordered_flat_map = 
+  boost_unordered_flat_map<K, V, xmx33_hash<K>>; 
+
 // Variations on boost::unordered::detail::foa::table
 
 template<typename Key,typename Value>
@@ -1323,6 +1334,9 @@ template<class K, class V> using std_unordered_map =
 template<class K, class V> using boost_unordered_map =
     boost::unordered_map<K, V, boost::hash<K>, std::equal_to<K>, allocator_for<K, V>>;
 
+template<class K, class V> using boost_unordered_flat_map =
+    boost::unordered_flat_map<K, V, boost::hash<K>, std::equal_to<K>, allocator_for<K, V>>;
+
 template<class K, class V> using fca_simple_unordered_map_ =
   fca_simple_unordered_map<
     K, V, boost::hash<K>, std::equal_to<K>,
@@ -1353,6 +1367,9 @@ template<class K, class V> using std_unordered_map_fnv1a =
 
 template<class K, class V> using boost_unordered_map_fnv1a =
     boost::unordered_map<K, V, fnv1a_hash, std::equal_to<K>, allocator_for<K, V>>;
+
+template<class K, class V> using boost_unordered_flat_map_fnv1a =
+    boost::unordered_flat_map<K, V, fnv1a_hash, std::equal_to<K>, allocator_for<K, V>>;
 
 template<class K, class V> using multi_index_map_fnv1a = multi_index_container<
   pair<K, V>,

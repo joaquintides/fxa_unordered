@@ -239,6 +239,20 @@ int main()
     test<boost_unordered_map>( "boost::unordered_map" );
     test<multi_index_map>( "multi_index_map" );
 
+#if !defined(IN_32BIT_ARCHITECTURE)
+   test<boost_xmx_unordered_flat_map>( "boost_xmx_unordered_flat_map" );
+#else
+   test<boost_xmx33_unordered_flat_map>( "boost_xmx33_unordered_flat_map" );
+#endif
+
+   // test<boost_mulx_foa_table>( "boost_mulx_foa_table" );
+
+#if !defined(IN_32BIT_ARCHITECTURE)
+   test<boost_xmx_foa_table>( "boost_xmx_foa_table" );
+#else
+   test<boost_xmx33_foa_table>( "boost_xmx33_foa_table" );
+#endif
+
 #ifdef BENCHMARK_EVERYTHING
     test<fca_simple_unordered_map_>( "fca_simple_unordered_map" );
     test<fca_unordered_map_>( "fca_unordered_map" );
@@ -352,14 +366,6 @@ int main()
     // test<foa_xm33_unordered_rc15_map>( "foa_xm33_unordered_rc15_map" );
     // test<foa_hxm33_unordered_rc16_map>( "foa_hxm33_unordered_rc16_map" );
     test<foa_hxm33_unordered_rc15_map>( "foa_hxm33_unordered_rc15_map" );
-#endif
-
-   // test<boost_mulx_foa_table>( "boost_mulx_foa_table" );
-
-#if !defined(IN_32BIT_ARCHITECTURE)
-   test<boost_xmx_foa_table>( "boost_xmx_foa_table" );
-#else
-   test<boost_xmx33_foa_table>( "boost_xmx33_foa_table" );
 #endif
 
 #ifdef HAVE_ANKERL_UNORDERED_DENSE
