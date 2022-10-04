@@ -1360,9 +1360,8 @@ using boost_xmx_unordered_flat_map =
   boost_unordered_flat_map<K, V, xmx_hash<K>>; 
 
 template<class K, class V> 
-using boost_xmx33unordered_flat_map = 
+using boost_xmx33_unordered_flat_map = 
   boost_unordered_flat_map<K, V, xmx33_hash<K>>; 
-
 
 template<class K, class V> using std_unordered_map_fnv1a =
     std::unordered_map<K, V, fnv1a_hash, std::equal_to<K>, allocator_for<K, V>>;
