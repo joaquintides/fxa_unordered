@@ -1222,7 +1222,7 @@ struct boost_foa_table_map_types
     f(std::move(const_cast<Key&>(x.first)),std::move(x.second));
   }
 };
-
+ 
 template<class K, class V, class H> 
 using boost_foa_table =
   boost::unordered::detail::foa::table<
