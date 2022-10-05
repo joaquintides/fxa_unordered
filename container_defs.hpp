@@ -1208,19 +1208,19 @@ using foa_hxm33_unordered_rc15_map =
 
 // Variations on boost::unordered::detail::foa::table
 
-template<typename Key,typename Value>
+template<typename Key,typename T>
 struct boost_foa_table_map_types
 {
-  using key_type=Key;
-  using init_type=std::pair<Key,Value>;
-  using value_type=std::pair<const Key,Value>;
+  using key_type = Key;
+  using init_type = std::pair<Key, T>;
+  using value_type = std::pair<Key const, T>;
+  static Key const& extract(init_type const& kv) { return kv.first; }
+  static Key const& extract(value_type const& kv) { return kv.first; }
 
-  static auto& extract(const init_type& x){return x.first;}
-  static auto& extract(const value_type& x){return x.first;}
   template<typename F>
   static void move_parts_to(value_type& x,F f)
   {
-    f(std::move(const_cast<Key&>(x.first)),std::move(x.second));
+    f(std::move(const_cast<Key&>(x.first)), std::move(x.second));
   }
 };
  
