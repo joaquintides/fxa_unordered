@@ -1212,8 +1212,15 @@ template<typename Key,typename Value>
 struct boost_foa_table_map_types
 {
   using key_type=Key;
-  using value_type=std::pair</*const*/ Key,Value>;
-  static inline auto& extract(const value_type& x){return x.first;}
+  using init_type=std::pair<Key,Value>;
+  using value_type=std::pair<const Key,Value>;
+
+  static auto& extract(const value_type& x){return x.first;}
+  template<typename F>
+  static void move_parts_to(value_type& x,F f)
+  {
+    f(std::move(const_cast<Key&>(x.first)),std::move(x.second));
+  }
 };
 
 template<class K, class V, class H> 
