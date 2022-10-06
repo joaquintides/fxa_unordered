@@ -1213,14 +1213,16 @@ struct boost_foa_table_map_types
 {
   using key_type = Key;
   using init_type = std::pair<Key, T>;
+  using moved_type = std::pair<Key&&, T&&>;
   using value_type = std::pair<Key const, T>;
   static Key const& extract(init_type const& kv) { return kv.first; }
   static Key const& extract(value_type const& kv) { return kv.first; }
+  static Key const& extract(moved_type const& kv) { return kv.first; }
 
-  template<typename F>
-  static void move_parts_to(value_type& x,F f)
+  static moved_type move(value_type& x)
   {
-    f(std::move(const_cast<Key&>(x.first)), std::move(x.second));
+    // TODO: we probably need to launder here
+    return {std::move(const_cast<Key&>(x.first)), std::move(x.second)};
   }
 };
  
