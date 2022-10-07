@@ -16,6 +16,7 @@
 #include <boost/unordered_map.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <boost/unordered/detail/foa.hpp>
+#include <boost/unordered/detail/foa_mixer.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
@@ -1334,7 +1335,7 @@ template<class K, class V> using std_unordered_map =
 template<class K, class V> using boost_unordered_map =
     boost::unordered_map<K, V, boost::hash<K>, std::equal_to<K>, allocator_for<K, V>>;
 
-template<class K, class V, class H = boost::hash<K>>
+template<class K, class V, class H = boost::unordered::detail::foa::mixer<boost::hash<K>>>
 using boost_unordered_flat_map =
     boost::unordered_flat_map<K, V, H, std::equal_to<K>, allocator_for<K, V>>;
 
@@ -1362,16 +1363,6 @@ template<class K, class V> using absl_flat_hash_map =
 template<class K, class V> using ankerl_unordered_dense_map =
     ankerl::unordered_dense::map<K, V, ankerl::unordered_dense::hash<K>, std::equal_to<K>, ::allocator< std::pair<K, V>>>;
 #endif
-
-// Variations on boost::unordered_flat_map
-
-template<class K, class V> 
-using boost_xmx_unordered_flat_map = 
-  boost_unordered_flat_map<K, V, xmx_hash<K>>; 
-
-template<class K, class V> 
-using boost_xmx33_unordered_flat_map = 
-  boost_unordered_flat_map<K, V, xmx33_hash<K>>; 
 
 template<class K, class V> using std_unordered_map_fnv1a =
     std::unordered_map<K, V, fnv1a_hash, std::equal_to<K>, allocator_for<K, V>>;

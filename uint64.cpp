@@ -252,12 +252,7 @@ int main()
 
     test<boost_unordered_map>( "boost::unordered_map" );
     test<multi_index_map>( "multi_index_map" );
-
-#if !defined(IN_32BIT_ARCHITECTURE)
-   test<boost_xmx_unordered_flat_map>( "boost_xmx_unordered_flat_map" );
-#else
-   test<boost_xmx33_unordered_flat_map>( "boost_xmx33_unordered_flat_map" );
-#endif
+    test<boost_unordered_flat_map>( "boost_unordered_flat_map" );
 
    // test<boost_mulx_foa_table>( "boost_mulx_foa_table" );
 
