@@ -1335,9 +1335,10 @@ template<class K, class V> using std_unordered_map =
 template<class K, class V> using boost_unordered_map =
     boost::unordered_map<K, V, boost::hash<K>, std::equal_to<K>, allocator_for<K, V>>;
 
-template<class K, class V, class H = boost::unordered::detail::foa::mixer<boost::hash<K>>>
+template<class K, class V, class H = boost::hash<K>>
 using boost_unordered_flat_map =
-    boost::unordered_flat_map<K, V, H, std::equal_to<K>, allocator_for<K, V>>;
+    boost::unordered_flat_map<K, V, boost::unordered::detail::foa::mixer<H>,
+    std::equal_to<K>, allocator_for<K, V>>;
 
 template<class K, class V> using fca_simple_unordered_map_ =
   fca_simple_unordered_map<
