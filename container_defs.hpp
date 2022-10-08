@@ -16,7 +16,6 @@
 #include <boost/unordered_map.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <boost/unordered/detail/foa.hpp>
-#include <boost/unordered/detail/foa_mixer.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
@@ -134,6 +133,8 @@ inline std::uint64_t mulx( std::uint64_t x, std::uint64_t y )
 template<class T, class H = boost::hash<T> >
 struct mulx_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& x) const
   {
     boost::uint64_t z = H()(x);
@@ -149,6 +150,8 @@ struct mulx_hash
 template<class T>
 struct xmxmx_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& x) const
   {
     boost::uint64_t z = boost::hash<T>()(x);
@@ -168,6 +171,8 @@ struct xmxmx_hash
 template<class T>
 struct mxm_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& x) const
   {
     boost::uint64_t z = boost::hash<T>()(x);
@@ -185,6 +190,8 @@ struct mxm_hash
 template<class T>
 struct mxm2_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& x) const
   {
     boost::uint64_t z = boost::hash<T>()(x);
@@ -202,6 +209,8 @@ struct mxm2_hash
 template<class T, class H = boost::hash<T> >
 struct xmx_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& x) const
   {
     boost::uint64_t z = H()(x);
@@ -219,6 +228,8 @@ struct xmx_hash
 template<class T>
 struct xmx2_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& x) const
   {
     boost::uint64_t z = boost::hash<T>()(x);
@@ -236,6 +247,8 @@ struct xmx2_hash
 template<class T>
 struct xm_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& x) const
   {
     boost::uint64_t z = boost::hash<T>()(x);
@@ -252,6 +265,8 @@ struct xm_hash
 template<class T, class H = boost::hash<T> >
 struct xm2_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& x) const
   {
     boost::uint64_t z = H()(x);
@@ -268,6 +283,8 @@ struct xm2_hash
 template<class T>
 struct xmxmx32_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& x) const
   {
     std::size_t z = boost::hash<T>()(x);
@@ -289,6 +306,8 @@ struct xmxmx32_hash
 template<class T>
 struct mxm32_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& x) const
   {
     std::size_t z = boost::hash<T>()(x);
@@ -307,6 +326,8 @@ struct mxm32_hash
 template<class T>
 struct mxm33_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& t) const
   {
     std::size_t x = boost::hash<T>()(t);
@@ -325,6 +346,8 @@ struct mxm33_hash
 template<class T>
 struct xmx32_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& x) const
   {
     std::size_t z = boost::hash<T>()(x);
@@ -343,6 +366,8 @@ struct xmx32_hash
 template<class T, class H = boost::hash<T> >
 struct xmx33_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& x) const
   {
     std::size_t z = H()(x);
@@ -361,6 +386,8 @@ struct xmx33_hash
 template<class T>
 struct xmx34_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& t) const
   {
     std::size_t x = boost::hash<T>()(t);
@@ -379,6 +406,8 @@ struct xmx34_hash
 template<class T>
 struct rmr32_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& t) const
   {
     std::size_t x = boost::hash<T>()(t);
@@ -397,6 +426,8 @@ struct rmr32_hash
 template<class T>
 struct rmr33_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& t) const
   {
     std::size_t x = boost::hash<T>()(t);
@@ -415,6 +446,8 @@ struct rmr33_hash
 template<class T>
 struct xm32_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& t) const
   {
     std::size_t x = boost::hash<T>()(t);
@@ -432,6 +465,8 @@ struct xm32_hash
 template<class T, class H = boost::hash<T> >
 struct xm33_hash
 {
+  using is_avalanching = void;
+
   std::size_t operator()(const T& t) const
   {
     std::size_t x = H()(t);
@@ -1337,7 +1372,7 @@ template<class K, class V> using boost_unordered_map =
 
 template<class K, class V, class H = boost::hash<K>>
 using boost_unordered_flat_map =
-    boost::unordered_flat_map<K, V, boost::unordered::detail::foa::mixer<H>,
+    boost::unordered_flat_map<K, V, H,
     std::equal_to<K>, allocator_for<K, V>>;
 
 template<class K, class V> using fca_simple_unordered_map_ =
