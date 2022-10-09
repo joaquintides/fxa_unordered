@@ -1261,12 +1261,22 @@ struct boost_foa_table_map_types
     return {std::move(const_cast<Key&>(x.first)), std::move(x.second)};
   }
 };
+
+template<typename Hash>
+struct noxmx_hash: Hash
+{
+  using is_avalanching = void;
+};
  
-template<class K, class V, class H> 
+template<class K, class V, class H = boost::hash<K>> 
 using boost_foa_table =
   boost::unordered::detail::foa::table<
     boost_foa_table_map_types<K, V>,H,std::equal_to<K>,
    ::allocator<typename boost_foa_table_map_types<K, V>::value_type>>;
+
+template<class K, class V, class H = boost::hash<K>> 
+using boost_noxmx_foa_table = 
+  boost_foa_table<K, V, noxmx_hash<H>>; 
 
 template<class K, class V> 
 using boost_absl_foa_table = 

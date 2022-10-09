@@ -228,6 +228,8 @@ int main()
     test<multi_index_map_fnv1a>( "multi_index_map, FNV-1a" );
     test<boost_unordered_flat_map_fnv1a>( "boost_unordered_flat_map, FNV-1a" );    
     test<boost_foa_table_fnv1a>( "boost_foa_table, FNV-1a" );    
+    test<boost_foa_table>( "boost_foa_table, boost::hash" );    
+    test<boost_noxmx_foa_table>( "boost_foa_table, boost::hash, no mixing" );    
 
 #ifdef BENCHMARK_EVERYTHING
     test<fca_simple_unordered_map_fnv1a>( "fca_simple_unordered_map, FNV-1a" );
