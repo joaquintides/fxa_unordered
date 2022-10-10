@@ -1244,25 +1244,39 @@ using foa_hxm33_unordered_rc15_map =
 
 // Variations on boost::unordered::detail::foa::table
 
+#if 0
 template<typename Key,typename T>
 struct boost_foa_table_map_types
 {
   using key_type = Key;
   using init_type = std::pair<Key, T>;
-  //using moved_type = std::pair<Key&&, T&&>;
+  using moved_type = std::pair<Key&&, T&&>;
   using value_type = std::pair<Key const, T>;
   static Key const& extract(init_type const& kv) { return kv.first; }
   static Key const& extract(value_type const& kv) { return kv.first; }
-  //static Key const& extract(moved_type const& kv) { return kv.first; }
+  static Key const& extract(moved_type const& kv) { return kv.first; }
 
-  //static moved_type move(value_type& x)
-  static init_type&& move(value_type& x)
+  static moved_type move(value_type& x)
   {
     // TODO: we probably need to launder here
-    //return {std::move(const_cast<Key&>(x.first)), std::move(x.second)};
-    return std::move(reinterpret_cast<init_type&>(x));
+    return {std::move(const_cast<Key&>(x.first)), std::move(x.second)};
   }
 };
+#else
+template<typename Key,typename T>
+struct boost_foa_table_map_types
+{
+  using key_type = Key;
+  using value_type = std::pair<Key, T>;
+  using init_type = value_type;
+  static Key const& extract(value_type const& kv) { return kv.first; }
+
+  static value_type&& move(value_type& x)
+  {
+    return std::move(x);
+  }
+};
+#endif
 
 template<typename Hash>
 struct noxmx_hash: Hash
