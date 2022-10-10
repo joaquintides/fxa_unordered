@@ -1622,6 +1622,10 @@ using foa_hxm33_unordered_rc15_map_fnv1a =
 template<class K, class V>
 using boost_foa_table_fnv1a = boost_foa_table<K, V, fnv1a_hash>;
 
+template<class K, class V>
+using boost_foa_table_xmxfnv1a = boost_noxmx_foa_table<K, V, xmx_hash<K, fnv1a_hash>>;
+
+
 #ifdef HAVE_ABSEIL
 
 template<class K, class V> using absl_node_hash_map_fnv1a =
