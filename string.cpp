@@ -35,7 +35,7 @@ static std::vector<std::string> indices1, indices2;
 static std::string make_index( unsigned x )
 {
     char buffer[ 64 ];
-    std::snprintf( buffer, sizeof(buffer), "pfx_%u_sfx", x );
+    std::snprintf( buffer, sizeof(buffer), "pfx_0000000%u_sfx", x );
 
     return buffer;
 }
