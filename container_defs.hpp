@@ -1251,11 +1251,11 @@ struct boost_foa_table_map_types
   using init_type = std::pair<Key, T>;
   using moved_type = std::pair<Key&&, T&&>;
   using value_type = std::pair<Key const, T>;
-  static Key const& extract(init_type const& kv) { return kv.first; }
-  static Key const& extract(value_type const& kv) { return kv.first; }
-  static Key const& extract(moved_type const& kv) { return kv.first; }
+  static inline Key const& extract(init_type const& kv) { return kv.first; }
+  static inline Key const& extract(value_type const& kv) { return kv.first; }
+  static inline Key const& extract(moved_type const& kv) { return kv.first; }
 
-  static moved_type move(value_type& x)
+  static inline moved_type move(value_type& x)
   {
     // TODO: we probably need to launder here
     return {std::move(const_cast<Key&>(x.first)), std::move(x.second)};
