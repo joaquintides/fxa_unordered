@@ -1244,7 +1244,6 @@ using foa_hxm33_unordered_rc15_map =
 
 // Variations on boost::unordered::detail::foa::table
 
-#if 0
 template<typename Key,typename T>
 struct boost_foa_table_map_types
 {
@@ -1262,21 +1261,6 @@ struct boost_foa_table_map_types
     return {std::move(const_cast<Key&>(x.first)), std::move(x.second)};
   }
 };
-#else
-template<typename Key,typename T>
-struct boost_foa_table_map_types
-{
-  using key_type = Key;
-  using value_type = std::pair<Key, T>;
-  using init_type = value_type;
-  static Key const& extract(value_type const& kv) { return kv.first; }
-
-  static value_type&& move(value_type& x)
-  {
-    return std::move(x);
-  }
-};
-#endif
 
 template<typename Hash>
 struct noxmx_hash: Hash
