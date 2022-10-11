@@ -313,6 +313,7 @@ int main()
 #ifdef HAVE_ABSEIL
     test<absl_node_hash_map_fnv1a>( "absl::node_hash_map, FNV-1a" );
     test<absl_flat_hash_map_fnv1a>( "absl::flat_hash_map, FNV-1a" );
+    test<absl_flat_hash_map>( "absl::flat_hash_map" );
 #endif
 
     std::cout << "---\n\n";
