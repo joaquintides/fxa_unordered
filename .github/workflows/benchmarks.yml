@@ -362,10 +362,10 @@ jobs:
             ./b2 -d0 headers
           fi
 
-      - name: Install Boost.Unordered branch feature/foa_rc
+      - name: Install Boost.Unordered branch feature/quadratic_range_copy_fix
         run: |
            cd $GITHUB_WORKSPACE
-           git clone -b feature/foa_rc https://github.com/boostorg/unordered.git boost_unordered-root     
+           git clone -b feature/quadratic_range_copy_fix https://github.com/boostorg/unordered.git boost_unordered-root     
       - name: Install Abseil
         run: |
           cd $GITHUB_WORKSPACE
@@ -537,11 +537,11 @@ jobs:
               .\b2.exe -d0 headers
           )
 
-      - name: Install Boost.Unordered branch feature/foa_rc
+      - name: Install Boost.Unordered branch feature/quadratic_range_copy_fix
         shell: cmd
         run: |
           cd %GITHUB_WORKSPACE%
-          git clone -b feature/foa_rc https://github.com/boostorg/unordered.git boost_unordered-root     
+          git clone -b feature/quadratic_range_copy_fix https://github.com/boostorg/unordered.git boost_unordered-root     
       - name: Install Abseil
         shell: cmd
         run: |
